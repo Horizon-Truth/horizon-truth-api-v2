@@ -1,0 +1,11 @@
+name: Deploy Horizon Truth API (Docker Compose)
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - stage
+
+env:
+  REGISTRY: ghcr.io
