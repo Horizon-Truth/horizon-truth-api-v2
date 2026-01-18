@@ -16,6 +16,12 @@ export class User {
     @Column({ unique: true })
     email: string;
 
+    @Column({ select: false })
+    password: string;
+
+    @Column({ unique: true, nullable: true })
+    apiKey: string;
+
     @Column()
     name: string;
 
