@@ -31,10 +31,22 @@ Horizon Truth is a platform dedicated to tracking and verifying claims. This rep
    ```bash
    npm install
    ```
-3. Set up environment variables (copy `.env.example` to `.env`):
+3. Set up environment variables:
+   - Development: Copy `.env.development` to `.env`
+   - Staging: Copy `.env.staging` to `.env`
    ```bash
-   cp .env.example .env
+   cp .env.development .env
    ```
+
+## 🌍 Environment Variables
+
+The application uses the following environment variables:
+- `PORT`: The port the server listens on (default: 3000).
+- `DATABASE_NAME`: The name of the SQLite database file.
+- `JWT_SECRET`: Secret key for JWT signing.
+- `NODE_ENV`: The environment mode (`development`, `staging`, `production`).
+
+Available configurations are provided in `.env.development` and `.env.staging`.
 
 ## 📜 Available Scripts
 
