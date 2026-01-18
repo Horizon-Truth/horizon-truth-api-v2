@@ -1,59 +1,59 @@
-# Horizon Truth
+# Horizon Truth Backend
 
-Horizon Truth is an open-source project dedicated to combating misinformation. This repository contains the backend service built with NestJS and Zod.
+Horizon Truth is a platform dedicated to tracking and verifying claims. This repository contains the backend service built with **NestJS**, **TypeORM**, and **SQLite**.
 
-## Features
+## 🚀 Tech Stack
 
-- **NestJS**: A progressive Node.js framework for building efficient, reliable and scalable server-side applications.
-- **Zod**: TypeScript-first schema declaration and validation.
-- **Open Source**: Built with open source principles in mind.
+- **Framework:** [NestJS](https://nestjs.com/)
+- **Database:** [SQLite](https://sqlite.org/) (via `better-sqlite3`)
+- **ORM:** [TypeORM](https://typeorm.io/)
+- **Validation:** [Zod](https://zod.dev/) (via `nestjs-zod`)
+- **Language:** TypeScript
 
-## Getting Started
+## 📂 Project Structure
+
+- `src/users/`: User management and profiles.
+- `src/claims/`: Claim tracking and management.
+- `src/reviews/`: Community reviews for claims.
+- `src/app.module.ts`: Core application module configuration.
+
+## 🛠 Setup & Installation
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- npm
+- Node.js (v18 or higher)
+- npm or yarn
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/horizon-truth.git
-   ```
+1. Clone the repository.
 2. Install dependencies:
    ```bash
-   cd horizon-truth
    npm install
    ```
+3. Set up environment variables (copy `.env.example` to `.env`):
+   ```bash
+   cp .env.example .env
+   ```
 
-### Running the app
+## 📜 Available Scripts
+
+- `npm run start:dev`: Start the application in development mode with watch mode.
+- `npm run build`: Build the application for production.
+- `npm run start:prod`: Start the application in production mode.
+- `npm run lint`: Run ESLint to check for code quality issues.
+- `npm run test`: Run unit tests using Jest.
+- `npm run test:e2e`: Run end-to-end tests.
+
+## 🧪 Testing
 
 ```bash
-# development
-npm run start
-
-# watch mode
-npm run start:dev
-
-# production mode
-npm run start:prod
-```
-
-### Test
-
-```bash
-# unit tests
+# Unit tests
 npm run test
 
 # e2e tests
 npm run test:e2e
+
+# Test coverage
+npm run test:cov
 ```
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
