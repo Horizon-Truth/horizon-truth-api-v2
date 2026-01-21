@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Horizon Truth! We welcome contrib
 ## Getting Started
 
 1. Fork the repository.
-2. Clone your fork: `git clone https://github.com/your-username/horizon-truth.git`
+2. Clone your fork: `git clone https://github.com/your-username/horizon-truth-api-v2.git`
 3. Install dependencies: `npm install`
 4. Create a new branch: `git checkout -b feature/your-feature-name`
 
