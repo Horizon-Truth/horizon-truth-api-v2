@@ -5,9 +5,9 @@ Horizon Truth is a platform dedicated to tracking and verifying claims. This rep
 ## 🚀 Tech Stack
 
 - **Framework:** [NestJS](https://nestjs.com/)
-- **Database:** [SQLite](https://sqlite.org/) (via `better-sqlite3`)
+- **Database:** [[Postgres](https://www.postgresql.org/)]
 - **ORM:** [TypeORM](https://typeorm.io/)
-- **Validation:** [Zod](https://zod.dev/) (via `nestjs-zod`)
+- **Validation:** [Zod](https://zod.dev/)
 - **Language:** TypeScript
 
 ## 📂 Project Structure
