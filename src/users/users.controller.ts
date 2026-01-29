@@ -45,3 +45,30 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Put('me/profile')
   @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Username already exists.',
+  })
+  async updateProfile(@Request() req, @Body() updateDto: UpdateProfileDto) {
+    const updatedUser = await this.usersService.updateProfile(
+      req.user.userId,
+      updateDto,
+    );
+    await this.usersService.logActivity(
+      req.user.userId,
+      'PROFILE_UPDATE',
+      { updates: Object.keys(updateDto) },
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return updatedUser;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/preferences')
+  @ApiOperation({ summary: 'Get current user preferences' })
+  @ApiResponse({ status: 200, description: 'User preferences retrieved.' })
+  async getPreferences(@Request() req) {
+    return this.usersService.getPreferences(req.user.userId);
+  }

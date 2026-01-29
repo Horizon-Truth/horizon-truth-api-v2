@@ -10,3 +10,16 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserStatus } from '../../shared/enums/user-status.enum';
 import { UserRole } from '../../shared/enums/user-role.enum';
 import { PlayerProfile } from '../../players/entities/player-profile.entity';
+
+@Entity('users')
+export class User {
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ApiPropertyOptional({ example: 'user@example.com' })
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  email?: string | null;
+
+  @ApiPropertyOptional({ example: 'johndoe' })
+  @Column({ type: 'varchar', unique: true, nullable: true })
