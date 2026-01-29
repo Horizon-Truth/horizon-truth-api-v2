@@ -13,3 +13,17 @@ To be the global gold standard for truth-centric infrastructure, empowering comm
 ### Mission
 
 To build and maintain a secure, decentralized, and high-performance backend ecosystem that provides the technical foundation for detecting misinformation, fostering media literacy, and enabling auditable fact-checking at scale.
+
+### Objectives
+
+*   Provide a robust API layer for Horizon-Truth applications.
+*   Ensure strong security, identity, and access controls.
+*   Support scalable analytics and AI integrations.
+*   Enable transparency, traceability, and auditability.
+
+## 2. Scope & Non-Goals
+
+### In Scope
+
+*   Core API architecture and routing
+*   Authentication and authorization

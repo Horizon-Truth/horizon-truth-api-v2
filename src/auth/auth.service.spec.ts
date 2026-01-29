@@ -12,3 +12,16 @@ jest.mock('bcrypt');
 
 describe('AuthService', () => {
   let service: AuthService;
+  let usersService: UsersService;
+  let jwtService: JwtService;
+  let sessionRepository: any;
+
+  const mockUsersService = {
+    findOneByEmail: jest.fn(),
+    findOneByUsername: jest.fn(),
+    update: jest.fn(),
+  };
+
+  const mockJwtService = {
+    signAsync: jest.fn(),
+  };

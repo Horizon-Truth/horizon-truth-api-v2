@@ -1,0 +1,335 @@
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull, ILike, FindOptionsWhere } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { User } from './entities/user.entity';
+import { UserActivity } from './entities/user-activity.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UserPreferencesDto } from './dto/user-preferences.dto';
+import { IpPrivacyUtil } from '../shared/utils/ip-privacy.util';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
+import { UserStatus } from '../shared/enums/user-status.enum';
+
+@Injectable()
+export class UsersService {
+  constructor(
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @InjectRepository(UserActivity)
+    private activityRepository: Repository<UserActivity>,
+    @InjectRepository(PlayerProfile)
+    private playerProfileRepository: Repository<PlayerProfile>,
+  ) { }
+
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { email },
+      relations: ['playerProfile', 'playerProfile.avatar'],
+      select: [
+        'id',
+        'email',
+        'passwordHash',
+        'fullName',
+        'role',
+        'apiKey',
+        'username',
+      ],
+    });
+  }
+
+  async findOneByUsername(username: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { username },
+      relations: ['playerProfile', 'playerProfile.avatar'],
+      select: [
+        'id',
+        'email',
+        'username',
+        'passwordHash',
+        'fullName',
+        'role',
+        'apiKey',
+      ],
+    });
+  }
+
+  async findOneByApiKey(apiKey: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { apiKey } });
+  }
+
+  async create(userData: Partial<User> & { password?: string }): Promise<User> {
+    const existingUser = await this.usersRepository.findOne({
+      where: [{ email: userData.email ?? undefined }, { username: userData.username ?? undefined }],
+    });
+
+    if (existingUser) {
+      throw new Error('User with this email or username already exists');
+    }
+
+    const createData: Partial<User> = { ...userData };
+    if (userData.password) {
+      createData.passwordHash = await bcrypt.hash(userData.password, 10);
+    }
+
+    if (!createData.apiKey) {
+      createData.apiKey =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+    }
+
+    const user = this.usersRepository.create(createData);
+    return this.usersRepository.save(user);
+  }
+
+  async findById(id: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { id },
+      relations: ['playerProfile', 'playerProfile.avatar'],
+    });
+  }
+
+  async findByIdWithRefreshToken(id: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { id },
+      relations: ['playerProfile'],
+      select: ['id', 'email', 'username', 'role', 'hashedRefreshToken'],
+    });
+  }
+
+  async update(id: string, updateData: Partial<User>): Promise<User | null> {
+    await this.usersRepository.update(id, updateData);
+    return this.usersRepository.findOne({ where: { id } });
+  }
+
+  async findOneByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { resetPasswordToken: token },
+      select: ['id', 'email', 'resetPasswordToken', 'resetPasswordExpires'],
+    });
+  }
+
+  async findAll(query: any): Promise<any> {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const search = query.search?.trim();
+    const role = query.role && query.role !== 'all' ? query.role : undefined;
+
+    // Base filters applied to every result (and to each OR branch when searching).
+    const baseWhere: FindOptionsWhere<User> = { deletedAt: IsNull() };
+    if (role) baseWhere.role = role;
+
+    // When searching, match across name/email/username — each needs its own
+    // where-object so the role/deleted filters still apply to every branch.
+    const where: FindOptionsWhere<User> | FindOptionsWhere<User>[] = search
+      ? [
+          { ...baseWhere, fullName: ILike(`%${search}%`) },
+          { ...baseWhere, email: ILike(`%${search}%`) },
+          { ...baseWhere, username: ILike(`%${search}%`) },
+        ]
+      : baseWhere;
+
+    const [users, total] = await this.usersRepository.findAndCount({
+      where,
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // New Methods for Task 3
+
+  async updateProfile(
+    userId: string,
+    updateDto: UpdateProfileDto,
+  ): Promise<User> {
+    // Check for username uniqueness if provided
+    if (updateDto.username) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { username: updateDto.username },
+      });
+      if (existingUser && existingUser.id !== userId) {
+        throw new BadRequestException('Username already exists');
+      }
+    }
+
+    await this.usersRepository.update(userId, updateDto);
+    const updatedUser = await this.findById(userId);
+
+    if (!updatedUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    return updatedUser;
+  }
+
+  async updatePreferences(
+    userId: string,
+    preferencesDto: UserPreferencesDto,
+  ): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Merge with existing preferences
+    const updatedPreferences = {
+      ...user.preferences,
+      ...preferencesDto,
+    };
+
+    await this.usersRepository.update(userId, {
+      preferences: updatedPreferences,
+    });
+    const updatedUser = await this.findById(userId);
+    if (!updatedUser) {
+      throw new NotFoundException('User not found');
+    }
+    return updatedUser;
+  }
+
+  async getPreferences(userId: string): Promise<any> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user.preferences || {};
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'passwordHash'],
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update(userId, {
+      passwordHash: newPasswordHash,
+    });
+  }
+
+  async softDelete(userId: string): Promise<void> {
+    await this.usersRepository.update(userId, { deletedAt: new Date() });
+  }
+
+  async hardDelete(userId: string): Promise<void> {
+    await this.usersRepository.delete(userId);
+  }
+
+  async restoreUser(userId: string): Promise<void> {
+    await this.usersRepository.update(userId, { deletedAt: undefined });
+  }
+
+  async logActivity(
+    userId: string,
+    action: string,
+    metadata?: Record<string, any>,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<UserActivity> {
+    // Process IP for privacy
+    const { ipAddressHash, ipAddressPartial } = ipAddress
+      ? IpPrivacyUtil.processIp(ipAddress)
+      : { ipAddressHash: undefined, ipAddressPartial: undefined };
+
+    const activity = this.activityRepository.create({
+      userId,
+      action,
+      metadata,
+      ipAddressHash,
+      ipAddressPartial,
+      userAgent,
+    });
+    return this.activityRepository.save(activity);
+  }
+
+  async getActivityHistory(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<any> {
+    const skip = (page - 1) * limit;
+
+    const [activities, total] = await this.activityRepository.findAndCount({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data: activities,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async anonymizeAccount(userId: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // 1. Anonymize User record
+    await this.usersRepository.update(userId, {
+      email: null,
+      phone: null,
+      username: null,
+      passwordHash: null,
+      fullName: 'Anonymized User',
+      apiKey: null,
+      hashedRefreshToken: null,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+      isVerified: false,
+      status: UserStatus.ANONYMIZED,
+      preferences: null,
+    });
+
+    // 2. Anonymize PlayerProfile if exists
+    if (user.playerProfile) {
+      await this.playerProfileRepository.update(user.playerProfile.id, {
+        nickname: 'Former Player',
+      });
+    }
+
+    // 3. Clear activity metadata (Optional but safer)
+    await this.activityRepository.update({ userId }, { metadata: null });
+  }
+}
