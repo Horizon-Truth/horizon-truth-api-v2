@@ -1,0 +1,1 @@
+import { IsUUID } from 'class-validator';
