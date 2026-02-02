@@ -11,3 +11,11 @@ import { User } from '../../users/entities/user.entity';
 import { Scenario } from './scenario.entity';
 import { Scene } from './scene.entity';
 import { GameProgress } from './game-progress.entity';
+
+@Entity('player_actions')
+export class PlayerAction {
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
