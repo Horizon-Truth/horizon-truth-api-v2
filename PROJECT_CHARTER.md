@@ -6,9 +6,13 @@
 **Repository Type:** Open-Source  
 **Primary Stack:** NestJS, TypeScript, PostgreSQL, TypeORM
 
+### Vision
+
+To be the global gold standard for truth-centric infrastructure, empowering communities and organizations to reclaim the digital information space through transparency, collective intelligence, and unshakeable data integrity.
+
 ### Mission
 
-Horizon-Truth Backend provides a secure, scalable, and auditable server-side platform for detecting, analyzing, and managing misinformation through structured data pipelines, APIs, and AI-assisted services.
+To build and maintain a secure, decentralized, and high-performance backend ecosystem that provides the technical foundation for detecting misinformation, fostering media literacy, and enabling auditable fact-checking at scale.
 
 ### Objectives
 
@@ -98,32 +102,42 @@ Contributions must follow:
 *   Breaking changes only in major releases
 *   Release notes required for every version
 
-## 7. Security & Compliance
+## 7. Community Engagement Statement
+
+Horizon-Truth is built on the belief that truth is a collective pursuit. We are committed to:
+*   **Radical Transparency**: Making our processes, algorithms, and governance accessible to all.
+*   **Inclusive Participation**: Welcoming contributors from diverse backgrounds, including technologists, journalists, and researchers.
+*   **Ethical Innovation**: Ensuring our tools are developed with a primary focus on the public good and human rights.
+*   **Continuous Dialogue**: Actively seeking and acting upon feedback from the communities we serve.
+
+## 8. Security & Compliance
 
 *   Secure-by-default API design
 *   Regular dependency updates
 *   Responsible disclosure process for vulnerabilities
 *   Audit logs for sensitive operations
 
-## 8. Licensing & IP
+## 9. Licensing Strategy
 
-*   Licensed under an OSI-approved open-source license (defined in `LICENSE`).
-*   All contributions are licensed under the same terms.
-*   No CLA required unless explicitly introduced.
+Our licensing strategy is designed to maximize public benefit while protecting the integrity of the platform:
+*   **Primary License**: The core backend is licensed under the **Apache License 2.0**, ensuring it remains free to use, modify, and distribute, while providing a clear patent grant to users.
+*   **Documentation & Media**: All non-code assets and documentation are licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
+*   **Contribution Integrity**: By contributing to this project, contributors agree that their contributions are made under the same license terms as the project itself (Inbound=Outbound).
+*   **Commercial Use**: We encourage commercial adoption and integration provided the terms of the Apache 2.0 license are respected, ensuring the ecosystem remains healthy and collaborative.
 
-## 9. Communication Channels
+## 10. Communication Channels
 
 *   GitHub Issues & Discussions
 *   Pull Request reviews
 *   Optional community channels (Discord / Matrix)
 
-## 10. Sustainability & Roadmap
+## 11. Sustainability & Roadmap
 
 *   Community-driven development
 *   Optional sponsorship or grants
 *   Transparent roadmap maintained in GitHub
 
-## 11. Amendments
+## 12. Amendments
 
 This charter may be amended by:
 
