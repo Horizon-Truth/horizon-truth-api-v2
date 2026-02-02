@@ -14,7 +14,14 @@ export class UsersService {
     async findOneByEmail(email: string): Promise<User | null> {
         return this.usersRepository.findOne({
             where: { email },
-            select: ['id', 'email', 'password', 'name', 'role', 'apiKey'], // explicitly select password for auth
+            select: ['id', 'email', 'passwordHash', 'fullName', 'role', 'apiKey'], // explicitly select passwordHash for auth
+        });
+    }
+
+    async findOneByUsername(username: string): Promise<User | null> {
+        return this.usersRepository.findOne({
+            where: { username },
+            select: ['id', 'email', 'username', 'passwordHash', 'fullName', 'role', 'apiKey'],
         });
     }
 
@@ -22,16 +29,19 @@ export class UsersService {
         return this.usersRepository.findOne({ where: { apiKey } });
     }
 
-    async create(userData: Partial<User>): Promise<User> {
-        if (!userData.password) {
-            throw new Error('Password is required');
+    async create(userData: Partial<User> & { password?: string }): Promise<User> {
+        const createData: Partial<User> = { ...userData };
+        if (userData.password) {
+            createData.passwordHash = await bcrypt.hash(userData.password, 10);
         }
-        const passwordHash = await bcrypt.hash(userData.password, 10);
-        const user = this.usersRepository.create({
-            ...userData,
-            password: passwordHash,
-            apiKey: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        } as any);
-        return this.usersRepository.save(user) as unknown as Promise<User>;
+
+        if (!createData.apiKey) {
+            createData.apiKey =
+                Math.random().toString(36).substring(2, 15) +
+                Math.random().toString(36).substring(2, 15);
+        }
+
+        const user = this.usersRepository.create(createData);
+        return this.usersRepository.save(user);
     }
 }

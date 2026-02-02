@@ -4,9 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
-import { ClaimsModule } from './claims/claims.module';
-import { ReviewsModule } from './reviews/reviews.module';
 import { AuthModule } from './auth/auth.module';
+
+import { OrganizationsModule } from './organizations/organizations.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { PlayersModule } from './players/players.module';
+import { EngineModule } from './engine/engine.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { GamificationModule } from './gamification/gamification.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -22,9 +28,14 @@ import { AuthModule } from './auth/auth.module';
       inject: [ConfigService],
     }),
     UsersModule,
-    ClaimsModule,
-    ReviewsModule,
     AuthModule,
+    OrganizationsModule,
+    AuditLogsModule,
+    PlayersModule,
+    EngineModule,
+    IncidentsModule,
+    GamificationModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
