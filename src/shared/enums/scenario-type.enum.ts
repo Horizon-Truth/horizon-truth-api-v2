@@ -1,0 +1,7 @@
+export enum ScenarioType {
+    NEWS_STORY = 'NEWS_STORY',
+    SOCIAL_POST = 'SOCIAL_POST',
+    CHAT_CONVERSATION = 'CHAT_CONVERSATION',
+    VIDEO_CLIP = 'VIDEO_CLIP',
+    OTHER = 'OTHER',
+}

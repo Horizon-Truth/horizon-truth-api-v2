@@ -1,43 +1,60 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Claim } from '../../claims/entities/claim.entity';
-import { Review } from '../../reviews/entities/review.entity';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { UserStatus } from '../../shared/enums/user-status.enum';
+import { UserRole } from '../../shared/enums/user-role.enum';
+import { PlayerProfile } from '../../players/entities/player-profile.entity';
 
-export enum UserRole {
-    ADMIN = 'ADMIN',
-    MODERATOR = 'MODERATOR',
-    USER = 'USER',
-}
-
-@Entity()
+@Entity('users')
 export class User {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
-    email: string;
-
-    @Column({ select: false })
-    password: string;
+    @Column({ unique: true, nullable: true })
+    email?: string;
 
     @Column({ unique: true, nullable: true })
-    apiKey: string;
+    username?: string;
 
-    @Column()
-    name: string;
+    @Column({ unique: true, nullable: true })
+    phone?: string;
+
+    @Column({ name: 'api_key', unique: true, nullable: true })
+    apiKey?: string;
+
+    @Column({ name: 'password_hash', select: false, type: 'text', nullable: true })
+    passwordHash: string;
+
+    @Column({ name: 'full_name' })
+    fullName: string;
 
     @Column({
-        type: 'simple-enum',
+        type: 'enum',
         enum: UserRole,
-        default: UserRole.USER,
+        default: UserRole.PLAYER,
     })
     role: UserRole;
 
-    @Column({ default: 0 })
-    reputationScore: number;
+    @Column({
+        type: 'enum',
+        enum: UserStatus,
+        default: UserStatus.ACTIVE
+    })
+    status: UserStatus;
 
-    @OneToMany(() => Claim, (claim) => claim.submitter)
-    claims: Claim[];
+    @Column({ name: 'is_verified', type: 'boolean', default: false })
+    isVerified: boolean;
 
-    @OneToMany(() => Review, (review) => review.reviewer)
-    reviews: Review[];
+    @Column({ name: 'preferred_language', type: 'varchar', default: 'en' })
+    preferredLanguage: string;
+
+    @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+    updatedAt: Date;
+
+    @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
+    lastLoginAt?: Date;
+
+    @OneToOne(() => PlayerProfile, (profile) => profile.user)
+    playerProfile: PlayerProfile;
 }

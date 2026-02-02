@@ -1,0 +1,7 @@
+export enum IncidentStatusType {
+    PENDING = 'PENDING',
+    UNDER_REVIEW = 'UNDER_REVIEW',
+    VERIFIED_FALSE = 'VERIFIED_FALSE',
+    VERIFIED_TRUE = 'VERIFIED_TRUE',
+    DISMISSED = 'DISMISSED',
+}
