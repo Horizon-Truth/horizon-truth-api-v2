@@ -10,6 +10,7 @@ import { OrganizationType } from 'src/shared/enums/organization-type.enum';
 import { OrganizationStatus } from 'src/shared/enums/organization-status.enum';
 import { OrganizationUser } from './organization-user.entity';
 
+
 @Entity('organizations')
 export class Organization {
     @PrimaryGeneratedColumn('uuid')

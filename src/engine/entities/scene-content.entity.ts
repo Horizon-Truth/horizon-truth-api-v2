@@ -13,6 +13,7 @@ import { FeedLayoutType } from '../../shared/enums/feed-layout-type.enum';
 import { SceneChatMessage } from './scene-chat-message.entity';
 import { SceneFeedItem } from './scene-feed-item.entity';
 
+
 @Entity('scene_content')
 export class SceneContent {
     @PrimaryGeneratedColumn('uuid')

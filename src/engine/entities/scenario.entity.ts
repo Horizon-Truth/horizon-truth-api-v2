@@ -12,6 +12,7 @@ import { ScenarioType } from '../../shared/enums/scenario-type.enum';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';
 import { Scene } from './scene.entity';
 
+
 @Entity('scenarios')
 export class Scenario {
     @PrimaryGeneratedColumn('uuid')

@@ -14,6 +14,7 @@ import { IncidentSeverity } from '../../shared/enums/incident-severity.enum';
 import { IncidentStatus } from './incident-status.entity';
 import { ModerationAction } from './moderation-action.entity';
 
+
 @Entity('incident_reports')
 export class IncidentReport {
     @PrimaryGeneratedColumn('uuid')

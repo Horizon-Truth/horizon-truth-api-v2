@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Scenario } from './scenario.entity';
 
+
 @Entity('game_levels')
 export class GameLevel {
     @PrimaryGeneratedColumn('uuid')

@@ -8,6 +8,7 @@ import {
 import { BadgeCategory } from '../../shared/enums/badge-category.enum';
 import { UserBadge } from './user-badge.entity';
 
+
 @Entity('badges')
 export class Badge {
     @PrimaryGeneratedColumn('uuid')

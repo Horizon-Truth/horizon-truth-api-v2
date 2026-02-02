@@ -34,7 +34,7 @@ export class DashboardWidget {
     @Column({ name: 'data_source', nullable: true })
     dataSource: string;
 
-    @Column({ type: 'simple-json', nullable: true })
+    @Column({ type: 'jsonb', nullable: true })
     config: any;
 
     @Column({ type: 'int', default: 0 })

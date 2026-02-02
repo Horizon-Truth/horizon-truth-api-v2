@@ -13,6 +13,7 @@ import { User } from '../../users/entities/user.entity';
 import { DashboardAccessLevel } from '../../shared/enums/dashboard-access-level.enum';
 import { DashboardWidget } from './dashboard-widget.entity';
 
+
 @Entity('organization_dashboards')
 export class OrganizationDashboard {
     @PrimaryGeneratedColumn('uuid')
@@ -38,7 +39,7 @@ export class OrganizationDashboard {
     @Column({ name: 'is_default', type: 'boolean', default: false })
     isDefault: boolean;
 
-    @Column({ type: 'simple-json', nullable: true })
+    @Column({ type: 'jsonb', nullable: true })
     config: any;
 
     @Column({ name: 'created_by_user_id' })

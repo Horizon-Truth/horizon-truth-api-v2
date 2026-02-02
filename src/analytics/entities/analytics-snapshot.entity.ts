@@ -49,10 +49,10 @@ export class AnalyticsSnapshot {
     @Column({ name: 'engagement_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
     engagementRate: number;
 
-    @Column({ name: 'top_misinfo_themes', type: 'simple-json', nullable: true })
+    @Column({ name: 'top_misinfo_themes', type: 'jsonb', nullable: true })
     topMisinfoThemes: any;
 
-    @Column({ name: 'high_risk_regions', type: 'simple-json', nullable: true })
+    @Column({ name: 'high_risk_regions', type: 'jsonb', nullable: true })
     highRiskRegions: any;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
