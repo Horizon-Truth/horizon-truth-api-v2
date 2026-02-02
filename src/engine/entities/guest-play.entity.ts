@@ -6,3 +6,7 @@ import {
     ManyToOne,
 } from 'typeorm';
 import { Scenario } from './scenario.entity';
+
+@Entity('guest_plays')
+export class GuestPlay {
+    @PrimaryGeneratedColumn('uuid')
