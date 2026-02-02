@@ -27,7 +27,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Critical for development
+        synchronize: true, 
       }),
       inject: [ConfigService],
     }),
