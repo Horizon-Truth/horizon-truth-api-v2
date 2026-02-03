@@ -1,0 +1,71 @@
+name: Deploy NestJS API (Caddy)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build NestJS
+        run: npm run build
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Deploy backend to server
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -e
+
+          # Create directories
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+            mkdir -p $DEPLOY_PATH/current
+            mkdir -p $DEPLOY_PATH/current/dist
+          EOF
+
+          # Sync dist folder
+          rsync -avz --delete dist/ $USER@$HOST:$DEPLOY_PATH/current/dist/
+
+          # Sync package.json & lock file
+          rsync -avz package.json package-lock.json $USER@$HOST:$DEPLOY_PATH/current/
+
+          # Deploy commands (NVM + PM2)
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+            set -e
+
+            # Load NVM so node, npm, pm2 are available
+            export NVM_DIR="\$HOME/.nvm"
+            [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
+
+            cd $DEPLOY_PATH/current
+
+            # Install production dependencies
+            npm ci --omit=dev
+
+            # Start or restart API using PM2
+            pm2 start dist/main.js --name horizontruth-api --update-env || pm2 restart horizontruth-api
+
+            # Save PM2 process list for reboot
+            pm2 save
+          EOF
