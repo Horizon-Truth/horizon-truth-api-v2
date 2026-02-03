@@ -38,24 +38,36 @@ jobs:
         run: |
           set -e
 
+          # Create directories
           ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
             mkdir -p $DEPLOY_PATH/current
             mkdir -p $DEPLOY_PATH/current/dist
           EOF
 
-          rsync -avz --delete dist/ \
-            $USER@$HOST:$DEPLOY_PATH/current/dist/
+          # Sync dist folder
+          rsync -avz --delete dist/ $USER@$HOST:$DEPLOY_PATH/current/dist/
 
-          rsync -avz package.json package-lock.json \
-            $USER@$HOST:$DEPLOY_PATH/current/
+          # Sync package.json & lock file
+          rsync -avz package.json package-lock.json $USER@$HOST:$DEPLOY_PATH/current/
 
-          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          # Deploy commands (NVM + PM2)
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            set -e
+
+            # Load NVM
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
             cd $DEPLOY_PATH/current
+
+            # Install dependencies (production only)
             npm ci --omit=dev
 
+            # Start or restart API using PM2
             pm2 start dist/main.js \
               --name horizontruth-api \
               --update-env || pm2 restart horizontruth-api
 
+            # Save PM2 process list
             pm2 save
-          EOF
+      EOF
