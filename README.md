@@ -215,7 +215,7 @@ This project is proprietary and **UNLICENSED**. All rights reserved. See the [LI
 ## 🔗 Related Repositories
 
 - **Frontend Application:** [horizon-truth-web](https://github.com/Horizon-Truth/horizon-truth-client-v2)
-<!-- - **Mobile Application:** [horizon-truth-mobile](https://github.com/Horizon-Truth/horizon-truth-mobile) -->
 - **Documentation:** [horizon-truth-docs](https://github.com/Horizon-Truth/horizon-truth-docs)
-- **Live Documentation:** [doc.horizontruth.org](https://docs.horizontruth.org)
-- **API Reference (Swagger):** [api.horizontruth.org/api/v1](https://api.horizontruth.org/api/v1/docs)
+- **Live Documentation:** [horizontruth.org/docs/](https://horizontruth.org/docs/)
+- **API Reference (Swagger):** [horizontruth.org/api/v1/docs](https://horizontruth.org/api/v1/docs)
+    
