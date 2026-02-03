@@ -218,4 +218,4 @@ This project is proprietary and **UNLICENSED**. All rights reserved. See the [LI
 <!-- - **Mobile Application:** [horizon-truth-mobile](https://github.com/Horizon-Truth/horizon-truth-mobile) -->
 - **Documentation:** [horizon-truth-docs](https://github.com/Horizon-Truth/horizon-truth-docs)
 - **Live Documentation:** [doc.horizontruth.org](https://doc.horizontruth.org)
-- **API Reference (Swagger):** [api.horizontruth.org/api/v1](https://api.horizontruth.org/api/v1)
+- **API Reference (Swagger):** [api.horizontruth.org/api/v1](https://api.horizontruth.org/api/v1/docs)
