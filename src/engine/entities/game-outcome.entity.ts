@@ -34,3 +34,13 @@ export class GameOutcome {
 
   @ApiProperty({
     example: 'Excellent work! You successfully completed the scenario.',
+  })
+  @Column({ type: 'text', nullable: true })
+  feedback: string;
+
+  @ApiProperty()
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
+  completedAt: Date;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @Column({ name: 'player_choice_id', nullable: true })
