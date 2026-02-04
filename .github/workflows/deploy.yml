@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - dev
+      - stage
 
 jobs:
   deploy:
@@ -30,6 +32,22 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
+      - name: Determine deployment directory
+        id: set-dir
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "DEPLOY_SUBDIR=current" >> $GITHUB_ENV
+            echo "PM2_NAME=horizontruth-api" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_name }}" == "dev" ]]; then
+            echo "DEPLOY_SUBDIR=dev" >> $GITHUB_ENV
+            echo "PM2_NAME=horizontruth-api-dev" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_name }}" == "stage" ]]; then
+            echo "DEPLOY_SUBDIR=stage" >> $GITHUB_ENV
+            echo "PM2_NAME=horizontruth-api-stage" >> $GITHUB_ENV
+          fi
+          echo "Selected directory: $DEPLOY_SUBDIR"
+          echo "PM2 name: $PM2_NAME"
+
       - name: Deploy backend to server
         env:
           HOST: ${{ secrets.SERVER_HOST }}
@@ -38,17 +56,24 @@ jobs:
         run: |
           set -e
 
+          # Get the deployment directory from environment
+          DEPLOY_DIR="$DEPLOY_SUBDIR"
+          PM2_NAME="$PM2_NAME"
+
+          echo "Deploying to directory: $DEPLOY_DIR"
+          echo "PM2 process name: $PM2_NAME"
+
           # Create directories
           ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
-            mkdir -p $DEPLOY_PATH/current
-            mkdir -p $DEPLOY_PATH/current/dist
+            mkdir -p $DEPLOY_PATH/$DEPLOY_DIR
+            mkdir -p $DEPLOY_PATH/$DEPLOY_DIR/dist
           EOF
 
           # Sync dist folder
-          rsync -avz --delete dist/ $USER@$HOST:$DEPLOY_PATH/current/dist/
+          rsync -avz --delete dist/ $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/dist/
 
           # Sync package.json & lock file
-          rsync -avz package.json package-lock.json $USER@$HOST:$DEPLOY_PATH/current/
+          rsync -avz package.json package-lock.json $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/
 
           # Deploy commands (NVM + PM2)
           ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
@@ -58,13 +83,13 @@ jobs:
             export NVM_DIR="\$HOME/.nvm"
             [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
 
-            cd $DEPLOY_PATH/current
+            cd $DEPLOY_PATH/$DEPLOY_DIR
 
             # Install production dependencies
             npm ci --omit=dev
 
-            # Start or restart API using PM2
-            pm2 start dist/main.js --name horizontruth-api --update-env || pm2 restart horizontruth-api
+            # Start or restart API using PM2 with different names for each environment
+            pm2 start dist/main.js --name "$PM2_NAME" --update-env || pm2 restart "$PM2_NAME"
 
             # Save PM2 process list for reboot
             pm2 save
