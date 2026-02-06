@@ -20,3 +20,25 @@ The API provides core business logic, data persistence, authentication, authoriz
 
 ### Core Framework & Language
 - **Framework:** [NestJS v11](https://nestjs.com/)
+- **Language:** TypeScript v5.7.3
+
+### Database & ORM
+- **Database:** PostgreSQL
+- **ORM:** [TypeORM v0.3](https://typeorm.io/)
+
+### Security & Authentication
+- **Authentication:** Passport.js with JWT and API Key strategies
+- **Password Hashing:** bcrypt v6
+- **Validation:** Zod v4.3 with nestjs-zod integration
+
+### Development Tools
+- **Linting:** ESLint v9 with TypeScript support
+- **Formatting:** Prettier v3.4
+- **Testing:** Jest v30 with ts-jest
+- **Build Tool:** Nest CLI v11
+
+## 📂 Project Structure
+
+```
+src/
+├── users/          # User management, profiles, and authentication
