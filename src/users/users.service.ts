@@ -30,6 +30,17 @@ export class UsersService {
     }
 
     async create(userData: Partial<User> & { password?: string }): Promise<User> {
+        const existingUser = await this.usersRepository.findOne({
+            where: [
+                { email: userData.email },
+                { username: userData.username }
+            ]
+        });
+
+        if (existingUser) {
+            throw new Error('User with this email or username already exists');
+        }
+
         const createData: Partial<User> = { ...userData };
         if (userData.password) {
             createData.passwordHash = await bcrypt.hash(userData.password, 10);
