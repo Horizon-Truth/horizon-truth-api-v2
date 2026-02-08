@@ -1,14 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
+import { UserActivity } from './entities/user-activity.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UserPreferencesDto } from './dto/user-preferences.dto';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        @InjectRepository(UserActivity)
+        private activityRepository: Repository<UserActivity>,
     ) { }
 
     async findOneByEmail(email: string): Promise<User | null> {
@@ -85,12 +90,133 @@ export class UsersService {
         const skip = (page - 1) * limit;
 
         const [users, total] = await this.usersRepository.findAndCount({
+            where: { deletedAt: IsNull() }, // Exclude soft-deleted users
             skip,
             take: limit,
         });
 
         return {
             data: users,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
+    }
+
+    // New Methods for Task 3
+
+    async updateProfile(userId: string, updateDto: UpdateProfileDto): Promise<User> {
+        // Check for username uniqueness if provided
+        if (updateDto.username) {
+            const existingUser = await this.usersRepository.findOne({
+                where: { username: updateDto.username },
+            });
+            if (existingUser && existingUser.id !== userId) {
+                throw new BadRequestException('Username already exists');
+            }
+        }
+
+        await this.usersRepository.update(userId, updateDto);
+        const updatedUser = await this.findById(userId);
+
+        if (!updatedUser) {
+            throw new NotFoundException('User not found');
+        }
+
+        return updatedUser;
+    }
+
+    async updatePreferences(userId: string, preferencesDto: UserPreferencesDto): Promise<User> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Merge with existing preferences
+        const updatedPreferences = {
+            ...user.preferences,
+            ...preferencesDto,
+        };
+
+        await this.usersRepository.update(userId, { preferences: updatedPreferences });
+        const updatedUser = await this.findById(userId);
+        if (!updatedUser) {
+            throw new NotFoundException('User not found');
+        }
+        return updatedUser;
+    }
+
+    async getPreferences(userId: string): Promise<any> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        return user.preferences || {};
+    }
+
+    async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+            select: ['id', 'passwordHash'],
+        });
+
+        if (!user || !user.passwordHash) {
+            throw new NotFoundException('User not found');
+        }
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+        await this.usersRepository.update(userId, { passwordHash: newPasswordHash });
+    }
+
+    async softDelete(userId: string): Promise<void> {
+        await this.usersRepository.update(userId, { deletedAt: new Date() });
+    }
+
+    async hardDelete(userId: string): Promise<void> {
+        await this.usersRepository.delete(userId);
+    }
+
+    async restoreUser(userId: string): Promise<void> {
+        await this.usersRepository.update(userId, { deletedAt: undefined });
+    }
+
+    async logActivity(
+        userId: string,
+        action: string,
+        metadata?: Record<string, any>,
+        ipAddress?: string,
+        userAgent?: string
+    ): Promise<UserActivity> {
+        const activity = this.activityRepository.create({
+            userId,
+            action,
+            metadata,
+            ipAddress,
+            userAgent,
+        });
+        return this.activityRepository.save(activity);
+    }
+
+    async getActivityHistory(userId: string, page: number = 1, limit: number = 20): Promise<any> {
+        const skip = (page - 1) * limit;
+
+        const [activities, total] = await this.activityRepository.findAndCount({
+            where: { userId },
+            order: { createdAt: 'DESC' },
+            skip,
+            take: limit,
+        });
+
+        return {
+            data: activities,
             meta: {
                 total,
                 page,

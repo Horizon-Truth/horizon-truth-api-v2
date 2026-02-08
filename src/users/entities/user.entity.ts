@@ -69,6 +69,19 @@ export class User {
     @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
     lastLoginAt?: Date;
 
+    @ApiPropertyOptional({ description: 'User preferences for notifications, privacy, theme, etc.' })
+    @Column({ type: 'jsonb', nullable: true })
+    preferences?: {
+        notifications?: { email?: boolean; push?: boolean; sms?: boolean };
+        privacy?: { profileVisible?: boolean; activityVisible?: boolean };
+        theme?: 'light' | 'dark';
+        language?: string;
+    };
+
+    @ApiPropertyOptional({ description: 'Soft delete timestamp' })
+    @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+    deletedAt?: Date;
+
     @OneToOne(() => PlayerProfile, (profile) => profile.user)
     playerProfile: PlayerProfile;
 
