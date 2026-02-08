@@ -18,7 +18,7 @@ export class User {
     @Column({ unique: true, nullable: true })
     username?: string;
 
-    @ApiPropertyOptional({ example: '+1234567890' })
+    @ApiPropertyOptional({ example: '+22' })
     @Column({ unique: true, nullable: true })
     phone?: string;
 
@@ -71,4 +71,13 @@ export class User {
 
     @OneToOne(() => PlayerProfile, (profile) => profile.user)
     playerProfile: PlayerProfile;
+
+    @Column({ name: 'hashed_refresh_token', type: 'varchar', nullable: true, select: false })
+    hashedRefreshToken?: string | null;
+
+    @Column({ name: 'reset_password_token', type: 'varchar', nullable: true, select: false })
+    resetPasswordToken?: string | null;
+
+    @Column({ name: 'reset_password_expires', type: 'timestamp', nullable: true, select: false })
+    resetPasswordExpires?: Date | null;
 }

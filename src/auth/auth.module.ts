@@ -1,18 +1,23 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { User } from '../users/entities/user.entity';
+import { Session } from './entities/session.entity';
 
 @Module({
     imports: [
         UsersModule,
         PassportModule,
         ConfigModule,
+        TypeOrmModule.forFeature([Session]),
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({
@@ -22,7 +27,7 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
             inject: [ConfigService],
         }),
     ],
-    providers: [AuthService, JwtStrategy, ApiKeyStrategy],
+    providers: [AuthService, JwtStrategy, ApiKeyStrategy, RefreshTokenStrategy],
     controllers: [AuthController],
     exports: [AuthService],
 })

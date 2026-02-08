@@ -55,4 +55,48 @@ export class UsersService {
         const user = this.usersRepository.create(createData);
         return this.usersRepository.save(user);
     }
+
+    async findById(id: string): Promise<User | null> {
+        return this.usersRepository.findOne({ where: { id } });
+    }
+
+    async findByIdWithRefreshToken(id: string): Promise<User | null> {
+        return this.usersRepository.findOne({
+            where: { id },
+            select: ['id', 'email', 'username', 'role', 'hashedRefreshToken'],
+        });
+    }
+
+    async update(id: string, updateData: Partial<User>): Promise<User | null> {
+        await this.usersRepository.update(id, updateData);
+        return this.usersRepository.findOne({ where: { id } });
+    }
+
+    async findOneByResetToken(token: string): Promise<User | null> {
+        return this.usersRepository.findOne({
+            where: { resetPasswordToken: token },
+            select: ['id', 'email', 'resetPasswordToken', 'resetPasswordExpires'],
+        });
+    }
+
+    async findAll(query: any): Promise<any> {
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const skip = (page - 1) * limit;
+
+        const [users, total] = await this.usersRepository.findAndCount({
+            skip,
+            take: limit,
+        });
+
+        return {
+            data: users,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
+    }
 }
