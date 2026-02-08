@@ -12,3 +12,18 @@ export class CreateGameOutcomeDto {
 
     @ApiPropertyOptional()
     @IsOptional()
+    @IsInt()
+    score?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsInt()
+    trustScoreDelta?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    message?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
