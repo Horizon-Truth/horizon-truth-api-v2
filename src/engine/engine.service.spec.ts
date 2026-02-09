@@ -11,3 +11,16 @@ import { PlayerChoice } from './entities/player-choice.entity';
 import { SceneContent } from './entities/scene-content.entity';
 import { GuestPlay } from './entities/guest-play.entity';
 import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
+import { DataSource } from 'typeorm';
+import { GamificationService } from '../gamification/gamification.service';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { GameProgressStatus } from '../shared/enums/game-progress-status.enum';
+
+describe('EngineService', () => {
+  let service: EngineService;
+  let scenarioRepository: any;
+  let gameProgressRepository: any;
+
+  const mockRepository = () => ({
+    find: jest.fn(),
+    findOne: jest.fn(),
