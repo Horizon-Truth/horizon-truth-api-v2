@@ -27,3 +27,20 @@ export class CreateGameOutcomeDto {
 
     @ApiPropertyOptional()
     @IsOptional()
+    @IsBoolean()
+    endScenario?: boolean;
+}
+
+export class CreatePlayerChoiceDto {
+    @ApiProperty()
+    @IsString()
+    label: string;
+
+    @ApiProperty({ enum: PlayerActionType, required: false })
+    @IsOptional()
+    @IsEnum(PlayerActionType)
+    actionType?: PlayerActionType;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsUUID()
