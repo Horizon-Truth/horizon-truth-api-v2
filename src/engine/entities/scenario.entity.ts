@@ -24,3 +24,20 @@ export class Scenario {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @Column({ name: 'game_level_id' })
+  gameLevelId: string;
+
+  @ManyToOne(() => GameLevel, (level) => level.scenarios)
+  @JoinColumn({ name: 'game_level_id' })
+  gameLevel: GameLevel;
+
+  @ApiProperty({ example: 'The Viral Hoax' })
+  @Column()
+  title: string;
+
+  @ApiPropertyOptional({
+    example: 'Investigate a suspicious post spreading on social media.',
+  })
+  @Column({ type: 'text', nullable: true })

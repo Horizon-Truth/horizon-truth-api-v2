@@ -44,3 +44,21 @@ export class CreatePlayerChoiceDto {
     @ApiPropertyOptional()
     @IsOptional()
     @IsUUID()
+    nextSceneId?: string;
+
+    @ApiProperty({ type: () => CreateGameOutcomeDto, isArray: true, required: false })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreateGameOutcomeDto)
+    outcomes?: CreateGameOutcomeDto[];
+
+    @ApiPropertyOptional({ example: 10 })
+    @IsOptional()
+    @IsInt()
+    scoreImpact?: number;
+
+    @ApiPropertyOptional({ example: 5 })
+    @IsOptional()
+    @IsInt()
+    influenceImpact?: number;

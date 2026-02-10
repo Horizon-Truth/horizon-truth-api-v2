@@ -118,3 +118,124 @@ describe('Phase 8 — Integrity Testing', () => {
     progressRepo = makeRepo();
     playerActionRepo = makeRepo();
     gameOutcomeRepo = makeRepo();
+    gameLevelRepo = makeRepo();
+    playerChoiceRepo = makeRepo();
+    badgeRepo = makeRepo();
+    userBadgeRepo = makeRepo();
+    leaderboardRepo = makeRepo();
+    playerProfileRepo = makeRepo();
+    const sceneContentRepo = makeRepo();
+    const guestPlayRepo = makeRepo();
+    const playerScenarioRecordRepo = makeRepo();
+
+    const qr = makeQueryRunner();
+    badgeRepo.findOne.mockImplementation(({ where }) => ({
+      id: 'badge-id',
+      code: where.code,
+      name: 'Test Badge',
+      isActive: true,
+    }));
+    dataSource = { 
+      createQueryRunner: jest.fn(() => qr),
+      getRepository: jest.fn((entity) => {
+        if (entity.name === 'PlayerProfile') return playerProfileRepo;
+        return makeRepo();
+      })
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EngineService,
+        GamificationService,
+        { provide: getRepositoryToken(Scenario), useValue: scenarioRepo },
+        { provide: getRepositoryToken(Scene), useValue: sceneRepo },
+        { provide: getRepositoryToken(GameProgress), useValue: progressRepo },
+        {
+          provide: getRepositoryToken(PlayerAction),
+          useValue: playerActionRepo,
+        },
+        { provide: getRepositoryToken(GameOutcome), useValue: gameOutcomeRepo },
+        { provide: getRepositoryToken(GameLevel), useValue: gameLevelRepo },
+        {
+          provide: getRepositoryToken(PlayerChoice),
+          useValue: playerChoiceRepo,
+        },
+        { provide: getRepositoryToken(Badge), useValue: badgeRepo },
+        { provide: getRepositoryToken(UserBadge), useValue: userBadgeRepo },
+        { provide: getRepositoryToken(Leaderboard), useValue: leaderboardRepo },
+        { provide: getRepositoryToken(SceneContent), useValue: sceneContentRepo },
+        { provide: getRepositoryToken(GuestPlay), useValue: guestPlayRepo },
+        { provide: getRepositoryToken(PlayerScenarioRecord), useValue: playerScenarioRecordRepo },
+        { provide: DataSource, useValue: dataSource },
+      ],
+    }).compile();
+
+    engineService = module.get<EngineService>(EngineService);
+    gamificationService = module.get<GamificationService>(GamificationService);
+  });
+
+  // ─── 1. Branch Path Integrity ─────────────────────────────────────────────
+
+  describe('1. Branch Path Integrity', () => {
+    it('should throw NotFoundException when scenario has no scenes', async () => {
+      scenarioRepo.findOne.mockResolvedValue({
+        id: 'scenario-1',
+        isActive: true,
+        scenes: [],
+      });
+      progressRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        engineService.startGame('user-1', 'scenario-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should start game on the first ordered scene', async () => {
+      const scenes = [
+        { id: 'scene-2', order: 2 },
+        { id: 'scene-1', order: 1 },
+      ];
+      scenarioRepo.findOne.mockResolvedValue({
+        id: 'scenario-1',
+        isActive: true,
+        scenes,
+      });
+      progressRepo.findOne
+        .mockResolvedValueOnce(null) // no existing progress
+        .mockResolvedValue({
+          // getGameProgress + getCurrentScene calls
+          id: 'progress-1',
+          scenarioId: 'scenario-1',
+          currentSceneId: 'scene-1',
+          status: GameProgressStatus.IN_PROGRESS,
+          scenario: { title: 'Test' },
+          currentScene: { id: 'scene-1' },
+        });
+      progressRepo.save.mockResolvedValue({
+        id: 'progress-1',
+        currentSceneId: 'scene-1',
+      });
+      sceneRepo.findOne.mockResolvedValue({
+        id: 'scene-1',
+        title: 'First',
+        order: 1,
+        choices: [],
+        content: null,
+        availableChoices: [],
+      });
+
+      const result = await engineService.startGame('user-1', 'scenario-1');
+      expect(progressRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ currentSceneId: 'scene-1' }),
+      );
+    });
+
+    it('should advance to nextSceneId from choice when set', async () => {
+      const scene1 = { id: 'scene-1', order: 1 };
+      const scene2 = { id: 'scene-2', order: 2 };
+      const choice = {
+        id: 'choice-1',
+        label: 'VERIFY',
+        nextSceneId: 'scene-2',
+        outcomes: [],
+      };
