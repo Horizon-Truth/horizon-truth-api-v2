@@ -151,3 +151,154 @@ export class EngineService {
     let activeProgress: GameProgress[] = [];
     if (userId) {
       [userRecords, activeProgress] = await Promise.all([
+        this.playerScenarioRecordRepository.find({
+          where: { userId },
+        }),
+        this.gameProgressRepository.find({
+          where: { userId, status: GameProgressStatus.IN_PROGRESS },
+          select: ['id', 'scenarioId']
+        })
+      ]);
+    }
+
+    // Build a map for prerequisite lookups
+    const allScenarios = await this.scenarioRepository.find({ select: ['id', 'minimumScore', 'unlockScenarioId'] });
+    const scenarioMap = new Map(allScenarios.map(s => [s.id, s]));
+
+    // Map records and compute lockStatus
+    const scenariosWithRecords = scenarios.map((scenario) => {
+      const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
+      const progress = activeProgress.find((p) => p.scenarioId === scenario.id);
+
+      let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
+      
+      // Only compute lock status if a userId is provided (intended for players)
+      if (userId) {
+        if (userRecord?.isCompleted) {
+          lockStatus = 'VERIFIED';
+        } else if (scenario.unlockScenarioId) {
+          const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
+          const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
+          const requiredScore = prereqScenario?.minimumScore ?? 70;
+
+          if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
+            lockStatus = 'LOCKED';
+          }
+        }
+      }
+
+      return {
+        ...scenario,
+        userRecord,
+        lockStatus,
+        activeProgressId: progress?.id || null,
+      };
+    });
+
+    // Custom sorting: Unlocked (AVAILABLE/VERIFIED) first, then LOCKED
+    // Within the same status, sort by scenario.order
+    scenariosWithRecords.sort((a, b) => {
+      // If no lock status provided (Admin view), just sort by order
+      if (!userId) {
+        return (a.order || 0) - (b.order || 0);
+      }
+      
+      const statusScore = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
+      const statusDiff = statusScore[a.lockStatus] - statusScore[b.lockStatus];
+      if (statusDiff !== 0) return statusDiff;
+      return (a.order || 0) - (b.order || 0);
+    });
+
+    // Manual pagination
+    const paginatedScenarios = scenariosWithRecords.slice(skip, skip + limit);
+
+    return {
+      data: paginatedScenarios,
+      total: scenariosWithRecords.length,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * Get scenario by ID with all scenes
+   */
+  async getScenarioById(id: string): Promise<Scenario> {
+    const scenario = await this.scenarioRepository.findOne({
+      where: { id },
+      relations: [
+        'gameLevel',
+        'scenes',
+        'scenes.content',
+        'scenes.choices',
+        'scenes.choices.outcomes',
+      ],
+      order: {
+        scenes: {
+          order: 'ASC'
+        }
+      }
+    });
+
+    if (!scenario) {
+      throw new NotFoundException(`Scenario with ID ${id} not found`);
+    }
+
+    return scenario;
+  }
+
+  /**
+   * Get all game levels
+   */
+  async getLevels(): Promise<GameLevel[]> {
+    return this.gameLevelRepository.find({
+      order: { levelNumber: 'ASC' },
+    });
+  }
+
+  async createLevel(dto: CreateLevelDto): Promise<GameLevel> {
+    const level = this.gameLevelRepository.create(dto);
+    return this.gameLevelRepository.save(level);
+  }
+
+  async updateLevel(id: string, dto: UpdateLevelDto): Promise<GameLevel | null> {
+    await this.gameLevelRepository.update(id, dto);
+    return this.gameLevelRepository.findOne({ where: { id } });
+  }
+
+  async deleteLevel(id: string): Promise<void> {
+    // Check if there are any scenarios associated with this level
+    const scenarioCount = await this.scenarioRepository.count({
+      where: { gameLevelId: id },
+    });
+
+    if (scenarioCount > 0) {
+      throw new Error('Cannot delete a level that has associated scenarios.');
+    }
+
+    await this.gameLevelRepository.delete(id);
+  }
+
+  async exportScenarios(ids: string[]): Promise<Scenario[]> {
+    return this.scenarioRepository.find({
+      where: { id: In(ids) },
+      relations: [
+        'gameLevel',
+        'scenes',
+        'scenes.content',
+        'scenes.choices',
+        'scenes.choices.outcomes',
+      ],
+    });
+  }
+
+  /**
+   * Import scenarios from JSON data
+   */
+  async importScenarios(data: any[]): Promise<{ imported: number; skipped: number; total: number }> {
+    let imported = 0;
+    let skipped = 0;
+
+    // Get all levels to map them by levelNumber (since IDs vary between environments)
+    const levels = await this.gameLevelRepository.find();
+    const levelMap = new Map(levels.map(l => [l.levelNumber, l.id]));
