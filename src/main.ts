@@ -8,6 +8,12 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ZodValidationPipe());
 
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Horizon Truth API')
     .setDescription('Full API documentation for Horizon Truth platform')
