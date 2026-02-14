@@ -239,3 +239,147 @@ describe('Phase 8 — Integrity Testing', () => {
         nextSceneId: 'scene-2',
         outcomes: [],
       };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [scene1, scene2] },
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 2. Action (replay check)
+        .mockResolvedValueOnce(choice) // 3. Choice
+        .mockResolvedValueOnce(null); // 4. Outcome template
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      sceneRepo.findOne.mockResolvedValue({
+        id: 'scene-2',
+        title: 'Scene 2',
+        order: 2,
+        choices: [],
+        content: null,
+        availableChoices: [],
+      });
+      progressRepo.findOne // used in getCurrentScene/getGameProgress after commit
+        .mockResolvedValue({
+          id: 'progress-1',
+          scenarioId: 'scenario-1',
+          status: GameProgressStatus.IN_PROGRESS,
+          currentSceneId: 'scene-2',
+          scenario: { title: 'Test' },
+          currentScene: { id: 'scene-2' },
+        });
+
+      const result = await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      expect(qr.manager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ currentSceneId: 'scene-2' }),
+      );
+    });
+
+    it('should fall back to sequential scene if no nextSceneId on choice', async () => {
+      const scene1 = { id: 'scene-1', order: 1 };
+      const scene2 = { id: 'scene-2', order: 2 };
+      const choice = {
+        id: 'choice-1',
+        label: 'VERIFY',
+        nextSceneId: null,
+        outcomes: [],
+      };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [scene1, scene2] },
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 2. Action (replay check)
+        .mockResolvedValueOnce(choice) // 3. Choice
+        .mockResolvedValueOnce(null); // 4. Outcome template
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      progressRepo.findOne // used in getCurrentScene/getGameProgress after commit
+        .mockResolvedValue({
+          id: 'progress-1',
+          scenarioId: 'scenario-1',
+          status: GameProgressStatus.IN_PROGRESS,
+          currentSceneId: 'scene-2',
+          scenario: { title: 'Test' },
+          currentScene: { id: 'scene-2' },
+        });
+      sceneRepo.findOne.mockResolvedValue({
+        id: 'scene-2',
+        title: 'Scene 2',
+        order: 2,
+        choices: [],
+        content: null,
+        availableChoices: [],
+      });
+
+      await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      // Should advance to scene-2 sequentially
+      expect(qr.manager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ currentSceneId: 'scene-2' }),
+      );
+    });
+
+    it('should complete game when no next scene exists (terminal)', async () => {
+      const scene1 = { id: 'scene-1', order: 1 };
+      const choice = {
+        id: 'choice-1',
+        label: 'IGNORE',
+        nextSceneId: null,
+        outcomes: [],
+      };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [scene1], title: 'Test' },
+        user: {},
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 1. Action
+        .mockResolvedValueOnce(choice) // 2. Choice
+        .mockResolvedValueOnce(null); // 3. Outcome
+      qr.manager.find.mockResolvedValueOnce([]); // sceneChoices for accuracy
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      // completeGame dependencies
