@@ -24,9 +24,13 @@ export class UserActivity {
     @Column({ type: 'jsonb', nullable: true })
     metadata?: Record<string, any>;
 
-    @ApiPropertyOptional({ example: '192.168.1.1' })
-    @Column({ name: 'ip_address', type: 'varchar', length: 45, nullable: true })
-    ipAddress?: string;
+    @ApiPropertyOptional({ example: 'a3f5b2c9...', description: 'Hashed IP for privacy' })
+    @Column({ name: 'ip_address_hash', type: 'varchar', length: 64, nullable: true })
+    ipAddressHash?: string;
+
+    @ApiPropertyOptional({ example: '192.168.*.*', description: 'Partial IP for geolocation' })
+    @Column({ name: 'ip_address_partial', type: 'varchar', length: 45, nullable: true })
+    ipAddressPartial?: string;
 
     @ApiPropertyOptional({ example: 'Mozilla/5.0...' })
     @Column({ name: 'user_agent', type: 'text', nullable: true })

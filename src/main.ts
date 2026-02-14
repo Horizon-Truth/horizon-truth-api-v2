@@ -1,12 +1,18 @@
 import { NestFactory } from '@nestjs/core';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ZodValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
+    whitelist: true,
+  }));
 
   const config = new DocumentBuilder()
     .setTitle('Horizon Truth API')

@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 import { UserActivity } from './entities/user-activity.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
+import { IpPrivacyUtil } from '../shared/utils/ip-privacy.util';
 
 @Injectable()
 export class UsersService {
@@ -195,11 +196,17 @@ export class UsersService {
         ipAddress?: string,
         userAgent?: string
     ): Promise<UserActivity> {
+        // Process IP for privacy
+        const { ipAddressHash, ipAddressPartial } = ipAddress
+            ? IpPrivacyUtil.processIp(ipAddress)
+            : { ipAddressHash: undefined, ipAddressPartial: undefined };
+
         const activity = this.activityRepository.create({
             userId,
             action,
             metadata,
-            ipAddress,
+            ipAddressHash,
+            ipAddressPartial,
             userAgent,
         });
         return this.activityRepository.save(activity);

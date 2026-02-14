@@ -55,3 +55,5 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 postman_collection.json
+postman_game_endpoints.json
+git_status.txt

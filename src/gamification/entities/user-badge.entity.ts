@@ -31,6 +31,9 @@ export class UserBadge {
     @Column({ name: 'earned_reason', type: 'text', nullable: true })
     earnedReason: string;
 
+    @Column({ type: 'jsonb', nullable: true })
+    metadata: Record<string, any>;
+
     @CreateDateColumn({ name: 'earned_at', type: 'timestamp' })
     earnedAt: Date;
 }

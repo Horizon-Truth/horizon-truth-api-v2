@@ -1,9 +1,14 @@
-import { createZodDto } from 'nestjs-zod';
-import { z } from 'zod';
+import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-export const LoginSchema = z.object({
-    email: z.string().min(1, 'Email or Username is required'),
-    password: z.string().min(1, 'Password is required'),
-});
+export class LoginDto {
+    @ApiProperty({ example: 'user@example.com', description: 'Email or Username' })
+    @IsString()
+    @IsNotEmpty({ message: 'Email or Username is required' })
+    email: string;
 
-export class LoginDto extends createZodDto(LoginSchema) { }
+    @ApiProperty({ example: 'password123' })
+    @IsString()
+    @IsNotEmpty({ message: 'Password is required' })
+    password: string;
+}

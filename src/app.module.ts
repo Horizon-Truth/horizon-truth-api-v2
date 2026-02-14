@@ -15,6 +15,7 @@ import { EngineModule } from './engine/engine.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SeederModule } from './database/seeders/seeder.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     IncidentsModule,
     GamificationModule,
     AnalyticsModule,
+    SeederModule,
   ],
   controllers: [AppController],
   providers: [
