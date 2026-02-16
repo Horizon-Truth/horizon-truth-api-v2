@@ -225,6 +225,50 @@ export class GameSeederService {
             ],
         });
 
+        // Scenario 3: The Deepfake Dilemma
+        await this.createScenario({
+            title: 'The Deepfake Dilemma',
+            description: 'Identify a potential deepfake video spreading through encrypted chats.',
+            scenarioType: ScenarioType.CHAT_CONVERSATION,
+            difficulty: ScenarioDifficulty.HARD,
+            scenes: [
+                {
+                    order: 1,
+                    title: 'The Suspicious Video',
+                    description: 'A friend sends you a video of a world leader making a shocking announcement.',
+                    sceneType: 'INVESTIGATION',
+                    contentType: SceneContentType.VIDEO,
+                    availableChoices: ['WATCH_CLOSELY', 'SHARE_FAST', 'REPORT_MISINFO'],
+                    content: {
+                        textBody: 'Look at this! The President just announced we are leaving the UN!',
+                        videoUrl: 'https://example.com/deepfake-test.mp4',
+                    },
+                },
+                {
+                    order: 2,
+                    title: 'Technical Analysis',
+                    description: 'You notice some glitches around the speakers mouth and eyes.',
+                    sceneType: 'ANALYSIS',
+                    contentType: SceneContentType.FEED,
+                    availableChoices: ['RUN_DETECTOR', 'IGNORE_GLITCHES', 'CALL_FRIEND'],
+                    content: {
+                        textBody: 'The lighting seems slightly off and the audio sync is flickering.',
+                    },
+                },
+                {
+                    order: 3,
+                    title: 'Final Decision',
+                    description: 'The community is panicking. What is your final verdict?',
+                    sceneType: 'DECISION',
+                    contentType: SceneContentType.CHAT,
+                    availableChoices: ['CONFIRM_DEEPFAKE', 'CONFIRM_REAL', 'SEEK_EXPERT'],
+                    content: {
+                        textBody: 'Verified AI analysis indicates 98% probability of synthetic generation.',
+                    },
+                },
+            ],
+        });
+
         this.logger.log('Scenarios seeded successfully');
     }
 
