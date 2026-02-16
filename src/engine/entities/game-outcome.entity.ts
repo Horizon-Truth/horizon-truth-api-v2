@@ -17,7 +17,31 @@ export class GameOutcome {
     id: string;
 
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-    @Column({ name: 'player_choice_id' })
+    @Column({ name: 'user_id' })
+    userId: string;
+
+    @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+    @Column({ name: 'scenario_id' })
+    scenarioId: string;
+
+    @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+    @Column({ name: 'progress_id' })
+    progressId: string;
+
+    @ApiProperty({ example: 100 })
+    @Column({ type: 'int', default: 0 })
+    score: number;
+
+    @ApiProperty({ example: 'Excellent work! You successfully completed the scenario.' })
+    @Column({ type: 'text', nullable: true })
+    feedback: string;
+
+    @ApiProperty()
+    @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
+    completedAt: Date;
+
+    @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+    @Column({ name: 'player_choice_id', nullable: true })
     playerChoiceId: string;
 
     @ManyToOne(() => PlayerChoice, (choice) => choice.outcomes)

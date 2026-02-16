@@ -28,9 +28,21 @@ export class Scene {
     @JoinColumn({ name: 'scenario_id' })
     scenario: Scenario;
 
+    @ApiProperty({ example: 'Social Media Investigation' })
+    @Column({ nullable: true })
+    title: string;
+
+    @ApiProperty({ example: 'You see a viral post on social media...' })
+    @Column({ type: 'text', nullable: true })
+    description: string;
+
     @ApiProperty({ example: 1 })
-    @Column({ name: 'scene_order', type: 'int' })
-    sceneOrder: number;
+    @Column({ name: 'order', type: 'int', default: 1 })
+    order: number;
+
+    @ApiProperty({ example: 'INVESTIGATION' })
+    @Column({ name: 'scene_type', type: 'varchar', nullable: true })
+    sceneType: string;
 
     @ApiProperty({ enum: SceneContentType })
     @Column({
@@ -39,6 +51,10 @@ export class Scene {
         enum: SceneContentType,
     })
     contentType: SceneContentType;
+
+    @ApiProperty({ example: ['VERIFY', 'SHARE', 'IGNORE'], isArray: true })
+    @Column({ name: 'available_choices', type: 'jsonb', nullable: true })
+    availableChoices: string[];
 
     @ApiProperty({ default: false })
     @Column({ name: 'is_terminal', type: 'boolean', default: false })
