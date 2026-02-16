@@ -309,10 +309,14 @@ export class EngineService {
             return {
                 status: 'game_completed',
                 outcome: {
-                    type: outcomeType,
+                    outcomeType,
                     score,
                     feedback: outcome.feedback,
-                    scenarioTitle: progress.scenario.title,
+                    completedAt: outcome.completedAt,
+                    scenario: {
+                        id: progress.scenarioId,
+                        title: progress.scenario.title,
+                    },
                 },
                 badgesAwarded,
                 progress,
@@ -322,10 +326,14 @@ export class EngineService {
             return {
                 status: 'game_completed',
                 outcome: {
-                    type: outcomeType,
+                    outcomeType,
                     score,
                     feedback: outcome.feedback,
-                    scenarioTitle: progress.scenario.title,
+                    completedAt: outcome.completedAt,
+                    scenario: {
+                        id: progress.scenarioId,
+                        title: progress.scenario.title,
+                    },
                 },
                 progress,
             };
