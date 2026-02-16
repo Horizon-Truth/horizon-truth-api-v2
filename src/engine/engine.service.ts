@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Scenario } from './entities/scenario.entity';
 import { Scene } from './entities/scene.entity';
+import { GameLevel } from './entities/game-level.entity';
 import { GameProgress } from './entities/game-progress.entity';
 import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
@@ -27,6 +28,8 @@ export class EngineService {
         private playerActionRepository: Repository<PlayerAction>,
         @InjectRepository(GameOutcome)
         private gameOutcomeRepository: Repository<GameOutcome>,
+        @InjectRepository(GameLevel)
+        private gameLevelRepository: Repository<GameLevel>,
         @Inject(forwardRef(() => GamificationService))
         private gamificationService: GamificationService,
     ) { }
@@ -387,8 +390,24 @@ export class EngineService {
 
     // Admin Methods
 
-    async createScenario(createDto: CreateScenarioDto): Promise<Scenario> {
-        const scenario = this.scenarioRepository.create(createDto);
+    async createScenario(createDto: any): Promise<Scenario> {
+        const { type, ...rest } = createDto;
+
+        // Map 'type' from frontend to 'scenarioType' in entity
+        const scenarioData = {
+            ...rest,
+            scenarioType: type || rest.scenarioType,
+        };
+
+        // Get default game level (Level 1) if not provided
+        if (!scenarioData.gameLevelId) {
+            const defaultLevel = await this.gameLevelRepository.findOne({ where: { levelNumber: 1 } });
+            if (defaultLevel) {
+                scenarioData.gameLevelId = defaultLevel.id;
+            }
+        }
+
+        const scenario = this.scenarioRepository.create(scenarioData as any);
         return this.scenarioRepository.save(scenario);
     }
 
