@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameSeederService } from './game-seeder.service';
+import { SystemSeederService } from './system-seeder.service';
+import { User } from '../../users/entities/user.entity';
 import { Scenario } from '../../engine/entities/scenario.entity';
 import { Scene } from '../../engine/entities/scene.entity';
 import { SceneContent } from '../../engine/entities/scene-content.entity';
@@ -17,9 +19,10 @@ import { GameLevel } from '../../engine/entities/game-level.entity';
             Avatar,
             Badge,
             GameLevel,
+            User,
         ]),
     ],
-    providers: [GameSeederService],
-    exports: [GameSeederService],
+    providers: [GameSeederService, SystemSeederService],
+    exports: [GameSeederService, SystemSeederService],
 })
 export class SeederModule { }
