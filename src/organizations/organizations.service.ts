@@ -14,3 +14,18 @@ export class OrganizationsService {
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
     private readonly usersService: UsersService,
+    private readonly dataSource: DataSource,
+  ) { }
+
+  async findAll(query: any): Promise<any> {
+    const { status, type, country, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder =
+      this.organizationRepository.createQueryBuilder('organization');
+
+    if (status) {
+      queryBuilder.andWhere('organization.status = :status', { status });
+    }
+
+    if (type) {
