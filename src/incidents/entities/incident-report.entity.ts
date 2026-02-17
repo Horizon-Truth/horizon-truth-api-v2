@@ -32,3 +32,14 @@ export class IncidentReport {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @Column({ name: 'reported_by_user_id' })
   reportedByUserId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'reported_by_user_id' })
+  reportedByUser: User;
+
+  @ApiProperty({ enum: IncidentReportReason })
+  @Column({
+    name: 'report_reason',
+    type: 'enum',
+    enum: IncidentReportReason,
+  })
