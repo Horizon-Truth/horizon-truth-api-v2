@@ -15,14 +15,15 @@ export class ReportsService {
     ) { }
 
     async create(createDto: CreateReportDto, reporterId: string): Promise<Report> {
+        const { tagIds, ...reportData } = createDto;
         const report = this.reportRepository.create({
-            ...createDto,
+            ...reportData,
             reporterId,
         });
 
-        if (createDto.tagIds && createDto.tagIds.length > 0) {
+        if (tagIds && tagIds.length > 0) {
             const tags = await this.reportTagRepository.findBy({
-                id: In(createDto.tagIds),
+                id: In(tagIds),
             });
             report.tags = tags;
         }

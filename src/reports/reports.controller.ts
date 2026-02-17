@@ -23,7 +23,7 @@ export class ReportsController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Submit a new report' })
     create(@Body() createReportDto: CreateReportDto, @Request() req: any) {
-        return this.reportsService.create(createReportDto, req.user.id);
+        return this.reportsService.create(createReportDto, req.user.userId);
     }
 
     @Get()
