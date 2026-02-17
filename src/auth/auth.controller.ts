@@ -16,7 +16,7 @@ export class AuthController {
         private usersService: UsersService,
     ) { }
 
-    @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
+    @Throttle({ default: { limit: 10, ttl: 300000 } }) // 10 requests per 5 minutes
     @Post('register')
     @ApiOperation({ summary: 'Register a new user' })
     @ApiResponse({ status: 201, description: 'User successfully registered.' })
@@ -35,7 +35,7 @@ export class AuthController {
         }
     }
 
-    @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+    @Throttle({ default: { limit: 15, ttl: 300000 } }) // 15 requests per 5 minutes
     @Post('login')
     @ApiOperation({ summary: 'Login user' })
     @ApiResponse({ status: 200, description: 'User successfully logged in.' })
@@ -71,7 +71,7 @@ export class AuthController {
         return this.authService.refreshTokens(userId, refreshToken, ip, userAgent);
     }
 
-    @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
+    @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 requests per 5 minutes
     @Post('forgot-password')
     @ApiOperation({ summary: 'Request password reset' })
     @ApiResponse({ status: 429, description: 'Too Many Requests.' })

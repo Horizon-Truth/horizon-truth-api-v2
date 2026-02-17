@@ -24,8 +24,8 @@ import { LanguagesModule } from './reports/languages.module';
     ConfigModule.forRoot(),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // Time window in milliseconds (1 minute = 60000ms)
-        limit: 100, // Max requests per time window (global default)
+        ttl: 300000, // Time window in milliseconds (5 minutes = 300000ms)
+        limit: 200, // Max requests per time window (global default)
       },
     ]),
     TypeOrmModule.forRootAsync({
