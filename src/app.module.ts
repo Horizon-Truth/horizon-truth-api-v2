@@ -16,6 +16,7 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SeederModule } from './database/seeders/seeder.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SeederModule } from './database/seeders/seeder.module';
     GamificationModule,
     AnalyticsModule,
     SeederModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
