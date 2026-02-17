@@ -17,6 +17,7 @@ import { GamificationModule } from './gamification/gamification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SeederModule } from './database/seeders/seeder.module';
 import { ReportsModule } from './reports/reports.module';
+import { LanguagesModule } from './reports/languages.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ReportsModule } from './reports/reports.module';
     AnalyticsModule,
     SeederModule,
     ReportsModule,
+    LanguagesModule,
   ],
   controllers: [AppController],
   providers: [
