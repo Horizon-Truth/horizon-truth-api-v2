@@ -408,7 +408,7 @@ export class EngineService {
         }
 
         const scenario = this.scenarioRepository.create(scenarioData as any);
-        return this.scenarioRepository.save(scenario);
+        return this.scenarioRepository.save(Array.isArray(scenario) ? scenario[0] : scenario);
     }
 
     async updateScenario(id: string, updateDto: UpdateScenarioDto): Promise<Scenario> {

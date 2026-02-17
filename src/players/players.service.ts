@@ -183,4 +183,54 @@ export class PlayersService {
             winRate: gamesPlayed > 0 ? Math.round((gamesCompleted / gamesPlayed) * 100) : 0
         };
     }
+    /**
+     * Get all player profiles (Admin only)
+     */
+    async findAllProfiles(query: any): Promise<any> {
+        const { onboardingCompleted, page = 1, limit = 10 } = query;
+        const skip = (page - 1) * limit;
+
+        const queryBuilder = this.playerProfileRepository.createQueryBuilder('profile')
+            .leftJoinAndSelect('profile.avatar', 'avatar')
+            .leftJoinAndSelect('profile.user', 'user');
+
+        if (onboardingCompleted !== undefined) {
+            queryBuilder.andWhere('profile.onboardingCompleted = :onboardingCompleted', { onboardingCompleted: onboardingCompleted === 'true' });
+        }
+
+        const [data, total] = await queryBuilder
+            .skip(skip)
+            .take(limit)
+            .orderBy('profile.createdAt', 'DESC')
+            .getManyAndCount();
+
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
+    }
+
+    /**
+     * Update player profile by admin
+     */
+    async updateProfileByAdmin(userId: string, updateDto: any): Promise<any> {
+        const profile = await this.playerProfileRepository.findOne({ where: { userId } });
+        if (!profile) throw new NotFoundException('Player profile not found');
+
+        Object.assign(profile, updateDto);
+        return this.playerProfileRepository.save(profile);
+    }
+
+    /**
+     * Delete player profile by admin
+     */
+    async deleteProfileByAdmin(userId: string): Promise<void> {
+        const result = await this.playerProfileRepository.delete({ userId });
+        if (result.affected === 0) throw new NotFoundException('Player profile not found');
+    }
 }
