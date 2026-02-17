@@ -27,16 +27,12 @@ export class ReportsController {
     }
 
     @Get()
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
     @ApiOperation({ summary: 'Get all reports' })
     findAll(@Query() query: any) {
         return this.reportsService.findAll(query);
     }
 
     @Get(':id')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
     @ApiOperation({ summary: 'Get a report by ID' })
     findOne(@Param('id') id: string) {
         return this.reportsService.findById(id);

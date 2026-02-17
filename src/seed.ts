@@ -2,12 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { GameSeederService } from './database/seeders/game-seeder.service';
 import { SystemSeederService } from './database/seeders/system-seeder.service';
+import { ReportsSeederService } from './database/seeders/reports-seeder.service';
 
 async function bootstrap() {
     const app = await NestFactory.createApplicationContext(AppModule);
 
     const gameSeeder = app.get(GameSeederService);
     const systemSeeder = app.get(SystemSeederService);
+    const reportsSeeder = app.get(ReportsSeederService);
 
     try {
         console.log('--- Starting System Seeding ---');
@@ -15,6 +17,9 @@ async function bootstrap() {
 
         console.log('--- Starting Game Data Seeding ---');
         await gameSeeder.seed();
+
+        console.log('--- Starting Reports Data Seeding ---');
+        await reportsSeeder.seed();
 
         console.log('✅ All database seeding completed successfully!');
     } catch (error) {
