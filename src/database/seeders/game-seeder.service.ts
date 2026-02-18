@@ -9,6 +9,10 @@ import { Badge } from '../../gamification/entities/badge.entity';
 import { GameLevel } from '../../engine/entities/game-level.entity';
 import { SceneContentType } from '../../shared/enums/scene-content-type.enum';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
+import { PlayerChoice } from '../../engine/entities/player-choice.entity';
+import { GameOutcome } from '../../engine/entities/game-outcome.entity';
+import { PlayerActionType } from '../../shared/enums/player-action-type.enum';
+import { OutcomeType } from '../../shared/enums/outcome-type.enum';
 import { BadgeCategory } from '../../shared/enums/badge-category.enum';
 import { AvatarGender } from '../../shared/enums/avatar-gender.enum';
 import { AvatarAgeGroup } from '../../shared/enums/avatar-age-group.enum';
@@ -31,6 +35,10 @@ export class GameSeederService {
         private badgeRepository: Repository<Badge>,
         @InjectRepository(GameLevel)
         private gameLevelRepository: Repository<GameLevel>,
+        @InjectRepository(PlayerChoice)
+        private playerChoiceRepository: Repository<PlayerChoice>,
+        @InjectRepository(GameOutcome)
+        private gameOutcomeRepository: Repository<GameOutcome>,
     ) { }
 
     async seed() {
@@ -167,6 +175,28 @@ export class GameSeederService {
                     content: {
                         textBody: 'BREAKING: Scientists discover miracle cure that eliminates all diseases! Shared 50,000 times in the last hour.',
                     },
+                    choices: [
+                        {
+                            label: 'SHARE',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: -10,
+                                outcomeType: OutcomeType.FAIL,
+                                endScenario: true,
+                                message: 'You shared misinformation without verifying. Your trust score has decreased.',
+                            }
+                        },
+                        {
+                            label: 'VERIFY',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 5,
+                                outcomeType: OutcomeType.NEUTRAL,
+                                endScenario: false,
+                                message: 'Good instinct! You decided to verify the claim before acting.',
+                            }
+                        }
+                    ]
                 },
                 {
                     order: 2,
@@ -178,6 +208,18 @@ export class GameSeederService {
                     content: {
                         textBody: 'The original post links to a website you\'ve never heard of. No major news outlets are reporting this story.',
                     },
+                    choices: [
+                        {
+                            label: 'DOUBT',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 10,
+                                outcomeType: OutcomeType.PASS,
+                                endScenario: true,
+                                message: 'Excellent! You correctly identified the source as unreliable.',
+                            }
+                        }
+                    ]
                 },
                 {
                     order: 3,
@@ -321,6 +363,34 @@ export class GameSeederService {
             });
 
             await this.sceneContentRepository.save(content);
+
+            // Create choices and their outcomes
+            if (sceneData.choices) {
+                for (const choiceData of sceneData.choices) {
+                    const choice = this.playerChoiceRepository.create({
+                        sceneId: savedScene.id,
+                        label: choiceData.label,
+                        actionType: choiceData.actionType,
+                        // nextSceneId will be handled after all scenes are created if it's a cross-reference,
+                        // but for now we'll assume sequential or handle it simply.
+                    });
+                    const savedChoice = await this.playerChoiceRepository.save(choice);
+
+                    if (choiceData.outcome) {
+                        const outcome = this.gameOutcomeRepository.create({
+                            scenarioId: savedScenario.id,
+                            playerChoiceId: savedChoice.id,
+                            outcomeType: choiceData.outcome.outcomeType,
+                            trustScoreDelta: choiceData.outcome.trustScoreDelta,
+                            message: choiceData.outcome.message,
+                            endScenario: choiceData.outcome.endScenario,
+                            score: choiceData.outcome.score || 0,
+                        });
+                        await this.gameOutcomeRepository.save(outcome);
+                    }
+                }
+            }
+
             this.logger.log(`Created scene: ${sceneData.title}`);
         }
     }

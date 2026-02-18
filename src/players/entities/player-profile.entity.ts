@@ -43,8 +43,12 @@ export class PlayerProfile {
     fictionalRegionId: string;
 
     @ApiProperty({ example: 50 })
-    @Column({ name: 'trust_score_initial', type: 'int', default: 0 })
+    @Column({ name: 'trust_score_initial', type: 'int', default: 50 })
     trustScoreInitial: number;
+
+    @ApiProperty({ example: 50 })
+    @Column({ name: 'current_trust_score', type: 'int', default: 50 })
+    currentTrustScore: number;
 
     @ApiProperty({ example: false })
     @Column({ name: 'onboarding_completed', type: 'boolean', default: false })
