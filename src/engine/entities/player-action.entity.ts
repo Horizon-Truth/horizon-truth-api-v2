@@ -34,6 +34,14 @@ export class PlayerAction {
     scenario: Scenario;
 
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+    @Column({ name: 'progress_id' })
+    progressId: string;
+
+    @ManyToOne('GameProgress')
+    @JoinColumn({ name: 'progress_id' })
+    progress: any;
+
+    @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
     @Column({ name: 'scene_id' })
     sceneId: string;
 

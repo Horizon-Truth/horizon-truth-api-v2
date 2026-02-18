@@ -3,4 +3,8 @@ export enum OutcomeType {
     FAILURE = 'FAILURE',
     NEUTRAL = 'NEUTRAL',
     DEATH = 'DEATH',
+    PASS = 'PASS',
+    FAIL = 'FAIL',
+    PARTIAL_FAIL = 'PARTIAL_FAIL',
+    PERFECT_PASS = 'PERFECT_PASS',
 }

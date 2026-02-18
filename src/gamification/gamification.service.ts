@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Badge } from './entities/badge.entity';
 import { UserBadge } from './entities/user-badge.entity';
+import { GameOutcome } from '../engine/entities/game-outcome.entity';
+import { OutcomeType } from '../shared/enums/outcome-type.enum';
 import { Leaderboard } from './entities/leaderboard.entity';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
 import { CreateBadgeDto } from './dto/create-badge.dto';
@@ -87,6 +89,48 @@ export class GamificationService {
     /**
      * Check badge eligibility for a user after game completion
      */
+    /**
+     * Check badge eligibility based on a specific outcome (mid-scenario or final)
+     */
+    async checkOutcomeBadgeEligibility(userId: string, outcome: GameOutcome): Promise<string[]> {
+        const awardedBadges: string[] = [];
+
+        if (outcome.outcomeType !== OutcomeType.PASS) {
+            return awardedBadges;
+        }
+
+        // Fetch scenario to check which one it is
+        const scenario = await this.userBadgeRepository.manager.findOne('Scenario', {
+            where: { id: outcome.scenarioId },
+        }) as any;
+
+        if (!scenario) return awardedBadges;
+
+        let badgeToAward: string | null = null;
+
+        // Logic based on wireframe requirements
+        if (scenario.title === 'The Viral Post') {
+            badgeToAward = 'COMMUNITY_PROTECTOR';
+        } else if (scenario.title === 'The Deepfake Dilemma') {
+            badgeToAward = 'CRISIS_VERIFIER';
+        }
+
+        if (badgeToAward) {
+            try {
+                // awardBadge handles duplication check
+                await this.awardBadge(userId, badgeToAward);
+                awardedBadges.push(badgeToAward);
+            } catch (error) {
+                // If it's just "User already has this badge", we ignore it
+                if (!(error instanceof BadRequestException && error.message.includes('already has'))) {
+                    console.error(`Failed to award mid-scenario badge ${badgeToAward}:`, error.message);
+                }
+            }
+        }
+
+        return awardedBadges;
+    }
+
     /**
      * Check badge eligibility for a user after game completion
      */

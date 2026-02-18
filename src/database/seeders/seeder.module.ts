@@ -12,6 +12,8 @@ import { Badge } from '../../gamification/entities/badge.entity';
 import { GameLevel } from '../../engine/entities/game-level.entity';
 import { ReportTag } from '../../reports/entities/report-tag.entity';
 import { Language } from '../../reports/entities/language.entity';
+import { PlayerChoice } from '../../engine/entities/player-choice.entity';
+import { GameOutcome } from '../../engine/entities/game-outcome.entity';
 
 @Module({
     imports: [
@@ -25,6 +27,8 @@ import { Language } from '../../reports/entities/language.entity';
             User,
             ReportTag,
             Language,
+            PlayerChoice,
+            GameOutcome,
         ]),
     ],
     providers: [GameSeederService, SystemSeederService, ReportsSeederService],

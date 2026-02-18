@@ -40,11 +40,15 @@ export class PlayerProfile {
 
     @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
     @Column({ name: 'fictional_region_id', type: 'uuid', nullable: true })
-    fictionalRegionId: string;
+    fictionalRegionId: string | null;
 
-    @ApiProperty({ example: 50 })
+    @ApiProperty({ example: 0 })
     @Column({ name: 'trust_score_initial', type: 'int', default: 0 })
     trustScoreInitial: number;
+
+    @ApiProperty({ example: 0 })
+    @Column({ name: 'current_trust_score', type: 'int', default: 0 })
+    currentTrustScore: number;
 
     @ApiProperty({ example: false })
     @Column({ name: 'onboarding_completed', type: 'boolean', default: false })

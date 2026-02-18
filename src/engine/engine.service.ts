@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import { Scenario } from './entities/scenario.entity';
 import { Scene } from './entities/scene.entity';
 import { GameLevel } from './entities/game-level.entity';
 import { GameProgress } from './entities/game-progress.entity';
 import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
+import { PlayerChoice } from './entities/player-choice.entity';
 import { ScenarioQueryDto } from './dto/scenario-query.dto';
 import { SubmitChoiceDto } from './dto/submit-choice.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
@@ -30,6 +31,9 @@ export class EngineService {
         private gameOutcomeRepository: Repository<GameOutcome>,
         @InjectRepository(GameLevel)
         private gameLevelRepository: Repository<GameLevel>,
+        @InjectRepository(PlayerChoice)
+        private playerChoiceRepository: Repository<PlayerChoice>,
+        private dataSource: DataSource,
         @Inject(forwardRef(() => GamificationService))
         private gamificationService: GamificationService,
     ) { }
@@ -186,7 +190,7 @@ export class EngineService {
 
         const scene = await this.sceneRepository.findOne({
             where: { id: progress.currentSceneId },
-            relations: ['content', 'content.chatMessages', 'content.feedItems'],
+            relations: ['content', 'content.chatMessages', 'content.feedItems', 'choices'],
         });
 
         if (!scene) {
@@ -202,6 +206,11 @@ export class EngineService {
             content: scene.content || null,
             chatMessages: scene.content?.chatMessages || [],
             feedItems: scene.content?.feedItems || [],
+            choices: scene.choices?.map(c => ({
+                id: c.id,
+                label: c.label,
+                actionType: c.actionType,
+            })) || [],
             availableChoices: scene.availableChoices || ['VERIFY', 'SHARE', 'IGNORE'],
         };
     }
@@ -210,61 +219,158 @@ export class EngineService {
      * Submit a player choice and advance the game
      */
     async submitChoice(userId: string, submitChoiceDto: SubmitChoiceDto): Promise<any> {
-        const { progressId, sceneId, choiceKey, metadata } = submitChoiceDto;
+        const { progressId, sceneId, choiceId, choiceKey, metadata } = submitChoiceDto;
 
-        // Verify progress belongs to user
-        const progress = await this.gameProgressRepository.findOne({
-            where: { id: progressId, userId },
-            relations: ['scenario', 'scenario.scenes'],
-        });
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        if (!progress) {
-            throw new NotFoundException('Game progress not found');
-        }
+        try {
+            // 1. Fetch progress with PESSIMISTIC_WRITE lock and verify ownership
+            const progress = await queryRunner.manager.findOne(GameProgress, {
+                where: { id: progressId, userId },
+                relations: ['scenario', 'scenario.scenes'],
+                lock: { mode: 'pessimistic_write' },
+            });
 
-        if (progress.status !== GameProgressStatus.IN_PROGRESS) {
-            throw new BadRequestException('This game is not in progress');
-        }
+            if (!progress) {
+                throw new NotFoundException('Game progress not found or unauthorized');
+            }
 
-        // Verify current scene
-        if (progress.currentSceneId !== sceneId) {
-            throw new BadRequestException('Invalid scene for current progress');
-        }
+            // 2. Status Immutability: Prevent modifications to completed games
+            if (progress.status !== GameProgressStatus.IN_PROGRESS) {
+                throw new BadRequestException(`Cannot submit choice: Game is ${progress.status}`);
+            }
 
-        // Record the player's choice
-        const choice = this.playerActionRepository.create({
-            userId,
-            scenarioId: progress.scenarioId,
-            sceneId,
-            choiceKey,
-            metadata,
-        });
+            if (progress.currentSceneId !== sceneId) {
+                throw new BadRequestException('Invalid scene for current progress');
+            }
 
-        await this.playerActionRepository.save(choice);
+            // 3. Replay Exploit Prevention: Check if choice already submitted for this scene
+            const existingAction = await queryRunner.manager.findOne(PlayerAction, {
+                where: { userId, progressId, sceneId },
+            });
 
-        // Get current scene to determine next scene
-        const currentScene = await this.sceneRepository.findOne({
-            where: { id: sceneId },
-        });
+            if (existingAction) {
+                throw new BadRequestException('Choice already submitted for this scene');
+            }
 
-        // Find next scene (simple logic: next in order)
-        const allScenes = progress.scenario.scenes.sort((a, b) => a.order - b.order);
-        const currentIndex = allScenes.findIndex(s => s.id === sceneId);
-        const nextScene = allScenes[currentIndex + 1];
+            // 4. Find the choice
+            let choice: PlayerChoice | null = null;
+            if (choiceId) {
+                choice = await queryRunner.manager.findOne(PlayerChoice, {
+                    where: { id: choiceId, sceneId },
+                    relations: ['outcomes'],
+                });
+            } else if (choiceKey) {
+                choice = await queryRunner.manager.findOne(PlayerChoice, {
+                    where: { sceneId, label: choiceKey },
+                    relations: ['outcomes'],
+                });
+            }
 
-        if (nextScene) {
-            // Move to next scene
-            progress.currentSceneId = nextScene.id;
-            await this.gameProgressRepository.save(progress);
+            if (!choice && choiceId) {
+                throw new NotFoundException(`Choice with ID ${choiceId} not found in this scene`);
+            }
 
-            return {
-                status: 'scene_completed',
-                nextScene: await this.getCurrentScene(progressId),
-                progress: await this.getGameProgress(progressId),
-            };
-        } else {
-            // Game completed - this was the last scene
-            return this.completeGame(progressId, OutcomeType.SUCCESS);
+            // 5. Record the player's action (Immutable Record)
+            const playerAction = queryRunner.manager.create(PlayerAction, {
+                userId,
+                scenarioId: progress.scenarioId,
+                progressId: progress.id, // Ensure link to progress
+                sceneId,
+                choiceKey: choice?.label || choiceKey || 'UNKNOWN',
+                metadata,
+            });
+            await queryRunner.manager.save(playerAction);
+
+            // 6. Handle Outcomes
+            let templateOutcome = choice?.outcomes?.find(o => !o.userId);
+            if (!templateOutcome && choice) {
+                templateOutcome = await queryRunner.manager.findOne(GameOutcome, {
+                    where: { playerChoiceId: choice.id, userId: IsNull() },
+                }) as GameOutcome;
+            }
+
+            let result: any = { status: 'scene_completed' };
+
+            if (templateOutcome) {
+                // Update persistent trust score
+                const playerProfile = await queryRunner.manager.findOne('PlayerProfile', {
+                    where: { userId },
+                }) as any;
+
+                if (playerProfile) {
+                    playerProfile.currentTrustScore = (playerProfile.currentTrustScore || 50) + (templateOutcome.trustScoreDelta || 0);
+                    await queryRunner.manager.save('PlayerProfile', playerProfile);
+                }
+
+                // Process message templates
+                let processedMessage = templateOutcome.message || '';
+                if (processedMessage.includes('{{reach}}') || processedMessage.includes('{{percent}}')) {
+                    const reach = Math.floor(Math.random() * 900) + 100;
+                    const percent = Math.floor(Math.random() * 41) + 50;
+                    processedMessage = processedMessage.replace('{{reach}}', reach.toString()).replace('{{percent}}', percent.toString());
+                }
+
+                // Create user-specific outcome
+                const userOutcome = queryRunner.manager.create(GameOutcome, {
+                    ...templateOutcome,
+                    id: undefined,
+                    userId,
+                    progressId,
+                    message: processedMessage,
+                    completedAt: new Date(),
+                });
+                await queryRunner.manager.save(userOutcome);
+
+                result.message = processedMessage;
+                result.trustScoreDelta = templateOutcome.trustScoreDelta;
+
+                // Check badges (Gamification is treated as side-effect, but we can't easily wrap it in this queryRunner's transaction without modifying it)
+                try {
+                    const awardedMidGame = await this.gamificationService.checkOutcomeBadgeEligibility(userId, userOutcome);
+                    if (awardedMidGame.length > 0) result.awardedBadges = awardedMidGame;
+                } catch (bErr) { console.error('Badge error:', bErr.message); }
+
+                // 7. Handle scenario termination
+                if (templateOutcome.endScenario) {
+                    await queryRunner.commitTransaction();
+                    return this.completeGame(progressId, templateOutcome.outcomeType);
+                }
+            }
+
+            // 8. Advance to next scene
+            const nextSceneId = choice?.nextSceneId;
+            if (nextSceneId) {
+                progress.currentSceneId = nextSceneId;
+                await queryRunner.manager.save(progress);
+            } else {
+                const allScenes = progress.scenario.scenes.sort((a, b) => a.order - b.order);
+                const currentIndex = allScenes.findIndex(s => s.id === sceneId);
+                const sequentialNext = allScenes[currentIndex + 1];
+
+                if (sequentialNext) {
+                    progress.currentSceneId = sequentialNext.id;
+                    await queryRunner.manager.save(progress);
+                } else {
+                    await queryRunner.commitTransaction();
+                    return this.completeGame(progressId, OutcomeType.SUCCESS);
+                }
+            }
+
+            await queryRunner.commitTransaction();
+
+            // Refresh progress and return next scene
+            result.nextScene = await this.getCurrentScene(progressId);
+            result.progress = await this.getGameProgress(progressId);
+            return result;
+
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
     }
 
@@ -279,6 +385,10 @@ export class EngineService {
 
         if (!progress) {
             throw new NotFoundException('Game progress not found');
+        }
+
+        if (progress.status === GameProgressStatus.COMPLETED) {
+            throw new BadRequestException('Game is already completed');
         }
 
         // Mark as completed
@@ -303,6 +413,20 @@ export class EngineService {
         });
 
         await this.gameOutcomeRepository.save(outcome);
+
+        // Update player's persistent trust score
+        try {
+            const playerProfile = await this.gameProgressRepository.manager.findOne('PlayerProfile', {
+                where: { userId: progress.userId },
+            }) as any;
+
+            if (playerProfile) {
+                playerProfile.currentTrustScore = (playerProfile.currentTrustScore || 0) + (outcome.trustScoreDelta || 0);
+                await this.gameProgressRepository.manager.save('PlayerProfile', playerProfile);
+            }
+        } catch (error) {
+            console.error('Failed to update player persistent trust score:', error.message);
+        }
 
         // Trigger badge awards and leaderboard updates
         try {
@@ -435,5 +559,43 @@ export class EngineService {
         };
 
         return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+    }
+
+    /**
+     * Get summary of player choices and consequences for the "Investigation Reveal" screen
+     */
+    async getScenarioSummary(userId: string, progressId: string): Promise<any> {
+        // Verify progress belongs to user
+        const progress = await this.gameProgressRepository.findOne({
+            where: { id: progressId, userId },
+            relations: ['scenario'],
+        });
+
+        if (!progress) {
+            throw new NotFoundException('Game progress not found');
+        }
+
+        // Fetch all outcomes for this specific progress session
+        const outcomes = await this.gameOutcomeRepository.find({
+            where: { progressId, userId },
+            relations: ['playerChoice'],
+            order: { createdAt: 'ASC' },
+        });
+
+        const summary = outcomes.map(outcome => ({
+            action: outcome.playerChoice?.label || 'Unknown Action',
+            consequence: outcome.message || 'No specific impact recorded.',
+            trustDelta: outcome.trustScoreDelta,
+            outcomeType: outcome.outcomeType,
+        }));
+
+        const totalTrustDelta = outcomes.reduce((sum, o) => sum + (o.trustScoreDelta || 0), 0);
+
+        return {
+            scenarioTitle: progress.scenario.title,
+            finalOutcome: progress.finalOutcome,
+            totalTrustDelta,
+            choices: summary,
+        };
     }
 }

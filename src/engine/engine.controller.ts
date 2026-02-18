@@ -88,6 +88,16 @@ export class EngineController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get('game/progress/:progressId/summary')
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get investigation reveal summary' })
+    @ApiResponse({ status: 200, description: 'Scenario summary retrieved.' })
+    @ApiResponse({ status: 404, description: 'Game progress not found.' })
+    async getScenarioSummary(@Request() req, @Param('progressId') progressId: string) {
+        return this.engineService.getScenarioSummary(req.user.userId, progressId);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Get('game/history/me')
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get current user game history' })
