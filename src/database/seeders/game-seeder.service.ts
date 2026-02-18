@@ -56,6 +56,7 @@ export class GameSeederService {
         this.logger.log('Seeding game levels...');
 
         const levels = [
+            { levelNumber: 0, name: 'Trainee', description: 'Begin your journey into truth verification' },
             { levelNumber: 1, name: 'Novice', description: 'Just getting started with truth verification' },
             { levelNumber: 2, name: 'Apprentice', description: 'Building your fact-checking skills' },
             { levelNumber: 3, name: 'Investigator', description: 'Skilled at identifying misinformation' },
@@ -172,157 +173,236 @@ export class GameSeederService {
     private async seedScenarios() {
         this.logger.log('Seeding scenarios...');
 
-        // Scenario 1: Social Media Viral Post
+        // LEVEL 0: Social Chat Simulation (Onboarding)
         await this.createScenario({
-            title: 'The Viral Post',
-            description: 'A shocking claim goes viral on social media. Can you distinguish fact from fiction?',
-            scenarioType: ScenarioType.SOCIAL_POST,
+            title: 'Welcome to Horizon',
+            description: 'Learn the basics of identifying truth in a digital world.',
+            levelNumber: 0,
+            scenarioType: ScenarioType.CHAT_CONVERSATION,
             difficulty: ScenarioDifficulty.EASY,
             scenes: [
                 {
                     order: 1,
-                    title: 'The Discovery',
-                    description: 'You come across a viral post claiming a major health breakthrough',
+                    title: 'First Encounter',
+                    description: 'Your digital assistant greets you.',
                     sceneType: 'INVESTIGATION',
-                    contentType: SceneContentType.TEXT,
-                    availableChoices: ['VERIFY', 'SHARE', 'IGNORE'],
-                    content: {
-                        textBody: 'BREAKING: Scientists discover miracle cure that eliminates all diseases! Shared 50,000 times in the last hour.',
-                    },
+                    contentType: SceneContentType.CHAT,
+                    availableChoices: ['HELLO', 'WHO_ARE_YOU'],
+                    content: { textBody: 'Welcome, Agent. I am your Truth Verification Assistant. Ready to begin?' },
                     choices: [
-                        {
-                            label: 'SHARE',
-                            actionType: PlayerActionType.CHOICE,
-                            outcome: {
-                                trustScoreDelta: -10,
-                                outcomeType: OutcomeType.FAIL,
-                                endScenario: true,
-                                message: 'Your share increased Panic Score of {{reach}} people by {{percent}}%! You shared misinformation without verifying. Your trust score has decreased.',
-                            }
-                        },
-                        {
-                            label: 'VERIFY',
-                            actionType: PlayerActionType.CHOICE,
-                            outcome: {
-                                trustScoreDelta: 5,
-                                outcomeType: OutcomeType.NEUTRAL,
-                                endScenario: false,
-                                message: 'Good instinct! You decided to verify the claim before acting.',
-                            }
-                        }
+                        { label: 'HELLO', actionType: PlayerActionType.CHOICE, nextSceneTitle: 'The Choice' },
+                        { label: 'WHO_ARE_YOU', actionType: PlayerActionType.CHOICE, nextSceneTitle: 'The Choice' }
                     ]
                 },
                 {
                     order: 2,
-                    title: 'Checking Sources',
-                    description: 'You decide to investigate the source of this claim',
+                    title: 'The Choice',
+                    description: 'Learning about Trust Scores.',
                     sceneType: 'ANALYSIS',
-                    contentType: SceneContentType.TEXT,
-                    availableChoices: ['TRUST', 'DOUBT', 'RESEARCH_MORE'],
-                    content: {
-                        textBody: 'The original post links to a website you\'ve never heard of. No major news outlets are reporting this story.',
-                    },
+                    contentType: SceneContentType.CHAT,
+                    availableChoices: ['TELL_ME_MORE', 'LETS_GO'],
+                    content: { textBody: 'Every action you take affects your Trust Score. High score means you are a reliable agent.' },
                     choices: [
                         {
-                            label: 'DOUBT',
+                            label: 'LETS_GO',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: { trustScoreDelta: 0, outcomeType: OutcomeType.NEUTRAL, endScenario: true, message: 'Tutorial complete! You are ready for your first real challenge.' }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // LEVEL 1: Telegram Scam
+        await this.createScenario({
+            title: 'The Telegram Trap',
+            description: 'Someone is offering an "exclusive" crypto tip in a Telegram group.',
+            levelNumber: 1,
+            scenarioType: ScenarioType.CHAT_CONVERSATION,
+            difficulty: ScenarioDifficulty.EASY,
+            scenes: [
+                {
+                    order: 1,
+                    title: 'Suspicious Offer',
+                    description: 'A user named "CryptoGod" sends a private message.',
+                    sceneType: 'INVESTIGATION',
+                    contentType: SceneContentType.CHAT,
+                    availableChoices: ['CHECK_PROFILE', 'CLICK_LINK', 'BLOCK'],
+                    content: { textBody: 'Hey! I saw you in the group. Want a 500% return on BTC in 2 hours? Just click: bit.ly/easy-btc-profit' },
+                    choices: [
+                        {
+                            label: 'CLICK_LINK',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: -20,
+                                outcomeType: OutcomeType.FAIL,
+                                endScenario: true,
+                                message: 'Your share increased Panic Score of {{reach}} people by {{percent}}%! You fell for a phishing link. Your account has been compromised.'
+                            }
+                        },
+                        { label: 'CHECK_PROFILE', actionType: PlayerActionType.CHOICE, nextSceneTitle: 'Fake Credentials' },
+                        {
+                            label: 'BLOCK',
                             actionType: PlayerActionType.CHOICE,
                             outcome: {
                                 trustScoreDelta: 10,
                                 outcomeType: OutcomeType.PASS,
                                 endScenario: true,
-                                message: 'Excellent! You correctly identified the source as unreliable.',
+                                message: 'Excellent. You avoided a common crypto scam by recognizing high-pressure tactics.'
+                            }
+                        }
+                    ]
+                },
+                {
+                    order: 2,
+                    title: 'Fake Credentials',
+                    description: 'Reviewing the users profile.',
+                    sceneType: 'ANALYSIS',
+                    contentType: SceneContentType.TEXT,
+                    availableChoices: ['REPORT', 'BELIEVE'],
+                    content: { textBody: 'The profile was created 10 minutes ago and has no mutual contacts. The profile picture is a generic stock photo.' },
+                    choices: [
+                        {
+                            label: 'REPORT',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 15,
+                                outcomeType: OutcomeType.PASS,
+                                endScenario: true,
+                                message: 'Great job! Reporting these accounts helps keep the community safe.'
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // LEVEL 1: X-Bank Phishing
+        await this.createScenario({
+            title: 'X-Bank Phishing',
+            description: 'A critical security alert from your bank.',
+            levelNumber: 1,
+            scenarioType: ScenarioType.SOCIAL_POST,
+            difficulty: ScenarioDifficulty.MEDIUM,
+            scenes: [
+                {
+                    order: 1,
+                    title: 'The Urgent SMS',
+                    description: 'You receive an SMS from "X-Bank".',
+                    sceneType: 'INVESTIGATION',
+                    contentType: SceneContentType.TEXT,
+                    availableChoices: ['LOGIN_NOW', 'CALL_OFFICIAL_NUMBER', 'DELETE'],
+                    content: { textBody: 'URGENT: Abnormal activity on your account. Login to verify: x-bank-verify.com/login or your account will be suspended in 30 mins.' },
+                    choices: [
+                        {
+                            label: 'LOGIN_NOW',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: -25,
+                                outcomeType: OutcomeType.FAIL,
+                                endScenario: true,
+                                message: 'You entered your credentials on a fake site. Your savings are now vulnerable.'
+                            }
+                        },
+                        {
+                            label: 'CALL_OFFICIAL_NUMBER',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 20,
+                                outcomeType: OutcomeType.PASS,
+                                endScenario: true,
+                                message: 'The bank confirms it was a scam. Always use official apps or numbers to verify alerts.'
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // LEVEL 2: Midnight Witness (Complex Branching)
+        await this.createScenario({
+            title: 'Midnight Witness',
+            description: 'A whistleblower claims to have proof of local government corruption.',
+            levelNumber: 2,
+            scenarioType: ScenarioType.NEWS_STORY,
+            difficulty: ScenarioDifficulty.HARD,
+            scenes: [
+                {
+                    order: 1,
+                    title: 'Anonymous Tip',
+                    description: 'Sent via encrypted mail.',
+                    sceneType: 'INVESTIGATION',
+                    contentType: SceneContentType.TEXT,
+                    availableChoices: ['ANALYZE_METADATA', 'PUBLISH_IMMEDIATELY', 'MEET_WHISTLEBLOWER'],
+                    content: { textBody: 'The Mayor is taking bribes for the new harbor project. Here is a photo of the transaction.' },
+                    choices: [
+                        { label: 'ANALYZE_METADATA', actionType: PlayerActionType.CHOICE, nextSceneTitle: 'Digital Fingerprints' },
+                        { label: 'MEET_WHISTLEBLOWER', actionType: PlayerActionType.CHOICE, nextSceneTitle: 'The Dark Alley' },
+                        {
+                            label: 'PUBLISH_IMMEDIATELY',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: -30,
+                                outcomeType: OutcomeType.FAIL,
+                                endScenario: true,
+                                message: 'The photo was a deepfake created by a political rival. You have committed libel and ruined your reputation.'
+                            }
+                        }
+                    ]
+                },
+                {
+                    order: 2,
+                    title: 'Digital Fingerprints',
+                    description: 'Checking the file for manipulation.',
+                    sceneType: 'ANALYSIS',
+                    contentType: SceneContentType.TEXT,
+                    availableChoices: ['CONFIRM_ORIGIN', 'FLAG_FAKE'],
+                    content: { textBody: 'Metadata shows the photo was edited 2 hours ago. Shadow angles don\'t match the clock in the background.' },
+                    choices: [
+                        {
+                            label: 'FLAG_FAKE',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 25,
+                                outcomeType: OutcomeType.PASS,
+                                endScenario: true,
+                                message: 'Brilliant detection. You identified the "Midnight Witness" as a professional disinformation operation.'
                             }
                         }
                     ]
                 },
                 {
                     order: 3,
-                    title: 'The Verdict',
-                    description: 'Based on your investigation, what\'s your conclusion?',
+                    title: 'The Dark Alley',
+                    description: 'Meeting the source in person.',
                     sceneType: 'DECISION',
                     contentType: SceneContentType.TEXT,
-                    availableChoices: ['REAL', 'FAKE', 'UNCERTAIN'],
-                    content: {
-                        textBody: 'You find that the website is known for spreading misinformation. The "scientists" mentioned don\'t exist.',
-                    },
-                },
-            ],
-        });
-
-        // Scenario 2: News Article Verification
-        await this.createScenario({
-            title: 'The Breaking News',
-            description: 'A news article makes bold claims. Is it trustworthy?',
-            scenarioType: ScenarioType.NEWS_STORY,
-            difficulty: ScenarioDifficulty.MEDIUM,
-            scenes: [
-                {
-                    order: 1,
-                    title: 'The Headline',
-                    description: 'You see a sensational news headline',
-                    sceneType: 'INVESTIGATION',
-                    contentType: SceneContentType.TEXT,
-                    availableChoices: ['READ_ARTICLE', 'CHECK_SOURCE', 'SKIP'],
-                    content: {
-                        textBody: 'SHOCKING: Government Plans to Ban All Social Media Next Week!',
-                    },
-                },
-                {
-                    order: 2,
-                    title: 'Digging Deeper',
-                    description: 'You investigate the article and its sources',
-                    sceneType: 'ANALYSIS',
-                    contentType: SceneContentType.TEXT,
-                    availableChoices: ['BELIEVE', 'DOUBT', 'INVESTIGATE'],
-                    content: {
-                        textBody: 'The article cites "anonymous sources" and uses dramatic language. Other news sites aren\'t reporting this.',
-                    },
-                },
-            ],
-        });
-
-        // Scenario 3: The Deepfake Dilemma
-        await this.createScenario({
-            title: 'The Deepfake Dilemma',
-            description: 'Identify a potential deepfake video spreading through encrypted chats.',
-            scenarioType: ScenarioType.CHAT_CONVERSATION,
-            difficulty: ScenarioDifficulty.HARD,
-            scenes: [
-                {
-                    order: 1,
-                    title: 'The Suspicious Video',
-                    description: 'A friend sends you a video of a world leader making a shocking announcement.',
-                    sceneType: 'INVESTIGATION',
-                    contentType: SceneContentType.VIDEO,
-                    availableChoices: ['WATCH_CLOSELY', 'SHARE_FAST', 'REPORT_MISINFO'],
-                    content: {
-                        textBody: 'Look at this! The President just announced we are leaving the UN!',
-                        videoUrl: 'https://example.com/deepfake-test.mp4',
-                    },
-                },
-                {
-                    order: 2,
-                    title: 'Technical Analysis',
-                    description: 'You notice some glitches around the speakers mouth and eyes.',
-                    sceneType: 'ANALYSIS',
-                    contentType: SceneContentType.FEED,
-                    availableChoices: ['RUN_DETECTOR', 'IGNORE_GLITCHES', 'CALL_FRIEND'],
-                    content: {
-                        textBody: 'The lighting seems slightly off and the audio sync is flickering.',
-                    },
-                },
-                {
-                    order: 3,
-                    title: 'Final Decision',
-                    description: 'The community is panicking. What is your final verdict?',
-                    sceneType: 'DECISION',
-                    contentType: SceneContentType.CHAT,
-                    availableChoices: ['CONFIRM_DEEPFAKE', 'CONFIRM_REAL', 'SEEK_EXPERT'],
-                    content: {
-                        textBody: 'Verified AI analysis indicates 98% probability of synthetic generation.',
-                    },
-                },
-            ],
+                    availableChoices: ['ACCEPT_PAYMENT', 'REJECT_AND_REPORT'],
+                    content: { textBody: 'A man in a hood offers you 50,000 to "leak" this specific version of the story. It includes extra accusations.' },
+                    choices: [
+                        {
+                            label: 'ACCEPT_PAYMENT',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: -100,
+                                outcomeType: OutcomeType.DEATH,
+                                endScenario: true,
+                                message: 'You sold your integrity. You are no longer fit to be a truth agent.'
+                            }
+                        },
+                        {
+                            label: 'REJECT_AND_REPORT',
+                            actionType: PlayerActionType.CHOICE,
+                            outcome: {
+                                trustScoreDelta: 40,
+                                outcomeType: OutcomeType.PASS,
+                                endScenario: true,
+                                message: 'Heroic integrity. You exposed both the fake news and the attempt to bribe the press.'
+                            }
+                        }
+                    ]
+                }
+            ]
         });
 
         this.logger.log('Scenarios seeded successfully');
@@ -338,9 +418,9 @@ export class GameSeederService {
             return;
         }
 
-        // Get the first game level
+        // Get the specific game level
         const gameLevel = await this.gameLevelRepository.findOne({
-            where: { levelNumber: 1 },
+            where: { levelNumber: data.levelNumber ?? 1 },
         });
 
         const scenario = this.scenarioRepository.create({
@@ -355,7 +435,9 @@ export class GameSeederService {
         const savedScenario = await this.scenarioRepository.save(scenario);
         this.logger.log(`Created scenario: ${data.title}`);
 
-        // Create scenes
+        const sceneMap = new Map<string, string>(); // Title -> ID
+
+        // Create scenes first
         for (const sceneData of data.scenes) {
             const scene = this.sceneRepository.create({
                 scenarioId: savedScenario.id,
@@ -365,9 +447,11 @@ export class GameSeederService {
                 sceneType: sceneData.sceneType,
                 contentType: sceneData.contentType,
                 availableChoices: sceneData.availableChoices,
+                isTerminal: sceneData.isTerminal || false,
             });
 
             const savedScene = await this.sceneRepository.save(scene);
+            sceneMap.set(sceneData.title, savedScene.id);
 
             // Create scene content
             const content = this.sceneContentRepository.create({
@@ -377,16 +461,20 @@ export class GameSeederService {
             });
 
             await this.sceneContentRepository.save(content);
+        }
 
-            // Create choices and their outcomes
+        // Create choices and their outcomes
+        for (const sceneData of data.scenes) {
+            const currentSceneId = sceneMap.get(sceneData.title);
+            if (!currentSceneId) continue;
+
             if (sceneData.choices) {
                 for (const choiceData of sceneData.choices) {
                     const choice = this.playerChoiceRepository.create({
-                        sceneId: savedScene.id,
+                        sceneId: currentSceneId,
                         label: choiceData.label,
                         actionType: choiceData.actionType,
-                        // nextSceneId will be handled after all scenes are created if it's a cross-reference,
-                        // but for now we'll assume sequential or handle it simply.
+                        nextSceneId: choiceData.nextSceneTitle ? sceneMap.get(choiceData.nextSceneTitle) : undefined,
                     });
                     const savedChoice = await this.playerChoiceRepository.save(choice);
 
@@ -404,8 +492,8 @@ export class GameSeederService {
                     }
                 }
             }
-
-            this.logger.log(`Created scene: ${sceneData.title}`);
         }
+
+        this.logger.log(`Setup ${data.scenes.length} scenes for: ${data.title}`);
     }
 }
