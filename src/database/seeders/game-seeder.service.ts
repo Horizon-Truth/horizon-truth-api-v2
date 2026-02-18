@@ -140,6 +140,20 @@ export class GameSeederService {
                 iconUrl: '/badges/top-10.png',
                 category: BadgeCategory.COMPETITIVE,
             },
+            {
+                code: 'COMMUNITY_PROTECTOR',
+                name: 'Community Protector',
+                description: 'Identified a viral misinformation campaign early',
+                iconUrl: '/badges/community-protector.png',
+                category: BadgeCategory.ACHIEVEMENT,
+            },
+            {
+                code: 'CRISIS_VERIFIER',
+                name: 'Crisis Verifier',
+                description: 'Successfully identified a high-stakes deepfake',
+                iconUrl: '/badges/crisis-verifier.png',
+                category: BadgeCategory.ACHIEVEMENT,
+            },
         ];
 
         for (const badgeData of badges) {

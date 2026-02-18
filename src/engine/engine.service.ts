@@ -309,6 +309,16 @@ export class EngineService {
                 result.message = templateOutcome.message;
                 result.trustScoreDelta = templateOutcome.trustScoreDelta;
 
+                // 4.5. Check for mid-scenario badge awards
+                try {
+                    const awardedMidGame = await this.gamificationService.checkOutcomeBadgeEligibility(userId, userOutcome);
+                    if (awardedMidGame.length > 0) {
+                        result.awardedBadges = awardedMidGame;
+                    }
+                } catch (badgeError) {
+                    console.error('Failed to check mid-game badges:', badgeError.message);
+                }
+
                 // 5. Handle scenario termination
                 if (templateOutcome.endScenario) {
                     await queryRunner.commitTransaction();
@@ -533,5 +543,43 @@ export class EngineService {
         };
 
         return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+    }
+
+    /**
+     * Get summary of player choices and consequences for the "Investigation Reveal" screen
+     */
+    async getScenarioSummary(userId: string, progressId: string): Promise<any> {
+        // Verify progress belongs to user
+        const progress = await this.gameProgressRepository.findOne({
+            where: { id: progressId, userId },
+            relations: ['scenario'],
+        });
+
+        if (!progress) {
+            throw new NotFoundException('Game progress not found');
+        }
+
+        // Fetch all outcomes for this specific progress session
+        const outcomes = await this.gameOutcomeRepository.find({
+            where: { progressId, userId },
+            relations: ['playerChoice'],
+            order: { createdAt: 'ASC' },
+        });
+
+        const summary = outcomes.map(outcome => ({
+            action: outcome.playerChoice?.label || 'Unknown Action',
+            consequence: outcome.message || 'No specific impact recorded.',
+            trustDelta: outcome.trustScoreDelta,
+            outcomeType: outcome.outcomeType,
+        }));
+
+        const totalTrustDelta = outcomes.reduce((sum, o) => sum + (o.trustScoreDelta || 0), 0);
+
+        return {
+            scenarioTitle: progress.scenario.title,
+            finalOutcome: progress.finalOutcome,
+            totalTrustDelta,
+            choices: summary,
+        };
     }
 }
