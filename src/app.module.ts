@@ -18,6 +18,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { SeederModule } from './database/seeders/seeder.module';
 import { ReportsModule } from './reports/reports.module';
 import { LanguagesModule } from './reports/languages.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { LanguagesModule } from './reports/languages.module';
     SeederModule,
     ReportsModule,
     LanguagesModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [

@@ -61,4 +61,24 @@ export class Scenario {
     @OneToMany(() => Scene, (scene) => scene.scenario)
     @ApiProperty({ type: () => Scene, isArray: true })
     scenes: Scene[];
+
+    @ApiPropertyOptional({ example: 'Learn to identify phishing attempts' })
+    @Column({ name: 'learning_objective', type: 'text', nullable: true })
+    learningObjective: string;
+
+    @ApiPropertyOptional({ example: 'High risk of data leakage' })
+    @Column({ name: 'behavioral_risk', type: 'text', nullable: true })
+    behavioralRisk: string;
+
+    @ApiPropertyOptional({ example: 'Fear of missing out (FOMO)' })
+    @Column({ name: 'psychological_trigger', type: 'text', nullable: true })
+    psychologicalTrigger: string;
+
+    @ApiPropertyOptional({ example: 'Always verify the sender address' })
+    @Column({ name: 'prevention_lesson', type: 'text', nullable: true })
+    preventionLesson: string;
+
+    @ApiPropertyOptional({ example: 'Cybersecurity' })
+    @Column({ name: 'theme', type: 'varchar', length: 255, nullable: true })
+    theme: string;
 }

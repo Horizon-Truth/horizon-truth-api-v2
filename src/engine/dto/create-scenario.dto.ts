@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsBoolean, IsOptional, IsInt } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';
 
@@ -24,4 +24,29 @@ export class CreateScenarioDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @ApiPropertyOptional({ example: 'Learn to identify phishing attempts' })
+    @IsOptional()
+    @IsString()
+    learningObjective?: string;
+
+    @ApiPropertyOptional({ example: 'High risk of data leakage' })
+    @IsOptional()
+    @IsString()
+    behavioralRisk?: string;
+
+    @ApiPropertyOptional({ example: 'Fear of missing out (FOMO)' })
+    @IsOptional()
+    @IsString()
+    psychologicalTrigger?: string;
+
+    @ApiPropertyOptional({ example: 'Always verify the sender address' })
+    @IsOptional()
+    @IsString()
+    preventionLesson?: string;
+
+    @ApiPropertyOptional({ example: 'Cybersecurity' })
+    @IsOptional()
+    @IsString()
+    theme?: string;
 }
