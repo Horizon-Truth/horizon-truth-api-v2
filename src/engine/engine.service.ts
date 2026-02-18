@@ -281,22 +281,28 @@ export class EngineService {
         // Mark as completed
         progress.status = GameProgressStatus.COMPLETED;
         progress.completedAt = new Date();
-        progress.finalOutcome = outcomeType;
+
+        // Calculate real score from player choices
+        const { score, totalPossible, percentage } = await this.calculateGameScore(
+            progress.userId,
+            progress.scenarioId,
+        );
+
+        // Determine outcome based on score percentage
+        const actualOutcome = this.determineOutcome(percentage);
+        progress.finalOutcome = actualOutcome;
 
         await this.gameProgressRepository.save(progress);
-
-        // Calculate score (simple: 100 points per scenario completed)
-        const score = 100;
 
         // Create game outcome
         const outcome = this.gameOutcomeRepository.create({
             userId: progress.userId,
             scenarioId: progress.scenarioId,
             progressId: progress.id,
-            outcomeType,
+            outcomeType: actualOutcome,
             score,
             completedAt: progress.completedAt,
-            feedback: this.generateFeedback(outcomeType, score),
+            feedback: this.generateFeedback(actualOutcome, score, percentage),
         });
 
         await this.gameOutcomeRepository.save(outcome);
@@ -309,8 +315,10 @@ export class EngineService {
             return {
                 status: 'game_completed',
                 outcome: {
-                    type: outcomeType,
+                    type: actualOutcome,
                     score,
+                    totalPossible,
+                    percentage: Math.round(percentage),
                     feedback: outcome.feedback,
                     scenarioTitle: progress.scenario.title,
                 },
@@ -322,8 +330,10 @@ export class EngineService {
             return {
                 status: 'game_completed',
                 outcome: {
-                    type: outcomeType,
+                    type: actualOutcome,
                     score,
+                    totalPossible,
+                    percentage: Math.round(percentage),
                     feedback: outcome.feedback,
                     scenarioTitle: progress.scenario.title,
                 },
@@ -397,16 +407,59 @@ export class EngineService {
     }
 
     /**
-     * Generate feedback based on outcome
+     * Calculate real score from player choices vs scene scoring map
      */
-    private generateFeedback(outcomeType: OutcomeType, score: number): string {
+    private async calculateGameScore(
+        userId: string,
+        scenarioId: string,
+    ): Promise<{ score: number; totalPossible: number; percentage: number }> {
+        // Get all player actions for this scenario
+        const actions = await this.playerActionRepository.find({
+            where: { userId, scenarioId },
+            relations: ['scene'],
+        });
+
+        // Get all scenes for the scenario
+        const scenes = await this.sceneRepository.find({
+            where: { scenarioId },
+        });
+
+        let score = 0;
+        const totalPossible = scenes.reduce((sum, s) => sum + (s.maxPoints || 10), 0);
+
+        for (const action of actions) {
+            const sceneScores = action.scene?.choiceScores;
+            if (sceneScores && action.choiceKey in sceneScores) {
+                score += sceneScores[action.choiceKey];
+            }
+        }
+
+        const percentage = totalPossible > 0 ? (score / totalPossible) * 100 : 0;
+        return { score, totalPossible, percentage };
+    }
+
+    /**
+     * Determine outcome type based on score percentage
+     */
+    private determineOutcome(percentage: number): OutcomeType {
+        if (percentage >= 80) return OutcomeType.SUCCESS;
+        if (percentage >= 50) return OutcomeType.NEUTRAL;
+        if (percentage >= 20) return OutcomeType.FAILURE;
+        return OutcomeType.DEATH;
+    }
+
+    /**
+     * Generate feedback based on outcome and score
+     */
+    private generateFeedback(outcomeType: OutcomeType, score: number, percentage: number): string {
         const feedbackMap = {
-            [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Score: ${score}`,
-            [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
-            [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement. Score: ${score}`,
-            [OutcomeType.DEATH]: `Game over! Make better choices next time. Score: ${score}`,
+            [OutcomeType.SUCCESS]: `Excellent work! You demonstrated strong critical thinking skills.`,
+            [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement.`,
+            [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present.`,
+            [OutcomeType.DEATH]: `You fell for misinformation. Learn from this experience and try again!`,
         };
 
-        return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+        const message = feedbackMap[outcomeType] || 'Game completed.';
+        return `${message} Score: ${score} (${Math.round(percentage)}%)`;
     }
 }

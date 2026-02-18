@@ -133,7 +133,7 @@ export class PlayersService {
             .select('COUNT(id)', 'total')
             .addSelect("COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)", 'completed')
             .from('game_progress', 'gp')
-            .where('gp.userId = :userId', { userId })
+            .where('gp.user_id = :userId', { userId })
             .getRawOne();
 
         const gamesPlayed = parseInt(stats.total, 10) || 0;
@@ -143,8 +143,8 @@ export class PlayersService {
         const scoreResult = await manager
             .createQueryBuilder()
             .select('SUM(score)', 'totalScore')
-            .from('game_outcome', 'go')
-            .where('userId = :userId', { userId })
+            .from('game_outcomes', 'go')
+            .where('go.user_id = :userId', { userId })
             .getRawOne();
 
         const totalScore = parseInt(scoreResult.totalScore, 10) || 0;
@@ -154,7 +154,7 @@ export class PlayersService {
             .createQueryBuilder()
             .select('COUNT(id)', 'count')
             .from('user_badges', 'ub')
-            .where('ub.userId = :userId', { userId })
+            .where('ub.user_id = :userId', { userId })
             .getRawOne();
 
         const badgesEarned = parseInt(badgesCount.count, 10) || 0;
@@ -164,8 +164,8 @@ export class PlayersService {
             .createQueryBuilder()
             .select('rank')
             .from('leaderboards', 'l')
-            .where('l.userId = :userId', { userId })
-            .andWhere("l.leaderboardType = 'GAME_SCORE'")
+            .where('l.user_id = :userId', { userId })
+            .andWhere("l.leaderboard_type = 'GAME_SCORE'")
             .andWhere("l.period = 'ALL_TIME'")
             .getRawOne();
 

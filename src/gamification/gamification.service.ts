@@ -107,7 +107,7 @@ export class GamificationService {
             .createQueryBuilder()
             .select('COUNT(id)', 'count')
             .from('game_progress', 'gp')
-            .where('gp.userId = :userId', { userId })
+            .where('gp.user_id = :userId', { userId })
             .andWhere('gp.status = :status', { status: 'COMPLETED' })
             .getRawOne();
 
@@ -117,8 +117,8 @@ export class GamificationService {
         const perfectScoresCount = await manager
             .createQueryBuilder()
             .select('COUNT(id)', 'count')
-            .from('game_outcome', 'go')
-            .where('go.userId = :userId', { userId })
+            .from('game_outcomes', 'go')
+            .where('go.user_id = :userId', { userId })
             .andWhere('go.score >= :score', { score: 100 })
             .getRawOne();
 
@@ -257,8 +257,8 @@ export class GamificationService {
         const result = await this.leaderboardRepository.manager
             .createQueryBuilder()
             .select('SUM(go.score)', 'totalScore')
-            .from('game_outcome', 'go')
-            .where('go.userId = :userId', { userId })
+            .from('game_outcomes', 'go')
+            .where('go.user_id = :userId', { userId })
             .getRawOne();
 
         return parseInt(result.totalScore, 10) || 0;

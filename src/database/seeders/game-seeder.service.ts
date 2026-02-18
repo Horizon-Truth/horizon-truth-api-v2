@@ -164,6 +164,8 @@ export class GameSeederService {
                     sceneType: 'INVESTIGATION',
                     contentType: SceneContentType.TEXT,
                     availableChoices: ['VERIFY', 'SHARE', 'IGNORE'],
+                    choiceScores: { VERIFY: 10, IGNORE: 5, SHARE: 0 },
+                    maxPoints: 10,
                     content: {
                         textBody: 'BREAKING: Scientists discover miracle cure that eliminates all diseases! Shared 50,000 times in the last hour.',
                     },
@@ -175,6 +177,8 @@ export class GameSeederService {
                     sceneType: 'ANALYSIS',
                     contentType: SceneContentType.TEXT,
                     availableChoices: ['TRUST', 'DOUBT', 'RESEARCH_MORE'],
+                    choiceScores: { DOUBT: 10, RESEARCH_MORE: 8, TRUST: 0 },
+                    maxPoints: 10,
                     content: {
                         textBody: 'The original post links to a website you\'ve never heard of. No major news outlets are reporting this story.',
                     },
@@ -186,6 +190,8 @@ export class GameSeederService {
                     sceneType: 'DECISION',
                     contentType: SceneContentType.TEXT,
                     availableChoices: ['REAL', 'FAKE', 'UNCERTAIN'],
+                    choiceScores: { FAKE: 10, UNCERTAIN: 3, REAL: 0 },
+                    maxPoints: 10,
                     content: {
                         textBody: 'You find that the website is known for spreading misinformation. The "scientists" mentioned don\'t exist.',
                     },
@@ -207,6 +213,8 @@ export class GameSeederService {
                     sceneType: 'INVESTIGATION',
                     contentType: SceneContentType.TEXT,
                     availableChoices: ['READ_ARTICLE', 'CHECK_SOURCE', 'SKIP'],
+                    choiceScores: { CHECK_SOURCE: 10, READ_ARTICLE: 5, SKIP: 0 },
+                    maxPoints: 10,
                     content: {
                         textBody: 'SHOCKING: Government Plans to Ban All Social Media Next Week!',
                     },
@@ -218,6 +226,8 @@ export class GameSeederService {
                     sceneType: 'ANALYSIS',
                     contentType: SceneContentType.TEXT,
                     availableChoices: ['BELIEVE', 'DOUBT', 'INVESTIGATE'],
+                    choiceScores: { DOUBT: 10, INVESTIGATE: 8, BELIEVE: 0 },
+                    maxPoints: 10,
                     content: {
                         textBody: 'The article cites "anonymous sources" and uses dramatic language. Other news sites aren\'t reporting this.',
                     },
@@ -265,6 +275,8 @@ export class GameSeederService {
                 sceneType: sceneData.sceneType,
                 contentType: sceneData.contentType,
                 availableChoices: sceneData.availableChoices,
+                choiceScores: sceneData.choiceScores || null,
+                maxPoints: sceneData.maxPoints || 10,
             });
 
             const savedScene = await this.sceneRepository.save(scene);
