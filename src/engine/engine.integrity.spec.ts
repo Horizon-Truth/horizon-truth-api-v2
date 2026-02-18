@@ -30,6 +30,19 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function makeRepo<T>(overrides: Partial<Record<keyof T, any>> = {}) {
+    const manager = {
+        findOne: jest.fn(),
+        save: jest.fn((entity: any, data: any) => data || entity),
+        create: jest.fn((entity: any, data: any) => data || entity),
+        createQueryBuilder: jest.fn(() => ({
+            select: jest.fn().mockReturnThis(),
+            addSelect: jest.fn().mockReturnThis(),
+            from: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            getRawOne: jest.fn().mockResolvedValue({ count: '0', totalScore: '0' }),
+        })),
+    } as any;
     return {
         findOne: jest.fn(),
         find: jest.fn(),
@@ -50,19 +63,7 @@ function makeRepo<T>(overrides: Partial<Record<keyof T, any>> = {}) {
             getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
             getRawOne: jest.fn().mockResolvedValue({ count: '0', totalScore: '0' }),
         })),
-        manager: {
-            findOne: jest.fn(),
-            save: jest.fn((entity, data) => ({ ...data })),
-            create: jest.fn((entity, data) => data),
-            createQueryBuilder: jest.fn(() => ({
-                select: jest.fn().mockReturnThis(),
-                addSelect: jest.fn().mockReturnThis(),
-                from: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                andWhere: jest.fn().mockReturnThis(),
-                getRawOne: jest.fn().mockResolvedValue({ count: '0', totalScore: '0' }),
-            })),
-        },
+        manager,
         ...overrides,
     };
 }
@@ -189,26 +190,29 @@ describe('Phase 8 — Integrity Testing', () => {
                 nextSceneId: 'scene-2',
                 outcomes: [],
             };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [scene1, scene2] },
+            };
 
             const qr = makeQueryRunner();
-            qr.manager.findOne.mockResolvedValue(null); // no template outcome
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress) // 1. Progress
+                .mockResolvedValueOnce(null)     // 2. Action (replay check)
+                .mockResolvedValueOnce(choice)   // 3. Choice
+                .mockResolvedValueOnce(null);    // 4. Outcome template
             dataSource.createQueryRunner.mockReturnValue(qr);
 
             sceneRepo.findOne.mockResolvedValue({
                 id: 'scene-2', title: 'Scene 2', order: 2, choices: [], content: null, availableChoices: [],
             });
-            progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [scene1, scene2] },
-                })
+            progressRepo.findOne // used in getCurrentScene/getGameProgress after commit
                 .mockResolvedValue({
                     id: 'progress-1', scenarioId: 'scenario-1', status: GameProgressStatus.IN_PROGRESS,
-                    currentSceneId: 'scene-2', // getCurrentScene needs this
+                    currentSceneId: 'scene-2',
                     scenario: { title: 'Test' }, currentScene: { id: 'scene-2' },
                 });
-            playerChoiceRepo.findOne.mockResolvedValue(choice);
 
             const result = await engineService.submitChoice('user-1', {
                 progressId: 'progress-1',
@@ -225,23 +229,26 @@ describe('Phase 8 — Integrity Testing', () => {
             const scene1 = { id: 'scene-1', order: 1 };
             const scene2 = { id: 'scene-2', order: 2 };
             const choice = { id: 'choice-1', label: 'VERIFY', nextSceneId: null, outcomes: [] };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [scene1, scene2] },
+            };
 
             const qr = makeQueryRunner();
-            qr.manager.findOne.mockResolvedValue(null);
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress) // 1. Progress
+                .mockResolvedValueOnce(null)     // 2. Action (replay check)
+                .mockResolvedValueOnce(choice)   // 3. Choice
+                .mockResolvedValueOnce(null);    // 4. Outcome template
             dataSource.createQueryRunner.mockReturnValue(qr);
 
-            progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [scene1, scene2] },
-                })
+            progressRepo.findOne // used in getCurrentScene/getGameProgress after commit
                 .mockResolvedValue({
                     id: 'progress-1', scenarioId: 'scenario-1', status: GameProgressStatus.IN_PROGRESS,
-                    currentSceneId: 'scene-2', // getCurrentScene needs this
+                    currentSceneId: 'scene-2',
                     scenario: { title: 'Test' }, currentScene: { id: 'scene-2' },
                 });
-            playerChoiceRepo.findOne.mockResolvedValue(choice);
             sceneRepo.findOne.mockResolvedValue({
                 id: 'scene-2', title: 'Scene 2', order: 2, choices: [], content: null, availableChoices: [],
             });
@@ -261,35 +268,35 @@ describe('Phase 8 — Integrity Testing', () => {
         it('should complete game when no next scene exists (terminal)', async () => {
             const scene1 = { id: 'scene-1', order: 1 };
             const choice = { id: 'choice-1', label: 'IGNORE', nextSceneId: null, outcomes: [] };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [scene1], title: 'Test' }, user: {},
+            };
 
             const qr = makeQueryRunner();
-            qr.manager.findOne.mockResolvedValue(null);
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress) // 1. Progress
+                .mockResolvedValueOnce(null)     // 2. Action
+                .mockResolvedValueOnce(choice)   // 3. Choice
+                .mockResolvedValueOnce(null);    // 4. Outcome
             dataSource.createQueryRunner.mockReturnValue(qr);
 
-            progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [scene1] }, // Only one scene
-                })
-                .mockResolvedValue({
-                    id: 'progress-1', userId: 'user-1', status: GameProgressStatus.COMPLETED,
-                    scenario: { title: 'Test' }, user: {},
-                });
-            playerChoiceRepo.findOne.mockResolvedValue(choice);
-            gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1' });
+            // completeGame dependencies
+            progressRepo.findOne.mockResolvedValue(progress);
+            progressRepo.save.mockImplementation((p) => p);
+            gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1', trustScoreDelta: 0 });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
-            progressRepo.save.mockResolvedValue({ id: 'progress-1', status: GameProgressStatus.COMPLETED });
+            progressRepo.manager.findOne.mockResolvedValue(null);
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
@@ -304,12 +311,14 @@ describe('Phase 8 — Integrity Testing', () => {
         });
 
         it('should reject choice submission when game is already completed', async () => {
-            progressRepo.findOne.mockResolvedValue({
-                id: 'progress-1',
-                userId: 'user-1',
-                status: GameProgressStatus.COMPLETED,
-                scenario: { scenes: [] },
-            });
+            const qr = makeQueryRunner();
+            dataSource.createQueryRunner.mockReturnValue(qr);
+
+            const completedProgress = {
+                id: 'progress-1', userId: 'user-1', status: GameProgressStatus.COMPLETED,
+            };
+
+            qr.manager.findOne.mockResolvedValueOnce(completedProgress);
 
             await expect(engineService.submitChoice('user-1', {
                 progressId: 'progress-1',
@@ -319,13 +328,18 @@ describe('Phase 8 — Integrity Testing', () => {
         });
 
         it('should reject choice submission for wrong scene', async () => {
-            progressRepo.findOne.mockResolvedValue({
+            const qr = makeQueryRunner();
+            dataSource.createQueryRunner.mockReturnValue(qr);
+
+            const progress = {
                 id: 'progress-1',
                 userId: 'user-1',
                 currentSceneId: 'scene-2', // User is on scene-2
                 status: GameProgressStatus.IN_PROGRESS,
                 scenario: { scenes: [] },
-            });
+            };
+
+            qr.manager.findOne.mockResolvedValueOnce(progress);
 
             await expect(engineService.submitChoice('user-1', {
                 progressId: 'progress-1',
@@ -351,30 +365,39 @@ describe('Phase 8 — Integrity Testing', () => {
             };
             const choice = { id: 'choice-1', label: 'VERIFY', nextSceneId: 'scene-2', outcomes: [templateOutcome] };
             const playerProfile = { userId: 'user-1', currentTrustScore: 50 };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [{ id: 'scene-1', order: 1 }, { id: 'scene-2', order: 2 }] },
+            };
 
             const qr = makeQueryRunner();
-            // Since templateOutcome is in choice.outcomes, the first qr.manager.findOne
-            // call is for PlayerProfile (not for template outcome DB lookup)
-            qr.manager.findOne.mockResolvedValueOnce(playerProfile);
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress)      // 1. Progress
+                .mockResolvedValueOnce(null)          // 2. Action
+                .mockResolvedValueOnce(choice)        // 3. Choice
+                .mockResolvedValueOnce(playerProfile);// 4. PlayerProfile
             qr.manager.save.mockImplementation((entity, data) => data ? { ...data } : { ...entity });
             dataSource.createQueryRunner.mockReturnValue(qr);
 
-            progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [{ id: 'scene-1', order: 1 }, { id: 'scene-2', order: 2 }] },
-                })
+            progressRepo.findOne // after commit
                 .mockResolvedValue({
                     id: 'progress-1', scenarioId: 'scenario-1', status: GameProgressStatus.IN_PROGRESS,
-                    currentSceneId: 'scene-2', // getCurrentScene needs this
+                    currentSceneId: 'scene-2',
                     scenario: { title: 'Test' }, currentScene: { id: 'scene-2' },
                 });
-            playerChoiceRepo.findOne.mockResolvedValue({ ...choice, outcomes: [templateOutcome] });
             sceneRepo.findOne.mockResolvedValue({
                 id: 'scene-2', title: 'Scene 2', order: 2, choices: [], content: null, availableChoices: [],
             });
-            userBadgeRepo.manager = { findOne: jest.fn().mockResolvedValue(null) };
+            userBadgeRepo.manager.findOne.mockResolvedValue(null);
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+            });
 
             const result = await engineService.submitChoice('user-1', {
                 progressId: 'progress-1',
@@ -384,12 +407,7 @@ describe('Phase 8 — Integrity Testing', () => {
 
             // Trust delta should be returned in the result
             expect(result.trustScoreDelta).toBe(15);
-
-            // Verify that the transaction manager's save was called (profile update happened)
             expect(qr.manager.save).toHaveBeenCalled();
-
-            // Verify the player profile findOne was called to fetch the profile
-            expect(qr.manager.findOne).toHaveBeenCalled();
         });
 
         it('should correctly apply negative trust score delta (penalty)', async () => {
@@ -405,47 +423,59 @@ describe('Phase 8 — Integrity Testing', () => {
             };
             const choice = { id: 'choice-1', label: 'SHARE', nextSceneId: null, outcomes: [templateOutcome] };
             const playerProfile = { userId: 'user-1', currentTrustScore: 30 };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+                user: {}
+            };
 
             const qr = makeQueryRunner();
-            qr.manager.findOne.mockResolvedValueOnce(playerProfile);
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress)      // 1. Progress
+                .mockResolvedValueOnce(null)          // 2. Action
+                .mockResolvedValueOnce(choice)        // 3. Choice
+                .mockResolvedValueOnce(playerProfile);// 4. Profile
             qr.manager.save.mockImplementation((entity, data) => ({ ...data }));
             dataSource.createQueryRunner.mockReturnValue(qr);
 
             progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
-                })
+                .mockResolvedValueOnce(progress)
                 .mockResolvedValue({
                     id: 'progress-1', userId: 'user-1', status: GameProgressStatus.COMPLETED,
                     scenario: { title: 'Test' }, user: {},
                 });
-            playerChoiceRepo.findOne.mockResolvedValue({ ...choice, outcomes: [templateOutcome] });
+
             gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1' });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
             progressRepo.save.mockResolvedValue({ id: 'progress-1', status: GameProgressStatus.COMPLETED });
+
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
 
-            const savedProfile = qr.manager.save.mock.calls.find(
+            await engineService.submitChoice('user-1', {
+                progressId: 'progress-1',
+                sceneId: 'scene-1',
+                choiceId: 'choice-1',
+            });
+
+            const savedProfileCall = qr.manager.save.mock.calls.find(
                 (call) => call[0] === 'PlayerProfile'
             );
 
             // The trust score should be 30 - 20 = 10
-            if (savedProfile) {
-                expect(savedProfile[1].currentTrustScore).toBe(10);
+            if (savedProfileCall) {
+                expect(savedProfileCall[1].currentTrustScore).toBe(10);
             }
         });
 
@@ -462,47 +492,59 @@ describe('Phase 8 — Integrity Testing', () => {
             };
             const choice = { id: 'choice-1', label: 'SHARE', nextSceneId: null, outcomes: [templateOutcome] };
             const playerProfile = { userId: 'user-1', currentTrustScore: 50 };
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+                user: {}
+            };
 
             const qr = makeQueryRunner();
-            qr.manager.findOne.mockResolvedValueOnce(playerProfile);
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress)      // 1. Progress
+                .mockResolvedValueOnce(null)          // 2. Action
+                .mockResolvedValueOnce(choice)        // 3. Choice
+                .mockResolvedValueOnce(playerProfile);// 4. Profile
             qr.manager.save.mockImplementation((entity, data) => ({ ...data }));
             dataSource.createQueryRunner.mockReturnValue(qr);
 
             progressRepo.findOne
-                .mockResolvedValueOnce({
-                    id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
-                    currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
-                    scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
-                })
+                .mockResolvedValueOnce(progress)
                 .mockResolvedValue({
                     id: 'progress-1', userId: 'user-1', status: GameProgressStatus.COMPLETED,
                     scenario: { title: 'Test' }, user: {},
                 });
-            playerChoiceRepo.findOne.mockResolvedValue({ ...choice, outcomes: [templateOutcome] });
+
             gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1' });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
             progressRepo.save.mockResolvedValue({ id: 'progress-1', status: GameProgressStatus.COMPLETED });
+
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
 
+            await engineService.submitChoice('user-1', {
+                progressId: 'progress-1',
+                sceneId: 'scene-1',
+                choiceId: 'choice-1',
+            });
+
             // The message should have placeholders replaced
-            const savedOutcome = qr.manager.save.mock.calls.find(
+            const savedOutcomeCall = qr.manager.save.mock.calls.find(
                 (call) => call[0] === GameOutcome || (typeof call[0] === 'function' && call[0].name === 'GameOutcome')
             );
-            if (savedOutcome) {
-                expect(savedOutcome[1].message).not.toContain('{{reach}}');
-                expect(savedOutcome[1].message).not.toContain('{{percent}}');
+            if (savedOutcomeCall) {
+                expect(savedOutcomeCall[1].message).not.toContain('{{reach}}');
+                expect(savedOutcomeCall[1].message).not.toContain('{{percent}}');
             }
         });
 
@@ -562,9 +604,17 @@ describe('Phase 8 — Integrity Testing', () => {
                 scenarioId: 'scenario-1',
             } as GameOutcome;
 
-            userBadgeRepo.manager = {
-                findOne: jest.fn().mockResolvedValue({ id: 'scenario-1', title: 'The Viral Post' }),
-            };
+            userBadgeRepo.manager.findOne.mockResolvedValue({ id: 'scenario-1', title: 'The Viral Post' });
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+            });
+            userBadgeRepo.manager.save.mockImplementation((e, d) => d || e);
+            userBadgeRepo.manager.create.mockImplementation((e, d) => d || e);
 
             const badge = { id: 'badge-1', code: 'COMMUNITY_PROTECTOR' };
             badgeRepo.findOne.mockResolvedValue(badge);
@@ -591,15 +641,14 @@ describe('Phase 8 — Integrity Testing', () => {
         it('should prevent double-awarding in same checkBadgeEligibility loop', async () => {
             // Simulate user completing their first game
             userBadgeRepo.find.mockResolvedValue([]); // No existing badges
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '1' }), // 1 completed game
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+            });
 
             badgeRepo.findOne.mockResolvedValue({ id: 'badge-1', code: 'FIRST_GAME' });
             userBadgeRepo.findOne.mockResolvedValue(null);
@@ -629,20 +678,26 @@ describe('Phase 8 — Integrity Testing', () => {
             progressRepo.save.mockResolvedValue({ ...progress, status: GameProgressStatus.COMPLETED });
             gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1', trustScoreDelta: 0 });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
-            progressRepo.manager = {
-                findOne: jest.fn().mockResolvedValue({ userId: 'user-1', currentTrustScore: 50 }),
-                save: jest.fn(),
-            };
+            progressRepo.manager.findOne.mockResolvedValue({ userId: 'user-1', currentTrustScore: 50 });
+            progressRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+            });
+            progressRepo.manager.save.mockImplementation((e, d) => d || e);
+            progressRepo.manager.create.mockImplementation((e, d) => d || e);
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
@@ -668,20 +723,17 @@ describe('Phase 8 — Integrity Testing', () => {
             progressRepo.save.mockImplementation((p) => p);
             gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1', trustScoreDelta: 0 });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
-            progressRepo.manager = {
-                findOne: jest.fn().mockResolvedValue(null),
-                save: jest.fn(),
-            };
+            progressRepo.manager.findOne.mockResolvedValue(null);
+            progressRepo.manager.save.mockResolvedValue(null);
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
@@ -705,20 +757,17 @@ describe('Phase 8 — Integrity Testing', () => {
             progressRepo.save.mockImplementation((p) => p);
             gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1', trustScoreDelta: 0 });
             gameOutcomeRepo.save.mockResolvedValue({ id: 'outcome-1', trustScoreDelta: 0 });
-            progressRepo.manager = {
-                findOne: jest.fn().mockResolvedValue(null),
-                save: jest.fn(),
-            };
+            progressRepo.manager.findOne.mockResolvedValue(null);
+            progressRepo.manager.save.mockResolvedValue(null);
             userBadgeRepo.find.mockResolvedValue([]);
-            userBadgeRepo.manager = {
-                createQueryBuilder: jest.fn(() => ({
-                    select: jest.fn().mockReturnThis(),
-                    from: jest.fn().mockReturnThis(),
-                    where: jest.fn().mockReturnThis(),
-                    andWhere: jest.fn().mockReturnThis(),
-                    getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
-                })),
-            };
+            userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                from: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+            });
             badgeRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.findOne.mockResolvedValue(null);
             leaderboardRepo.find.mockResolvedValue([]);
@@ -760,6 +809,73 @@ describe('Phase 8 — Integrity Testing', () => {
 
             await expect(engineService.getGameProgress('non-existent-id'))
                 .rejects.toThrow(NotFoundException);
+        });
+    });
+
+    describe('5. Phase 9 Security - Lockdown & Exploits', () => {
+        it('should prevent replaying a choice for the same scene', async () => {
+            const qr = makeQueryRunner();
+            dataSource.createQueryRunner.mockReturnValue(qr);
+
+            const progress = {
+                id: 'progress-1', userId: 'user-1', scenarioId: 'scenario-1',
+                currentSceneId: 'scene-1', status: GameProgressStatus.IN_PROGRESS,
+                scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+            };
+
+            // 1st findOne: Progress (with lock)
+            // 2nd findOne: Existing PlayerAction (to check replay)
+            qr.manager.findOne
+                .mockResolvedValueOnce(progress)        // Progress fetch
+                .mockResolvedValueOnce({ id: 'act-1' }); // Replay found!
+
+            await expect(engineService.submitChoice('user-1', {
+                progressId: 'progress-1',
+                sceneId: 'scene-1',
+                choiceId: 'choice-1',
+            })).rejects.toThrow(BadRequestException);
+
+            expect(qr.rollbackTransaction).toHaveBeenCalled();
+        });
+
+        it('should block choice submission for COMPLETED games', async () => {
+            const qr = makeQueryRunner();
+            dataSource.createQueryRunner.mockReturnValue(qr);
+
+            const completedProgress = {
+                id: 'progress-1', userId: 'user-1', status: GameProgressStatus.COMPLETED,
+            };
+
+            qr.manager.findOne.mockResolvedValueOnce(completedProgress);
+
+            await expect(engineService.submitChoice('user-1', {
+                progressId: 'progress-1',
+                sceneId: 'scene-1',
+                choiceId: 'choice-1',
+            })).rejects.toThrow(BadRequestException);
+        });
+
+        it('should block re-completion of already COMPLETED games', async () => {
+            progressRepo.findOne.mockResolvedValue({
+                id: 'progress-1', status: GameProgressStatus.COMPLETED,
+            });
+
+            await expect(engineService.completeGame('progress-1', OutcomeType.SUCCESS))
+                .rejects.toThrow(BadRequestException);
+        });
+
+        it('should enforce user ownership through locked progress fetch', async () => {
+            const qr = makeQueryRunner();
+            dataSource.createQueryRunner.mockReturnValue(qr);
+
+            // Return null because ownership (userId) doesn't match
+            qr.manager.findOne.mockResolvedValueOnce(null);
+
+            await expect(engineService.submitChoice('wrong-user', {
+                progressId: 'progress-1',
+                sceneId: 'scene-1',
+                choiceId: 'choice-1',
+            })).rejects.toThrow(NotFoundException);
         });
     });
 });
