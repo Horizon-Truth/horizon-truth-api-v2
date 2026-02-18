@@ -5,6 +5,8 @@ import { PlayerProfile } from './entities/player-profile.entity';
 import { Avatar } from './entities/avatar.entity';
 import { CreatePlayerProfileDto } from './dto/create-player-profile.dto';
 import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
+import { InitializeProfileDto } from './dto/initialize-profile.dto';
+import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
 
 @Injectable()
 export class PlayersService {
@@ -13,6 +15,8 @@ export class PlayersService {
         private playerProfileRepository: Repository<PlayerProfile>,
         @InjectRepository(Avatar)
         private avatarRepository: Repository<Avatar>,
+        @InjectRepository(PlayerAlgorithmProfile)
+        private algorithmProfileRepository: Repository<PlayerAlgorithmProfile>,
     ) { }
 
     /**
@@ -41,7 +45,8 @@ export class PlayersService {
         const profile = this.playerProfileRepository.create({
             userId,
             ...createDto,
-            trustScoreInitial: 50, // Default initial trust score
+            trustScoreInitial: 0, // Initial trust score for Level 0 logic
+            currentTrustScore: 0,
         });
 
         return this.playerProfileRepository.save(profile);
@@ -106,6 +111,57 @@ export class PlayersService {
         profile.onboardingCompleted = true;
         profile.onboardingCompletedAt = new Date();
         await this.playerProfileRepository.save(profile);
+    }
+
+    /**
+     * Initialize player profile during onboarding (Level 0)
+     */
+    async initializeProfile(userId: string, initializeDto: InitializeProfileDto): Promise<PlayerProfile> {
+        let profile = await this.playerProfileRepository.findOne({
+            where: { userId },
+        });
+
+        if (!profile) {
+            // If No profile exists (shouldn't happen with auto-creation, but safe-guard)
+            profile = this.playerProfileRepository.create({ userId });
+        }
+
+        // 1. Verify avatar exists
+        const avatar = await this.avatarRepository.findOne({
+            where: { id: initializeDto.avatarId },
+        });
+
+        if (!avatar) {
+            throw new NotFoundException(`Avatar with ID ${initializeDto.avatarId} not found`);
+        }
+
+        // 2. Update profile with onboarding data
+        profile.nickname = initializeDto.nickname;
+        profile.avatarId = initializeDto.avatarId;
+        profile.fictionalRegionId = initializeDto.fictionalRegionId || null;
+        profile.trustScoreInitial = 0;
+        profile.currentTrustScore = 0;
+        profile.onboardingCompleted = true;
+        profile.onboardingCompletedAt = new Date();
+
+        await this.playerProfileRepository.save(profile);
+
+        // 3. Create initial algorithm profile if it doesn't exist
+        const existingAlgoProfile = await this.algorithmProfileRepository.findOne({
+            where: { userId },
+        });
+
+        if (!existingAlgoProfile) {
+            const algoProfile = this.algorithmProfileRepository.create({
+                userId,
+                biasType: 'INITIAL',
+                exposureScore: 0,
+                panicSensitivity: 0,
+            });
+            await this.algorithmProfileRepository.save(algoProfile);
+        }
+
+        return this.getProfile(userId);
     }
 
     /**

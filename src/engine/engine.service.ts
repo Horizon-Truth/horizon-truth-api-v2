@@ -297,16 +297,26 @@ export class EngineService {
                 }
 
                 // 4. Create a user-specific record of this outcome
+                let processedMessage = templateOutcome.message || '';
+                if (processedMessage.includes('{{reach}}') || processedMessage.includes('{{percent}}')) {
+                    const reach = Math.floor(Math.random() * 900) + 100; // 100 - 1000
+                    const percent = Math.floor(Math.random() * 41) + 50; // 50% - 90%
+                    processedMessage = processedMessage
+                        .replace('{{reach}}', reach.toString())
+                        .replace('{{percent}}', percent.toString());
+                }
+
                 const userOutcome = queryRunner.manager.create(GameOutcome, {
                     ...templateOutcome,
                     id: undefined, // Let it generate a new UUID
                     userId,
                     progressId,
+                    message: processedMessage,
                     completedAt: new Date(),
                 });
                 await queryRunner.manager.save(userOutcome);
 
-                result.message = templateOutcome.message;
+                result.message = processedMessage;
                 result.trustScoreDelta = templateOutcome.trustScoreDelta;
 
                 // 4.5. Check for mid-scenario badge awards

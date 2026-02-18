@@ -197,7 +197,7 @@ export class GameSeederService {
                                 trustScoreDelta: -10,
                                 outcomeType: OutcomeType.FAIL,
                                 endScenario: true,
-                                message: 'You shared misinformation without verifying. Your trust score has decreased.',
+                                message: 'Your share increased Panic Score of {{reach}} people by {{percent}}%! You shared misinformation without verifying. Your trust score has decreased.',
                             }
                         },
                         {
