@@ -5,6 +5,9 @@ import {
   Put,
   Body,
   Param,
+  Query,
+  Patch,
+  Delete,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -18,12 +21,17 @@ import { PlayersService } from './players.service';
 import { CreatePlayerProfileDto } from './dto/create-player-profile.dto';
 import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
 import { InitializeProfileDto } from './dto/initialize-profile.dto';
+import { CreateAvatarDto } from './dto/create-avatar.dto';
+import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../shared/enums/user-role.enum';
 
 @ApiTags('Players')
 @Controller('players')
 export class PlayersController {
-  constructor(private readonly playersService: PlayersService) {}
+  constructor(private readonly playersService: PlayersService) { }
 
   @Get('avatars')
   @ApiOperation({ summary: 'List all available avatars' })
@@ -122,5 +130,51 @@ export class PlayersController {
   @ApiResponse({ status: 404, description: 'Profile not found.' })
   async getPublicProfile(@Param('userId') userId: string) {
     return this.playersService.getProfile(userId);
+  }
+
+  // --- Administrative Avatar Management ---
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Get('admin/avatars')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all avatars (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Avatars retrieved successfully.' })
+  async findAllAvatarsAdmin(@Query() query: any) {
+    return this.playersService.findAllAvatarsAdmin(query);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Post('admin/avatars')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new avatar (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Avatar created successfully.' })
+  async createAvatar(@Body() createDto: CreateAvatarDto) {
+    return this.playersService.createAvatar(createDto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Patch('admin/avatars/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update an avatar (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Avatar updated successfully.' })
+  async updateAvatar(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateAvatarDto,
+  ) {
+    return this.playersService.updateAvatar(id, updateDto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Delete('admin/avatars/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete an avatar (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Avatar deleted successfully.' })
+  async deleteAvatar(@Param('id') id: string) {
+    await this.playersService.deleteAvatar(id);
+    return { message: 'Avatar deleted successfully' };
   }
 }

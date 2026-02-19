@@ -11,6 +11,8 @@ import { Region } from './entities/region.entity';
 import { CreatePlayerProfileDto } from './dto/create-player-profile.dto';
 import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
 import { InitializeProfileDto } from './dto/initialize-profile.dto';
+import { CreateAvatarDto } from './dto/create-avatar.dto';
+import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
 
 @Injectable()
@@ -24,7 +26,7 @@ export class PlayersService {
     private regionRepository: Repository<Region>,
     @InjectRepository(PlayerAlgorithmProfile)
     private algorithmProfileRepository: Repository<PlayerAlgorithmProfile>,
-  ) {}
+  ) { }
 
   /**
    * Create a new player profile
@@ -345,5 +347,68 @@ export class PlayersService {
     const result = await this.playerProfileRepository.delete({ userId });
     if (result.affected === 0)
       throw new NotFoundException('Player profile not found');
+  }
+
+  /**
+   * Get all avatars for administration
+   */
+  async findAllAvatarsAdmin(query: any): Promise<any> {
+    const { isActive, ageGroup, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.avatarRepository.createQueryBuilder('avatar');
+
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('avatar.isActive = :isActive', {
+        isActive: isActive === 'true',
+      });
+    }
+
+    if (ageGroup) {
+      queryBuilder.andWhere('avatar.ageGroup = :ageGroup', { ageGroup });
+    }
+
+    const [data, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('avatar.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Create a new avatar
+   */
+  async createAvatar(dto: CreateAvatarDto): Promise<Avatar> {
+    const avatar = this.avatarRepository.create(dto);
+    return this.avatarRepository.save(avatar);
+  }
+
+  /**
+   * Update an avatar
+   */
+  async updateAvatar(id: string, dto: UpdateAvatarDto): Promise<Avatar> {
+    const avatar = await this.avatarRepository.findOne({ where: { id } });
+    if (!avatar) throw new NotFoundException('Avatar not found');
+
+    Object.assign(avatar, dto);
+    return this.avatarRepository.save(avatar);
+  }
+
+  /**
+   * Delete an avatar
+   */
+  async deleteAvatar(id: string): Promise<void> {
+    const result = await this.avatarRepository.delete(id);
+    if (result.affected === 0) throw new NotFoundException('Avatar not found');
   }
 }
