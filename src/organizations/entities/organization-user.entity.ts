@@ -6,10 +6,10 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../../users/entities/user.entity';
 import { Organization } from './organization.entity';
-import { OrganizationUserRole } from 'src/shared/enums/organization-user-role.enum';
-import { OrganizationUserStatus } from 'src/shared/enums/organization-user-status.enum';
+import { OrganizationUserRole } from '../../shared/enums/organization-user-role.enum';
+import { OrganizationUserStatus } from '../../shared/enums/organization-user-status.enum';
 
 @Entity('organization_users')
 export class OrganizationUser {
