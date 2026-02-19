@@ -13,6 +13,7 @@ import { GameProgress } from './entities/game-progress.entity';
 import { EngineService } from './engine.service';
 import { EngineController } from './engine.controller';
 import { GamificationModule } from '../gamification/gamification.module';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { ScenarioAdminController } from './admin/scenario-admin.controller';
 
 @Module({
@@ -28,6 +29,7 @@ import { ScenarioAdminController } from './admin/scenario-admin.controller';
       PlayerAction,
       GameOutcome,
       GameProgress,
+      PlayerProfile,
     ]),
     forwardRef(() => GamificationModule),
   ],
@@ -35,4 +37,4 @@ import { ScenarioAdminController } from './admin/scenario-admin.controller';
   providers: [EngineService],
   exports: [EngineService, TypeOrmModule],
 })
-export class EngineModule {}
+export class EngineModule { }
