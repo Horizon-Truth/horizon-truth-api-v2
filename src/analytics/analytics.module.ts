@@ -9,16 +9,16 @@ import { PlayerSceneEvent } from './entities/player-scene-event.entity';
 import { PlayerAlgorithmProfile } from './entities/player-algorithm-profile.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            AnalyticsSnapshot,
-            MisinformationHeatmap,
-            OrganizationDashboard,
-            DashboardWidget,
-            PlayerSceneEvent,
-            PlayerAlgorithmProfile,
-        ]),
-    ],
-    exports: [TypeOrmModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      AnalyticsSnapshot,
+      MisinformationHeatmap,
+      OrganizationDashboard,
+      DashboardWidget,
+      PlayerSceneEvent,
+      PlayerAlgorithmProfile,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

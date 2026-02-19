@@ -1,4 +1,10 @@
-import { IsString, IsEnum, IsBoolean, IsOptional, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsBoolean,
+  IsOptional,
+  IsInt,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';

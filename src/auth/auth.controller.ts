@@ -32,7 +32,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
-  ) { }
+  ) {}
 
   @Throttle({ default: { limit: 10, ttl: 300000 } }) // 10 requests per 5 minutes
   @Post('register')
@@ -40,7 +40,11 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully registered.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 429, description: 'Too Many Requests.' })
-  async register(@Body() registerDto: RegisterDto, @Request() req, @Ip() ip: string) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Request() req,
+    @Ip() ip: string,
+  ) {
     try {
       const user = await this.usersService.create(registerDto);
       const userAgent = req.headers['user-agent'];
@@ -49,7 +53,10 @@ export class AuthController {
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new HttpException(error.message || 'Registration failed', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error.message || 'Registration failed',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -60,7 +67,10 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 429, description: 'Too Many Requests.' })
   async login(@Body() loginDto: LoginDto, @Request() req, @Ip() ip: string) {
-    const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+    const user = await this.authService.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -145,4 +155,3 @@ export class AuthController {
     return { message: 'All sessions revoked successfully' };
   }
 }
-

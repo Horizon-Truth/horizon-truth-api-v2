@@ -56,20 +56,6 @@ export class Scene {
   @Column({ name: 'available_choices', type: 'jsonb', nullable: true })
   availableChoices: string[];
 
-  @ApiProperty({
-    example: { VERIFY: 10, IGNORE: 5, SHARE: 0 },
-    description: 'Map of choice key to points awarded',
-  })
-  @Column({ name: 'choice_scores', type: 'jsonb', nullable: true })
-  choiceScores: Record<string, number>;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Maximum possible points for this scene',
-  })
-  @Column({ name: 'max_points', type: 'int', default: 10 })
-  maxPoints: number;
-
   @ApiProperty({ default: false })
   @Column({ name: 'is_terminal', type: 'boolean', default: false })
   isTerminal: boolean;

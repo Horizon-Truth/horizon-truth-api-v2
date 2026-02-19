@@ -6,69 +6,74 @@ import { OrganizationStatus } from '../shared/enums/organization-status.enum';
 
 @Injectable()
 export class OrganizationsService {
-    constructor(
-        @InjectRepository(Organization)
-        private readonly organizationRepository: Repository<Organization>,
-    ) { }
+  constructor(
+    @InjectRepository(Organization)
+    private readonly organizationRepository: Repository<Organization>,
+  ) {}
 
-    async findAll(query: any): Promise<any> {
-        const { status, type, country, page = 1, limit = 10 } = query;
-        const skip = (page - 1) * limit;
+  async findAll(query: any): Promise<any> {
+    const { status, type, country, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-        const queryBuilder = this.organizationRepository.createQueryBuilder('organization');
+    const queryBuilder =
+      this.organizationRepository.createQueryBuilder('organization');
 
-        if (status) {
-            queryBuilder.andWhere('organization.status = :status', { status });
-        }
-
-        if (type) {
-            queryBuilder.andWhere('organization.type = :type', { type });
-        }
-
-        if (country) {
-            queryBuilder.andWhere('organization.country = :country', { country });
-        }
-
-        const [data, total] = await queryBuilder
-            .skip(skip)
-            .take(limit)
-            .orderBy('organization.createdAt', 'DESC')
-            .getManyAndCount();
-
-        return {
-            data,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            }
-        };
+    if (status) {
+      queryBuilder.andWhere('organization.status = :status', { status });
     }
 
-    async findById(id: string): Promise<Organization> {
-        const org = await this.organizationRepository.findOne({ where: { id } });
-        if (!org) throw new NotFoundException('Organization not found');
-        return org;
+    if (type) {
+      queryBuilder.andWhere('organization.type = :type', { type });
     }
 
-    async create(createDto: any): Promise<Organization> {
-        const org = this.organizationRepository.create(createDto);
-        return this.organizationRepository.save(Array.isArray(org) ? org[0] : org);
+    if (country) {
+      queryBuilder.andWhere('organization.country = :country', { country });
     }
 
-    async update(id: string, updateDto: any): Promise<Organization> {
-        await this.organizationRepository.update(id, updateDto);
-        return this.findById(id);
-    }
+    const [data, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('organization.createdAt', 'DESC')
+      .getManyAndCount();
 
-    async delete(id: string): Promise<void> {
-        const result = await this.organizationRepository.delete(id);
-        if (result.affected === 0) throw new NotFoundException('Organization not found');
-    }
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 
-    async updateStatus(id: string, status: OrganizationStatus): Promise<Organization> {
-        await this.organizationRepository.update(id, { status });
-        return this.findById(id);
-    }
+  async findById(id: string): Promise<Organization> {
+    const org = await this.organizationRepository.findOne({ where: { id } });
+    if (!org) throw new NotFoundException('Organization not found');
+    return org;
+  }
+
+  async create(createDto: any): Promise<Organization> {
+    const org = this.organizationRepository.create(createDto);
+    return this.organizationRepository.save(Array.isArray(org) ? org[0] : org);
+  }
+
+  async update(id: string, updateDto: any): Promise<Organization> {
+    await this.organizationRepository.update(id, updateDto);
+    return this.findById(id);
+  }
+
+  async delete(id: string): Promise<void> {
+    const result = await this.organizationRepository.delete(id);
+    if (result.affected === 0)
+      throw new NotFoundException('Organization not found');
+  }
+
+  async updateStatus(
+    id: string,
+    status: OrganizationStatus,
+  ): Promise<Organization> {
+    await this.organizationRepository.update(id, { status });
+    return this.findById(id);
+  }
 }
