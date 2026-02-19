@@ -6,14 +6,14 @@ import { IncidentStatus } from './entities/incident-status.entity';
 import { ModerationAction } from './entities/moderation-action.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Content,
-            IncidentReport,
-            IncidentStatus,
-            ModerationAction,
-        ]),
-    ],
-    exports: [TypeOrmModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      Content,
+      IncidentReport,
+      IncidentStatus,
+      ModerationAction,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
-export class IncidentsModule { }
+export class IncidentsModule {}

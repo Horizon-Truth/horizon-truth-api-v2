@@ -1,5 +1,5 @@
 export enum ChatSender {
-    PLAYER = 'PLAYER',
-    NPC = 'NPC',
-    SYSTEM = 'SYSTEM',
+  PLAYER = 'PLAYER',
+  NPC = 'NPC',
+  SYSTEM = 'SYSTEM',
 }

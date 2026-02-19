@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
@@ -14,46 +25,49 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('feedback')
 export class FeedbackController {
-    constructor(private readonly feedbackService: FeedbackService) { }
+  constructor(private readonly feedbackService: FeedbackService) {}
 
-    @Post()
-    @ApiOperation({ summary: 'Create new feedback' })
-    create(@Request() req, @Body() createFeedbackDto: CreateFeedbackDto) {
-        return this.feedbackService.create(req.user.userId, createFeedbackDto);
-    }
+  @Post()
+  @ApiOperation({ summary: 'Create new feedback' })
+  create(@Request() req, @Body() createFeedbackDto: CreateFeedbackDto) {
+    return this.feedbackService.create(req.user.userId, createFeedbackDto);
+  }
 
-    @Get()
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
-    @ApiOperation({ summary: 'Get all feedback with filters' })
-    findAll(@Query() query: FeedbackQueryDto) {
-        return this.feedbackService.findAll(query);
-    }
+  @Get()
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get all feedback with filters' })
+  findAll(@Query() query: FeedbackQueryDto) {
+    return this.feedbackService.findAll(query);
+  }
 
-    @Get('stats')
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
-    @ApiOperation({ summary: 'Get feedback statistics' })
-    getStats() {
-        return this.feedbackService.getStats();
-    }
+  @Get('stats')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get feedback statistics' })
+  getStats() {
+    return this.feedbackService.getStats();
+  }
 
-    @Get(':id')
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
-    @ApiOperation({ summary: 'Get feedback by ID' })
-    findOne(@Param('id') id: string) {
-        return this.feedbackService.findOne(id);
-    }
+  @Get(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get feedback by ID' })
+  findOne(@Param('id') id: string) {
+    return this.feedbackService.findOne(id);
+  }
 
-    @Patch(':id')
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
-    @ApiOperation({ summary: 'Update feedback status or details' })
-    update(@Param('id') id: string, @Body() updateFeedbackDto: UpdateFeedbackDto) {
-        return this.feedbackService.update(id, updateFeedbackDto);
-    }
+  @Patch(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Update feedback status or details' })
+  update(
+    @Param('id') id: string,
+    @Body() updateFeedbackDto: UpdateFeedbackDto,
+  ) {
+    return this.feedbackService.update(id, updateFeedbackDto);
+  }
 
-    @Delete(':id')
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
-    @ApiOperation({ summary: 'Delete feedback' })
-    remove(@Param('id') id: string) {
-        return this.feedbackService.remove(id);
-    }
+  @Delete(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Delete feedback' })
+  remove(@Param('id') id: string) {
+    return this.feedbackService.remove(id);
+  }
 }

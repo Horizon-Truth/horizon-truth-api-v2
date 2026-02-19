@@ -1,39 +1,39 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    ManyToOne,
-    JoinColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Badge } from './badge.entity';
 
 @Entity('user_badges')
 export class UserBadge {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column({ name: 'user_id' })
-    userId: string;
+  @Column({ name: 'user_id' })
+  userId: string;
 
-    @ManyToOne(() => User)
-    @JoinColumn({ name: 'user_id' })
-    user: User;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
-    @Column({ name: 'badge_id' })
-    badgeId: string;
+  @Column({ name: 'badge_id' })
+  badgeId: string;
 
-    @ManyToOne(() => Badge, (badge) => badge.userBadges)
-    @JoinColumn({ name: 'badge_id' })
-    badge: Badge;
+  @ManyToOne(() => Badge, (badge) => badge.userBadges)
+  @JoinColumn({ name: 'badge_id' })
+  badge: Badge;
 
-    @Column({ name: 'earned_reason', type: 'text', nullable: true })
-    earnedReason: string;
+  @Column({ name: 'earned_reason', type: 'text', nullable: true })
+  earnedReason: string;
 
-    @Column({ type: 'jsonb', nullable: true })
-    metadata: Record<string, any>;
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any>;
 
-    @CreateDateColumn({ name: 'earned_at', type: 'timestamp' })
-    earnedAt: Date;
+  @CreateDateColumn({ name: 'earned_at', type: 'timestamp' })
+  earnedAt: Date;
 }

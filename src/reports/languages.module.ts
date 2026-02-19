@@ -5,9 +5,9 @@ import { LanguagesService } from './languages.service';
 import { LanguagesController } from './languages.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Language])],
-    controllers: [LanguagesController],
-    providers: [LanguagesService],
-    exports: [LanguagesService],
+  imports: [TypeOrmModule.forFeature([Language])],
+  controllers: [LanguagesController],
+  providers: [LanguagesService],
+  exports: [LanguagesService],
 })
-export class LanguagesModule { }
+export class LanguagesModule {}
