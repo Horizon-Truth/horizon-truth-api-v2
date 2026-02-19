@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Scenario } from './entities/scenario.entity';
@@ -16,450 +22,482 @@ import { GamificationService } from '../gamification/gamification.service';
 
 @Injectable()
 export class EngineService {
-    constructor(
-        @InjectRepository(Scenario)
-        private scenarioRepository: Repository<Scenario>,
-        @InjectRepository(Scene)
-        private sceneRepository: Repository<Scene>,
-        @InjectRepository(GameProgress)
-        private gameProgressRepository: Repository<GameProgress>,
-        @InjectRepository(PlayerAction)
-        private playerActionRepository: Repository<PlayerAction>,
-        @InjectRepository(GameOutcome)
-        private gameOutcomeRepository: Repository<GameOutcome>,
-        @Inject(forwardRef(() => GamificationService))
-        private gamificationService: GamificationService,
-    ) { }
+  constructor(
+    @InjectRepository(Scenario)
+    private scenarioRepository: Repository<Scenario>,
+    @InjectRepository(Scene)
+    private sceneRepository: Repository<Scene>,
+    @InjectRepository(GameProgress)
+    private gameProgressRepository: Repository<GameProgress>,
+    @InjectRepository(PlayerAction)
+    private playerActionRepository: Repository<PlayerAction>,
+    @InjectRepository(GameOutcome)
+    private gameOutcomeRepository: Repository<GameOutcome>,
+    @Inject(forwardRef(() => GamificationService))
+    private gamificationService: GamificationService,
+  ) {}
 
-    /**
-     * Get list of scenarios with optional filtering
-     */
-    async getScenarios(query: ScenarioQueryDto): Promise<any> {
-        const { difficulty, scenarioType, isActive, page = 1, limit = 10 } = query;
-        const skip = (page - 1) * limit;
+  /**
+   * Get list of scenarios with optional filtering
+   */
+  async getScenarios(query: ScenarioQueryDto): Promise<any> {
+    const { difficulty, scenarioType, isActive, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-        const queryBuilder = this.scenarioRepository.createQueryBuilder('scenario')
-            .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
-            .skip(skip)
-            .take(limit);
+    const queryBuilder = this.scenarioRepository
+      .createQueryBuilder('scenario')
+      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
+      .skip(skip)
+      .take(limit);
 
-        if (difficulty) {
-            queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
-        }
-
-        if (scenarioType) {
-            queryBuilder.andWhere('scenario.scenarioType = :scenarioType', { scenarioType });
-        }
-
-        if (isActive !== undefined) {
-            queryBuilder.andWhere('scenario.isActive = :isActive', { isActive });
-        }
-
-        const [scenarios, total] = await queryBuilder.getManyAndCount();
-
-        return {
-            data: scenarios,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+    if (difficulty) {
+      queryBuilder.andWhere('scenario.difficulty = :difficulty', {
+        difficulty,
+      });
     }
 
-    /**
-     * Get scenario by ID with all scenes
-     */
-    async getScenarioById(id: string): Promise<Scenario> {
-        const scenario = await this.scenarioRepository.findOne({
-            where: { id },
-            relations: ['gameLevel', 'scenes'],
-        });
-
-        if (!scenario) {
-            throw new NotFoundException(`Scenario with ID ${id} not found`);
-        }
-
-        return scenario;
+    if (scenarioType) {
+      queryBuilder.andWhere('scenario.scenarioType = :scenarioType', {
+        scenarioType,
+      });
     }
 
-    /**
-     * Start a new game session for a user
-     */
-    async startGame(userId: string, scenarioId: string): Promise<any> {
-        // Check if scenario exists and is active
-        const scenario = await this.scenarioRepository.findOne({
-            where: { id: scenarioId },
-            relations: ['scenes'],
-        });
-
-        if (!scenario) {
-            throw new NotFoundException(`Scenario with ID ${scenarioId} not found`);
-        }
-
-        if (!scenario.isActive) {
-            throw new BadRequestException('This scenario is not currently available');
-        }
-
-        // Check if user already has an in-progress game for this scenario
-        const existingProgress = await this.gameProgressRepository.findOne({
-            where: {
-                userId,
-                scenarioId,
-                status: GameProgressStatus.IN_PROGRESS,
-            },
-        });
-
-        if (existingProgress) {
-            // Return existing progress instead of creating new one
-            return this.getGameProgress(existingProgress.id);
-        }
-
-        // Get the first scene (assuming scenes are ordered)
-        const firstScene = scenario.scenes.sort((a, b) => a.order - b.order)[0];
-
-        if (!firstScene) {
-            throw new BadRequestException('Scenario has no scenes configured');
-        }
-
-        // Create new game progress
-        const gameProgress = this.gameProgressRepository.create({
-            userId,
-            scenarioId,
-            currentSceneId: firstScene.id,
-            status: GameProgressStatus.IN_PROGRESS,
-        });
-
-        const savedProgress = await this.gameProgressRepository.save(gameProgress);
-
-        // Return progress with current scene
-        return this.getGameProgress(savedProgress.id);
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('scenario.isActive = :isActive', { isActive });
     }
 
-    /**
-     * Get game progress details with current scene
-     */
-    async getGameProgress(progressId: string): Promise<any> {
-        const progress = await this.gameProgressRepository.findOne({
-            where: { id: progressId },
-            relations: ['scenario', 'currentScene', 'user'],
-        });
+    const [scenarios, total] = await queryBuilder.getManyAndCount();
 
-        if (!progress) {
-            throw new NotFoundException(`Game progress with ID ${progressId} not found`);
-        }
+    return {
+      data: scenarios,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 
-        // Get current scene with all content
-        const currentScene = await this.getCurrentScene(progressId);
+  /**
+   * Get scenario by ID with all scenes
+   */
+  async getScenarioById(id: string): Promise<Scenario> {
+    const scenario = await this.scenarioRepository.findOne({
+      where: { id },
+      relations: ['gameLevel', 'scenes'],
+    });
 
-        return {
-            id: progress.id,
-            scenarioId: progress.scenarioId,
-            scenarioTitle: progress.scenario.title,
-            status: progress.status,
-            currentScene,
-            startedAt: progress.startedAt,
-            completedAt: progress.completedAt,
-            finalOutcome: progress.finalOutcome,
-        };
+    if (!scenario) {
+      throw new NotFoundException(`Scenario with ID ${id} not found`);
     }
 
-    /**
-     * Get current scene with all content (chat, feed items, content)
-     */
-    async getCurrentScene(progressId: string): Promise<any> {
-        const progress = await this.gameProgressRepository.findOne({
-            where: { id: progressId },
-        });
+    return scenario;
+  }
 
-        if (!progress) {
-            throw new NotFoundException(`Game progress not found`);
-        }
+  /**
+   * Start a new game session for a user
+   */
+  async startGame(userId: string, scenarioId: string): Promise<any> {
+    // Check if scenario exists and is active
+    const scenario = await this.scenarioRepository.findOne({
+      where: { id: scenarioId },
+      relations: ['scenes'],
+    });
 
-        if (!progress.currentSceneId) {
-            throw new BadRequestException('No current scene available');
-        }
-
-        const scene = await this.sceneRepository.findOne({
-            where: { id: progress.currentSceneId },
-            relations: ['content', 'content.chatMessages', 'content.feedItems'],
-        });
-
-        if (!scene) {
-            throw new NotFoundException('Current scene not found');
-        }
-
-        return {
-            id: scene.id,
-            title: scene.title,
-            description: scene.description,
-            order: scene.order,
-            sceneType: scene.sceneType,
-            content: scene.content || null,
-            chatMessages: scene.content?.chatMessages || [],
-            feedItems: scene.content?.feedItems || [],
-            availableChoices: scene.availableChoices || ['VERIFY', 'SHARE', 'IGNORE'],
-        };
+    if (!scenario) {
+      throw new NotFoundException(`Scenario with ID ${scenarioId} not found`);
     }
 
-    /**
-     * Submit a player choice and advance the game
-     */
-    async submitChoice(userId: string, submitChoiceDto: SubmitChoiceDto): Promise<any> {
-        const { progressId, sceneId, choiceKey, metadata } = submitChoiceDto;
-
-        // Verify progress belongs to user
-        const progress = await this.gameProgressRepository.findOne({
-            where: { id: progressId, userId },
-            relations: ['scenario', 'scenario.scenes'],
-        });
-
-        if (!progress) {
-            throw new NotFoundException('Game progress not found');
-        }
-
-        if (progress.status !== GameProgressStatus.IN_PROGRESS) {
-            throw new BadRequestException('This game is not in progress');
-        }
-
-        // Verify current scene
-        if (progress.currentSceneId !== sceneId) {
-            throw new BadRequestException('Invalid scene for current progress');
-        }
-
-        // Record the player's choice
-        const choice = this.playerActionRepository.create({
-            userId,
-            scenarioId: progress.scenarioId,
-            sceneId,
-            choiceKey,
-            metadata,
-        });
-
-        await this.playerActionRepository.save(choice);
-
-        // Get current scene to determine next scene
-        const currentScene = await this.sceneRepository.findOne({
-            where: { id: sceneId },
-        });
-
-        // Find next scene (simple logic: next in order)
-        const allScenes = progress.scenario.scenes.sort((a, b) => a.order - b.order);
-        const currentIndex = allScenes.findIndex(s => s.id === sceneId);
-        const nextScene = allScenes[currentIndex + 1];
-
-        if (nextScene) {
-            // Move to next scene
-            progress.currentSceneId = nextScene.id;
-            await this.gameProgressRepository.save(progress);
-
-            return {
-                status: 'scene_completed',
-                nextScene: await this.getCurrentScene(progressId),
-                progress: await this.getGameProgress(progressId),
-            };
-        } else {
-            // Game completed - this was the last scene
-            return this.completeGame(progressId, OutcomeType.SUCCESS);
-        }
+    if (!scenario.isActive) {
+      throw new BadRequestException('This scenario is not currently available');
     }
 
-    /**
-     * Complete the game and record outcome
-     */
-    async completeGame(progressId: string, outcomeType: OutcomeType): Promise<any> {
-        const progress = await this.gameProgressRepository.findOne({
-            where: { id: progressId },
-            relations: ['scenario', 'user'],
-        });
+    // Check if user already has an in-progress game for this scenario
+    const existingProgress = await this.gameProgressRepository.findOne({
+      where: {
+        userId,
+        scenarioId,
+        status: GameProgressStatus.IN_PROGRESS,
+      },
+    });
 
-        if (!progress) {
-            throw new NotFoundException('Game progress not found');
-        }
-
-        // Mark as completed
-        progress.status = GameProgressStatus.COMPLETED;
-        progress.completedAt = new Date();
-
-        // Calculate real score from player choices
-        const { score, totalPossible, percentage } = await this.calculateGameScore(
-            progress.userId,
-            progress.scenarioId,
-        );
-
-        // Determine outcome based on score percentage
-        const actualOutcome = this.determineOutcome(percentage);
-        progress.finalOutcome = actualOutcome;
-
-        await this.gameProgressRepository.save(progress);
-
-        // Create game outcome
-        const outcome = this.gameOutcomeRepository.create({
-            userId: progress.userId,
-            scenarioId: progress.scenarioId,
-            progressId: progress.id,
-            outcomeType: actualOutcome,
-            score,
-            completedAt: progress.completedAt,
-            feedback: this.generateFeedback(actualOutcome, score, percentage),
-        });
-
-        await this.gameOutcomeRepository.save(outcome);
-
-        // Trigger badge awards and leaderboard updates
-        try {
-            const badgesAwarded = await this.gamificationService.checkBadgeEligibility(progress.userId);
-            await this.gamificationService.updateLeaderboard(progress.userId);
-
-            return {
-                status: 'game_completed',
-                outcome: {
-                    type: actualOutcome,
-                    score,
-                    totalPossible,
-                    percentage: Math.round(percentage),
-                    feedback: outcome.feedback,
-                    scenarioTitle: progress.scenario.title,
-                },
-                badgesAwarded,
-                progress,
-            };
-        } catch (error) {
-            // If gamification fails, still return success
-            return {
-                status: 'game_completed',
-                outcome: {
-                    type: actualOutcome,
-                    score,
-                    totalPossible,
-                    percentage: Math.round(percentage),
-                    feedback: outcome.feedback,
-                    scenarioTitle: progress.scenario.title,
-                },
-                progress,
-            };
-        }
+    if (existingProgress) {
+      // Return existing progress instead of creating new one
+      return this.getGameProgress(existingProgress.id);
     }
 
-    /**
-     * Get game outcome for a completed game
-     */
-    async getGameOutcome(progressId: string): Promise<any> {
-        const outcome = await this.gameOutcomeRepository.findOne({
-            where: { progressId },
-        });
+    // Get the first scene (assuming scenes are ordered)
+    const firstScene = scenario.scenes.sort((a, b) => a.order - b.order)[0];
 
-        if (!outcome) {
-            throw new NotFoundException('Game outcome not found');
-        }
-
-        // Load scenario separately
-        const scenario = await this.scenarioRepository.findOne({
-            where: { id: outcome.scenarioId },
-        });
-
-        return {
-            outcomeType: outcome.outcomeType,
-            score: outcome.score,
-            feedback: outcome.feedback,
-            completedAt: outcome.completedAt,
-            scenario: scenario ? {
-                id: scenario.id,
-                title: scenario.title,
-            } : null,
-        };
+    if (!firstScene) {
+      throw new BadRequestException('Scenario has no scenes configured');
     }
 
-    /**
-     * Get user's game progress history
-     */
-    async getUserProgress(userId: string, scenarioId?: string): Promise<GameProgress[]> {
-        const query: any = { userId };
-        if (scenarioId) {
-            query.scenarioId = scenarioId;
-        }
+    // Create new game progress
+    const gameProgress = this.gameProgressRepository.create({
+      userId,
+      scenarioId,
+      currentSceneId: firstScene.id,
+      status: GameProgressStatus.IN_PROGRESS,
+    });
 
-        return this.gameProgressRepository.find({
-            where: query,
-            relations: ['scenario', 'currentScene'],
-            order: { startedAt: 'DESC' },
-        });
+    const savedProgress = await this.gameProgressRepository.save(gameProgress);
+
+    // Return progress with current scene
+    return this.getGameProgress(savedProgress.id);
+  }
+
+  /**
+   * Get game progress details with current scene
+   */
+  async getGameProgress(progressId: string): Promise<any> {
+    const progress = await this.gameProgressRepository.findOne({
+      where: { id: progressId },
+      relations: ['scenario', 'currentScene', 'user'],
+    });
+
+    if (!progress) {
+      throw new NotFoundException(
+        `Game progress with ID ${progressId} not found`,
+      );
     }
 
-    // Admin Methods
+    // Get current scene with all content
+    const currentScene = await this.getCurrentScene(progressId);
 
-    async createScenario(createDto: CreateScenarioDto): Promise<Scenario> {
-        const scenario = this.scenarioRepository.create(createDto);
-        return this.scenarioRepository.save(scenario);
+    return {
+      id: progress.id,
+      scenarioId: progress.scenarioId,
+      scenarioTitle: progress.scenario.title,
+      status: progress.status,
+      currentScene,
+      startedAt: progress.startedAt,
+      completedAt: progress.completedAt,
+      finalOutcome: progress.finalOutcome,
+    };
+  }
+
+  /**
+   * Get current scene with all content (chat, feed items, content)
+   */
+  async getCurrentScene(progressId: string): Promise<any> {
+    const progress = await this.gameProgressRepository.findOne({
+      where: { id: progressId },
+    });
+
+    if (!progress) {
+      throw new NotFoundException(`Game progress not found`);
     }
 
-    async updateScenario(id: string, updateDto: UpdateScenarioDto): Promise<Scenario> {
-        await this.scenarioRepository.update(id, updateDto);
-        const updated = await this.scenarioRepository.findOne({ where: { id } });
-        if (!updated) throw new NotFoundException('Scenario not found');
-        return updated;
+    if (!progress.currentSceneId) {
+      throw new BadRequestException('No current scene available');
     }
 
-    async deleteScenario(id: string): Promise<void> {
-        const result = await this.scenarioRepository.delete(id);
-        if (result.affected === 0) throw new NotFoundException('Scenario not found');
+    const scene = await this.sceneRepository.findOne({
+      where: { id: progress.currentSceneId },
+      relations: ['content', 'content.chatMessages', 'content.feedItems'],
+    });
+
+    if (!scene) {
+      throw new NotFoundException('Current scene not found');
     }
 
-    /**
-     * Calculate real score from player choices vs scene scoring map
-     */
-    private async calculateGameScore(
-        userId: string,
-        scenarioId: string,
-    ): Promise<{ score: number; totalPossible: number; percentage: number }> {
-        // Get all player actions for this scenario
-        const actions = await this.playerActionRepository.find({
-            where: { userId, scenarioId },
-            relations: ['scene'],
-        });
+    return {
+      id: scene.id,
+      title: scene.title,
+      description: scene.description,
+      order: scene.order,
+      sceneType: scene.sceneType,
+      content: scene.content || null,
+      chatMessages: scene.content?.chatMessages || [],
+      feedItems: scene.content?.feedItems || [],
+      availableChoices: scene.availableChoices || ['VERIFY', 'SHARE', 'IGNORE'],
+    };
+  }
 
-        // Get all scenes for the scenario
-        const scenes = await this.sceneRepository.find({
-            where: { scenarioId },
-        });
+  /**
+   * Submit a player choice and advance the game
+   */
+  async submitChoice(
+    userId: string,
+    submitChoiceDto: SubmitChoiceDto,
+  ): Promise<any> {
+    const { progressId, sceneId, choiceKey, metadata } = submitChoiceDto;
 
-        let score = 0;
-        const totalPossible = scenes.reduce((sum, s) => sum + (s.maxPoints || 10), 0);
+    // Verify progress belongs to user
+    const progress = await this.gameProgressRepository.findOne({
+      where: { id: progressId, userId },
+      relations: ['scenario', 'scenario.scenes'],
+    });
 
-        for (const action of actions) {
-            const sceneScores = action.scene?.choiceScores;
-            if (sceneScores && action.choiceKey in sceneScores) {
-                score += sceneScores[action.choiceKey];
-            }
-        }
-
-        const percentage = totalPossible > 0 ? (score / totalPossible) * 100 : 0;
-        return { score, totalPossible, percentage };
+    if (!progress) {
+      throw new NotFoundException('Game progress not found');
     }
 
-    /**
-     * Determine outcome type based on score percentage
-     */
-    private determineOutcome(percentage: number): OutcomeType {
-        if (percentage >= 80) return OutcomeType.SUCCESS;
-        if (percentage >= 50) return OutcomeType.NEUTRAL;
-        if (percentage >= 20) return OutcomeType.FAILURE;
-        return OutcomeType.DEATH;
+    if (progress.status !== GameProgressStatus.IN_PROGRESS) {
+      throw new BadRequestException('This game is not in progress');
     }
 
-    /**
-     * Generate feedback based on outcome and score
-     */
-    private generateFeedback(outcomeType: OutcomeType, score: number, percentage: number): string {
-        const feedbackMap = {
-            [OutcomeType.SUCCESS]: `Excellent work! You demonstrated strong critical thinking skills.`,
-            [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement.`,
-            [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present.`,
-            [OutcomeType.DEATH]: `You fell for misinformation. Learn from this experience and try again!`,
-        };
-
-        const message = feedbackMap[outcomeType] || 'Game completed.';
-        return `${message} Score: ${score} (${Math.round(percentage)}%)`;
+    // Verify current scene
+    if (progress.currentSceneId !== sceneId) {
+      throw new BadRequestException('Invalid scene for current progress');
     }
+
+    // Record the player's choice
+    const choice = this.playerActionRepository.create({
+      userId,
+      scenarioId: progress.scenarioId,
+      sceneId,
+      choiceKey,
+      metadata,
+    });
+
+    await this.playerActionRepository.save(choice);
+
+    // Get current scene to determine next scene
+    const currentScene = await this.sceneRepository.findOne({
+      where: { id: sceneId },
+    });
+
+    // Find next scene (simple logic: next in order)
+    const allScenes = progress.scenario.scenes.sort(
+      (a, b) => a.order - b.order,
+    );
+    const currentIndex = allScenes.findIndex((s) => s.id === sceneId);
+    const nextScene = allScenes[currentIndex + 1];
+
+    if (nextScene) {
+      // Move to next scene
+      progress.currentSceneId = nextScene.id;
+      await this.gameProgressRepository.save(progress);
+
+      return {
+        status: 'scene_completed',
+        nextScene: await this.getCurrentScene(progressId),
+        progress: await this.getGameProgress(progressId),
+      };
+    } else {
+      // Game completed - this was the last scene
+      return this.completeGame(progressId, OutcomeType.SUCCESS);
+    }
+  }
+
+  /**
+   * Complete the game and record outcome
+   */
+  async completeGame(
+    progressId: string,
+    outcomeType: OutcomeType,
+  ): Promise<any> {
+    const progress = await this.gameProgressRepository.findOne({
+      where: { id: progressId },
+      relations: ['scenario', 'user'],
+    });
+
+    if (!progress) {
+      throw new NotFoundException('Game progress not found');
+    }
+
+    // Mark as completed
+    progress.status = GameProgressStatus.COMPLETED;
+    progress.completedAt = new Date();
+
+    // Calculate real score from player choices
+    const { score, totalPossible, percentage } = await this.calculateGameScore(
+      progress.userId,
+      progress.scenarioId,
+    );
+
+    // Determine outcome based on score percentage
+    const actualOutcome = this.determineOutcome(percentage);
+    progress.finalOutcome = actualOutcome;
+
+    await this.gameProgressRepository.save(progress);
+
+    // Create game outcome
+    const outcome = this.gameOutcomeRepository.create({
+      userId: progress.userId,
+      scenarioId: progress.scenarioId,
+      progressId: progress.id,
+      outcomeType: actualOutcome,
+      score,
+      completedAt: progress.completedAt,
+      feedback: this.generateFeedback(actualOutcome, score, percentage),
+    });
+
+    await this.gameOutcomeRepository.save(outcome);
+
+    // Trigger badge awards and leaderboard updates
+    try {
+      const badgesAwarded =
+        await this.gamificationService.checkBadgeEligibility(progress.userId);
+      await this.gamificationService.updateLeaderboard(progress.userId);
+
+      return {
+        status: 'game_completed',
+        outcome: {
+          type: actualOutcome,
+          score,
+          totalPossible,
+          percentage: Math.round(percentage),
+          feedback: outcome.feedback,
+          scenarioTitle: progress.scenario.title,
+        },
+        badgesAwarded,
+        progress,
+      };
+    } catch (error) {
+      // If gamification fails, still return success
+      return {
+        status: 'game_completed',
+        outcome: {
+          type: actualOutcome,
+          score,
+          totalPossible,
+          percentage: Math.round(percentage),
+          feedback: outcome.feedback,
+          scenarioTitle: progress.scenario.title,
+        },
+        progress,
+      };
+    }
+  }
+
+  /**
+   * Get game outcome for a completed game
+   */
+  async getGameOutcome(progressId: string): Promise<any> {
+    const outcome = await this.gameOutcomeRepository.findOne({
+      where: { progressId },
+    });
+
+    if (!outcome) {
+      throw new NotFoundException('Game outcome not found');
+    }
+
+    // Load scenario separately
+    const scenario = await this.scenarioRepository.findOne({
+      where: { id: outcome.scenarioId },
+    });
+
+    return {
+      outcomeType: outcome.outcomeType,
+      score: outcome.score,
+      feedback: outcome.feedback,
+      completedAt: outcome.completedAt,
+      scenario: scenario
+        ? {
+            id: scenario.id,
+            title: scenario.title,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * Get user's game progress history
+   */
+  async getUserProgress(
+    userId: string,
+    scenarioId?: string,
+  ): Promise<GameProgress[]> {
+    const query: any = { userId };
+    if (scenarioId) {
+      query.scenarioId = scenarioId;
+    }
+
+    return this.gameProgressRepository.find({
+      where: query,
+      relations: ['scenario', 'currentScene'],
+      order: { startedAt: 'DESC' },
+    });
+  }
+
+  // Admin Methods
+
+  async createScenario(createDto: CreateScenarioDto): Promise<Scenario> {
+    const scenario = this.scenarioRepository.create(createDto);
+    return this.scenarioRepository.save(scenario);
+  }
+
+  async updateScenario(
+    id: string,
+    updateDto: UpdateScenarioDto,
+  ): Promise<Scenario> {
+    await this.scenarioRepository.update(id, updateDto);
+    const updated = await this.scenarioRepository.findOne({ where: { id } });
+    if (!updated) throw new NotFoundException('Scenario not found');
+    return updated;
+  }
+
+  async deleteScenario(id: string): Promise<void> {
+    const result = await this.scenarioRepository.delete(id);
+    if (result.affected === 0)
+      throw new NotFoundException('Scenario not found');
+  }
+
+  /**
+   * Calculate real score from player choices vs scene scoring map
+   */
+  private async calculateGameScore(
+    userId: string,
+    scenarioId: string,
+  ): Promise<{ score: number; totalPossible: number; percentage: number }> {
+    // Get all player actions for this scenario
+    const actions = await this.playerActionRepository.find({
+      where: { userId, scenarioId },
+      relations: ['scene'],
+    });
+
+    // Get all scenes for the scenario
+    const scenes = await this.sceneRepository.find({
+      where: { scenarioId },
+    });
+
+    let score = 0;
+    const totalPossible = scenes.reduce(
+      (sum, s) => sum + (s.maxPoints || 10),
+      0,
+    );
+
+    for (const action of actions) {
+      const sceneScores = action.scene?.choiceScores;
+      if (sceneScores && action.choiceKey in sceneScores) {
+        score += sceneScores[action.choiceKey];
+      }
+    }
+
+    const percentage = totalPossible > 0 ? (score / totalPossible) * 100 : 0;
+    return { score, totalPossible, percentage };
+  }
+
+  /**
+   * Determine outcome type based on score percentage
+   */
+  private determineOutcome(percentage: number): OutcomeType {
+    if (percentage >= 80) return OutcomeType.SUCCESS;
+    if (percentage >= 50) return OutcomeType.NEUTRAL;
+    if (percentage >= 20) return OutcomeType.FAILURE;
+    return OutcomeType.DEATH;
+  }
+
+  /**
+   * Generate feedback based on outcome and score
+   */
+  private generateFeedback(
+    outcomeType: OutcomeType,
+    score: number,
+    percentage: number,
+  ): string {
+    const feedbackMap = {
+      [OutcomeType.SUCCESS]: `Excellent work! You demonstrated strong critical thinking skills.`,
+      [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement.`,
+      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present.`,
+      [OutcomeType.DEATH]: `You fell for misinformation. Learn from this experience and try again!`,
+    };
+
+    const message = feedbackMap[outcomeType] || 'Game completed.';
+    return `${message} Score: ${score} (${Math.round(percentage)}%)`;
+  }
 }

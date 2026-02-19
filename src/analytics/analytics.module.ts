@@ -6,14 +6,14 @@ import { OrganizationDashboard } from './entities/organization-dashboard.entity'
 import { DashboardWidget } from './entities/dashboard-widget.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            AnalyticsSnapshot,
-            MisinformationHeatmap,
-            OrganizationDashboard,
-            DashboardWidget,
-        ]),
-    ],
-    exports: [TypeOrmModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      AnalyticsSnapshot,
+      MisinformationHeatmap,
+      OrganizationDashboard,
+      DashboardWidget,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

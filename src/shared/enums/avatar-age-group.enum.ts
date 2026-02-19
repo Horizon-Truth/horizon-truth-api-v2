@@ -1,4 +1,4 @@
 export enum AvatarAgeGroup {
-    YOUTH = 'YOUTH',
-    ADULT = 'ADULT',
+  YOUTH = 'YOUTH',
+  ADULT = 'ADULT',
 }

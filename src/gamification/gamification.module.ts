@@ -8,11 +8,9 @@ import { GamificationService } from './gamification.service';
 import { BadgeAdminController } from './admin/badge-admin.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Badge, UserBadge, Leaderboard]),
-    ],
-    controllers: [GamificationController, BadgeAdminController],
-    providers: [GamificationService],
-    exports: [GamificationService],
+  imports: [TypeOrmModule.forFeature([Badge, UserBadge, Leaderboard])],
+  controllers: [GamificationController, BadgeAdminController],
+  providers: [GamificationService],
+  exports: [GamificationService],
 })
-export class GamificationModule { }
+export class GamificationModule {}

@@ -9,17 +9,17 @@ import { Badge } from '../../gamification/entities/badge.entity';
 import { GameLevel } from '../../engine/entities/game-level.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Scenario,
-            Scene,
-            SceneContent,
-            Avatar,
-            Badge,
-            GameLevel,
-        ]),
-    ],
-    providers: [GameSeederService],
-    exports: [GameSeederService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Scenario,
+      Scene,
+      SceneContent,
+      Avatar,
+      Badge,
+      GameLevel,
+    ]),
+  ],
+  providers: [GameSeederService],
+  exports: [GameSeederService],
 })
-export class SeederModule { }
+export class SeederModule {}
