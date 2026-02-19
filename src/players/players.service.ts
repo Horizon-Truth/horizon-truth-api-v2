@@ -1,206 +1,292 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PlayerProfile } from './entities/player-profile.entity';
 import { Avatar } from './entities/avatar.entity';
 import { CreatePlayerProfileDto } from './dto/create-player-profile.dto';
 import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
+import { InitializeProfileDto } from './dto/initialize-profile.dto';
+import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
 
 @Injectable()
 export class PlayersService {
-  constructor(
-    @InjectRepository(PlayerProfile)
-    private playerProfileRepository: Repository<PlayerProfile>,
-    @InjectRepository(Avatar)
-    private avatarRepository: Repository<Avatar>,
-  ) {}
+    constructor(
+        @InjectRepository(PlayerProfile)
+        private playerProfileRepository: Repository<PlayerProfile>,
+        @InjectRepository(Avatar)
+        private avatarRepository: Repository<Avatar>,
+        @InjectRepository(PlayerAlgorithmProfile)
+        private algorithmProfileRepository: Repository<PlayerAlgorithmProfile>,
+    ) { }
 
-  /**
-   * Create a new player profile
-   */
-  async createProfile(
-    userId: string,
-    createDto: CreatePlayerProfileDto,
-  ): Promise<PlayerProfile> {
-    // Check if user already has a profile
-    const existingProfile = await this.playerProfileRepository.findOne({
-      where: { userId },
-    });
+    /**
+     * Create a new player profile
+     */
+    async createProfile(userId: string, createDto: CreatePlayerProfileDto): Promise<PlayerProfile> {
+        // Check if user already has a profile
+        const existingProfile = await this.playerProfileRepository.findOne({
+            where: { userId },
+        });
 
-    if (existingProfile) {
-      throw new BadRequestException(
-        'Player profile already exists for this user',
-      );
+        if (existingProfile) {
+            throw new BadRequestException('Player profile already exists for this user');
+        }
+
+        // Verify avatar exists
+        const avatar = await this.avatarRepository.findOne({
+            where: { id: createDto.avatarId },
+        });
+
+        if (!avatar) {
+            throw new NotFoundException(`Avatar with ID ${createDto.avatarId} not found`);
+        }
+
+        // Create profile
+        const profile = this.playerProfileRepository.create({
+            userId,
+            ...createDto,
+            trustScoreInitial: 0, // Initial trust score for Level 0 logic
+            currentTrustScore: 0,
+        });
+
+        return this.playerProfileRepository.save(profile);
     }
 
-    // Verify avatar exists
-    const avatar = await this.avatarRepository.findOne({
-      where: { id: createDto.avatarId },
-    });
+    /**
+     * Get player profile by user ID
+     */
+    async getProfile(userId: string): Promise<PlayerProfile> {
+        const profile = await this.playerProfileRepository.findOne({
+            where: { userId },
+            relations: ['avatar', 'user'],
+        });
 
-    if (!avatar) {
-      throw new NotFoundException(
-        `Avatar with ID ${createDto.avatarId} not found`,
-      );
+        if (!profile) {
+            throw new NotFoundException('Player profile not found');
+        }
+
+        return profile;
     }
 
-    // Create profile
-    const profile = this.playerProfileRepository.create({
-      userId,
-      ...createDto,
-      trustScoreInitial: 50, // Default initial trust score
-    });
+    /**
+     * Update player profile
+     */
+    async updateProfile(userId: string, updateDto: UpdatePlayerProfileDto): Promise<PlayerProfile> {
+        const profile = await this.playerProfileRepository.findOne({
+            where: { userId },
+        });
 
-    return this.playerProfileRepository.save(profile);
-  }
+        if (!profile) {
+            throw new NotFoundException('Player profile not found');
+        }
 
-  /**
-   * Get player profile by user ID
-   */
-  async getProfile(userId: string): Promise<PlayerProfile> {
-    const profile = await this.playerProfileRepository.findOne({
-      where: { userId },
-      relations: ['avatar', 'user'],
-    });
+        // If avatar is being updated, verify it exists
+        if (updateDto.avatarId) {
+            const avatar = await this.avatarRepository.findOne({
+                where: { id: updateDto.avatarId },
+            });
 
-    if (!profile) {
-      throw new NotFoundException('Player profile not found');
+            if (!avatar) {
+                throw new NotFoundException(`Avatar with ID ${updateDto.avatarId} not found`);
+            }
+        }
+
+        // Update profile
+        Object.assign(profile, updateDto);
+        return this.playerProfileRepository.save(profile);
     }
 
-    return profile;
-  }
+    /**
+     * Complete onboarding
+     */
+    async completeOnboarding(userId: string): Promise<void> {
+        const profile = await this.playerProfileRepository.findOne({
+            where: { userId },
+        });
 
-  /**
-   * Update player profile
-   */
-  async updateProfile(
-    userId: string,
-    updateDto: UpdatePlayerProfileDto,
-  ): Promise<PlayerProfile> {
-    const profile = await this.playerProfileRepository.findOne({
-      where: { userId },
-    });
+        if (!profile) {
+            throw new NotFoundException('Player profile not found');
+        }
 
-    if (!profile) {
-      throw new NotFoundException('Player profile not found');
+        profile.onboardingCompleted = true;
+        profile.onboardingCompletedAt = new Date();
+        await this.playerProfileRepository.save(profile);
     }
 
-    // If avatar is being updated, verify it exists
-    if (updateDto.avatarId) {
-      const avatar = await this.avatarRepository.findOne({
-        where: { id: updateDto.avatarId },
-      });
+    /**
+     * Initialize player profile during onboarding (Level 0)
+     */
+    async initializeProfile(userId: string, initializeDto: InitializeProfileDto): Promise<PlayerProfile> {
+        let profile = await this.playerProfileRepository.findOne({
+            where: { userId },
+        });
 
-      if (!avatar) {
-        throw new NotFoundException(
-          `Avatar with ID ${updateDto.avatarId} not found`,
-        );
-      }
+        if (!profile) {
+            // If No profile exists (shouldn't happen with auto-creation, but safe-guard)
+            profile = this.playerProfileRepository.create({ userId });
+        }
+
+        // 1. Verify avatar exists
+        const avatar = await this.avatarRepository.findOne({
+            where: { id: initializeDto.avatarId },
+        });
+
+        if (!avatar) {
+            throw new NotFoundException(`Avatar with ID ${initializeDto.avatarId} not found`);
+        }
+
+        // 2. Update profile with onboarding data
+        profile.nickname = initializeDto.nickname;
+        profile.avatarId = initializeDto.avatarId;
+        profile.fictionalRegionId = initializeDto.fictionalRegionId || null;
+        profile.trustScoreInitial = 0;
+        profile.currentTrustScore = 0;
+        profile.onboardingCompleted = true;
+        profile.onboardingCompletedAt = new Date();
+
+        await this.playerProfileRepository.save(profile);
+
+        // 3. Create initial algorithm profile if it doesn't exist
+        const existingAlgoProfile = await this.algorithmProfileRepository.findOne({
+            where: { userId },
+        });
+
+        if (!existingAlgoProfile) {
+            const algoProfile = this.algorithmProfileRepository.create({
+                userId,
+                biasType: 'INITIAL',
+                exposureScore: 0,
+                panicSensitivity: 0,
+            });
+            await this.algorithmProfileRepository.save(algoProfile);
+        }
+
+        return this.getProfile(userId);
     }
 
-    // Update profile
-    Object.assign(profile, updateDto);
-    return this.playerProfileRepository.save(profile);
-  }
-
-  /**
-   * Complete onboarding
-   */
-  async completeOnboarding(userId: string): Promise<void> {
-    const profile = await this.playerProfileRepository.findOne({
-      where: { userId },
-    });
-
-    if (!profile) {
-      throw new NotFoundException('Player profile not found');
+    /**
+     * Get all available avatars
+     */
+    async getAvatars(): Promise<Avatar[]> {
+        return this.avatarRepository.find({
+            where: { isActive: true },
+        });
     }
 
-    profile.onboardingCompleted = true;
-    profile.onboardingCompletedAt = new Date();
-    await this.playerProfileRepository.save(profile);
-  }
+    /**
+     * Get player statistics
+     */
+    /**
+     * Get player statistics
+     */
+    async getPlayerStats(userId: string): Promise<any> {
+        const profile = await this.getProfile(userId);
+        const manager = this.playerProfileRepository.manager;
 
-  /**
-   * Get all available avatars
-   */
-  async getAvatars(): Promise<Avatar[]> {
-    return this.avatarRepository.find({
-      where: { isActive: true },
-    });
-  }
+        // 1. Get Game Counts
+        const stats = await manager
+            .createQueryBuilder()
+            .select('COUNT(id)', 'total')
+            .addSelect("COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)", 'completed')
+            .from('game_progress', 'gp')
+            .where('gp.userId = :userId', { userId })
+            .getRawOne();
 
-  /**
-   * Get player statistics
-   */
-  /**
-   * Get player statistics
-   */
-  async getPlayerStats(userId: string): Promise<any> {
-    const profile = await this.getProfile(userId);
-    const manager = this.playerProfileRepository.manager;
+        const gamesPlayed = parseInt(stats.total, 10) || 0;
+        const gamesCompleted = parseInt(stats.completed, 10) || 0;
 
-    // 1. Get Game Counts
-    const stats = await manager
-      .createQueryBuilder()
-      .select('COUNT(id)', 'total')
-      .addSelect(
-        "COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)",
-        'completed',
-      )
-      .from('game_progress', 'gp')
-      .where('gp.user_id = :userId', { userId })
-      .getRawOne();
+        // 2. Get Score (using query directly since we can't easily inject GamificationService due to circular dep)
+        const scoreResult = await manager
+            .createQueryBuilder()
+            .select('SUM(score)', 'totalScore')
+            .from('game_outcome', 'go')
+            .where('userId = :userId', { userId })
+            .getRawOne();
 
-    const gamesPlayed = parseInt(stats.total, 10) || 0;
-    const gamesCompleted = parseInt(stats.completed, 10) || 0;
+        const totalScore = parseInt(scoreResult.totalScore, 10) || 0;
 
-    // 2. Get Score (using query directly since we can't easily inject GamificationService due to circular dep)
-    const scoreResult = await manager
-      .createQueryBuilder()
-      .select('SUM(score)', 'totalScore')
-      .from('game_outcomes', 'go')
-      .where('go.user_id = :userId', { userId })
-      .getRawOne();
+        // 3. Get Badges Count
+        const badgesCount = await manager
+            .createQueryBuilder()
+            .select('COUNT(id)', 'count')
+            .from('user_badges', 'ub')
+            .where('ub.userId = :userId', { userId })
+            .getRawOne();
 
-    const totalScore = parseInt(scoreResult.totalScore, 10) || 0;
+        const badgesEarned = parseInt(badgesCount.count, 10) || 0;
 
-    // 3. Get Badges Count
-    const badgesCount = await manager
-      .createQueryBuilder()
-      .select('COUNT(id)', 'count')
-      .from('user_badges', 'ub')
-      .where('ub.user_id = :userId', { userId })
-      .getRawOne();
+        // 4. Get Rank
+        const rankResult = await manager
+            .createQueryBuilder()
+            .select('rank')
+            .from('leaderboards', 'l')
+            .where('l.userId = :userId', { userId })
+            .andWhere("l.leaderboardType = 'GAME_SCORE'")
+            .andWhere("l.period = 'ALL_TIME'")
+            .getRawOne();
 
-    const badgesEarned = parseInt(badgesCount.count, 10) || 0;
+        return {
+            userId,
+            nickname: profile.nickname,
+            trustScore: profile.trustScoreInitial, // TODO: Implement trust score dynamic calculation
+            totalScore,
+            onboardingCompleted: profile.onboardingCompleted,
+            memberSince: profile.createdAt,
+            gamesPlayed,
+            gamesCompleted,
+            badgesEarned,
+            currentRank: rankResult ? rankResult.rank : null,
+            winRate: gamesPlayed > 0 ? Math.round((gamesCompleted / gamesPlayed) * 100) : 0
+        };
+    }
+    /**
+     * Get all player profiles (Admin only)
+     */
+    async findAllProfiles(query: any): Promise<any> {
+        const { onboardingCompleted, page = 1, limit = 10 } = query;
+        const skip = (page - 1) * limit;
 
-    // 4. Get Rank
-    const rankResult = await manager
-      .createQueryBuilder()
-      .select('rank')
-      .from('leaderboards', 'l')
-      .where('l.user_id = :userId', { userId })
-      .andWhere("l.leaderboard_type = 'GAME_SCORE'")
-      .andWhere("l.period = 'ALL_TIME'")
-      .getRawOne();
+        const queryBuilder = this.playerProfileRepository.createQueryBuilder('profile')
+            .leftJoinAndSelect('profile.avatar', 'avatar')
+            .leftJoinAndSelect('profile.user', 'user');
 
-    return {
-      userId,
-      nickname: profile.nickname,
-      trustScore: profile.trustScoreInitial, // TODO: Implement trust score dynamic calculation
-      totalScore,
-      onboardingCompleted: profile.onboardingCompleted,
-      memberSince: profile.createdAt,
-      gamesPlayed,
-      gamesCompleted,
-      badgesEarned,
-      currentRank: rankResult ? rankResult.rank : null,
-      winRate:
-        gamesPlayed > 0 ? Math.round((gamesCompleted / gamesPlayed) * 100) : 0,
-    };
-  }
+        if (onboardingCompleted !== undefined) {
+            queryBuilder.andWhere('profile.onboardingCompleted = :onboardingCompleted', { onboardingCompleted: onboardingCompleted === 'true' });
+        }
+
+        const [data, total] = await queryBuilder
+            .skip(skip)
+            .take(limit)
+            .orderBy('profile.createdAt', 'DESC')
+            .getManyAndCount();
+
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
+    }
+
+    /**
+     * Update player profile by admin
+     */
+    async updateProfileByAdmin(userId: string, updateDto: any): Promise<any> {
+        const profile = await this.playerProfileRepository.findOne({ where: { userId } });
+        if (!profile) throw new NotFoundException('Player profile not found');
+
+        Object.assign(profile, updateDto);
+        return this.playerProfileRepository.save(profile);
+    }
+
+    /**
+     * Delete player profile by admin
+     */
+    async deleteProfileByAdmin(userId: string): Promise<void> {
+        const result = await this.playerProfileRepository.delete({ userId });
+        if (result.affected === 0) throw new NotFoundException('Player profile not found');
+    }
 }

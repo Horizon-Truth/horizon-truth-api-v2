@@ -17,12 +17,13 @@ import {
 import { PlayersService } from './players.service';
 import { CreatePlayerProfileDto } from './dto/create-player-profile.dto';
 import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
+import { InitializeProfileDto } from './dto/initialize-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Players')
 @Controller('players')
 export class PlayersController {
-  constructor(private readonly playersService: PlayersService) {}
+  constructor(private readonly playersService: PlayersService) { }
 
   @Get('avatars')
   @ApiOperation({ summary: 'List all available avatars' })
@@ -76,6 +77,16 @@ export class PlayersController {
   async completeOnboarding(@Request() req) {
     await this.playersService.completeOnboarding(req.user.userId);
     return { message: 'Onboarding completed successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('initialize')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Initialize player profile during onboarding (Level 0)' })
+  @ApiResponse({ status: 200, description: 'Profile initialized successfully.' })
+  @ApiResponse({ status: 404, description: 'Avatar or Profile not found.' })
+  async initializeProfile(@Request() req, @Body() initializeDto: InitializeProfileDto) {
+    return this.playersService.initializeProfile(req.user.userId, initializeDto);
   }
 
   @UseGuards(JwtAuthGuard)

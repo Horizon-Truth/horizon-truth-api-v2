@@ -1,0 +1,8 @@
+export enum ReportStatus {
+    NEW = 'NEW',
+    UNDER_REVIEW = 'UNDER_REVIEW',
+    VERIFIED = 'VERIFIED',
+    FLAGGED = 'FLAGGED',
+    NEEDS_REVIEW = 'NEEDS_REVIEW',
+    ARCHIVED = 'ARCHIVED',
+}
