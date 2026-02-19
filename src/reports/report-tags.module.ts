@@ -5,9 +5,9 @@ import { ReportTagsService } from './report-tags.service';
 import { ReportTagsController } from './report-tags.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([ReportTag])],
-    controllers: [ReportTagsController],
-    providers: [ReportTagsService],
-    exports: [ReportTagsService, TypeOrmModule],
+  imports: [TypeOrmModule.forFeature([ReportTag])],
+  controllers: [ReportTagsController],
+  providers: [ReportTagsService],
+  exports: [ReportTagsService, TypeOrmModule],
 })
-export class ReportTagsModule { }
+export class ReportTagsModule {}

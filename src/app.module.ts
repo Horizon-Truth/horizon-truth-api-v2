@@ -66,4 +66,4 @@ import { FeedbackModule } from './feedback/feedback.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

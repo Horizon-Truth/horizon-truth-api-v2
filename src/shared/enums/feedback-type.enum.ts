@@ -1,4 +1,4 @@
 export enum FeedbackType {
-    SCENARIO = 'SCENARIO',
-    OPERATION = 'OPERATION',
+  SCENARIO = 'SCENARIO',
+  OPERATION = 'OPERATION',
 }

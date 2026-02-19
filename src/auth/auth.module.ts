@@ -13,22 +13,22 @@ import { User } from '../users/entities/user.entity';
 import { Session } from './entities/session.entity';
 
 @Module({
-    imports: [
-        UsersModule,
-        PassportModule,
-        ConfigModule,
-        TypeOrmModule.forFeature([Session]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'secretKey',
-                signOptions: { expiresIn: '1d' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    providers: [AuthService, JwtStrategy, ApiKeyStrategy, RefreshTokenStrategy],
-    controllers: [AuthController],
-    exports: [AuthService],
+  imports: [
+    UsersModule,
+    PassportModule,
+    ConfigModule,
+    TypeOrmModule.forFeature([Session]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'secretKey',
+        signOptions: { expiresIn: '1d' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [AuthService, JwtStrategy, ApiKeyStrategy, RefreshTokenStrategy],
+  controllers: [AuthController],
+  exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

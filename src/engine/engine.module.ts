@@ -16,23 +16,23 @@ import { GamificationModule } from '../gamification/gamification.module';
 import { ScenarioAdminController } from './admin/scenario-admin.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            GameLevel,
-            Scenario,
-            Scene,
-            SceneContent,
-            SceneChatMessage,
-            SceneFeedItem,
-            PlayerChoice,
-            PlayerAction,
-            GameOutcome,
-            GameProgress,
-        ]),
-        forwardRef(() => GamificationModule),
-    ],
-    controllers: [EngineController, ScenarioAdminController],
-    providers: [EngineService],
-    exports: [EngineService, TypeOrmModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      GameLevel,
+      Scenario,
+      Scene,
+      SceneContent,
+      SceneChatMessage,
+      SceneFeedItem,
+      PlayerChoice,
+      PlayerAction,
+      GameOutcome,
+      GameProgress,
+    ]),
+    forwardRef(() => GamificationModule),
+  ],
+  controllers: [EngineController, ScenarioAdminController],
+  providers: [EngineService],
+  exports: [EngineService, TypeOrmModule],
 })
-export class EngineModule { }
+export class EngineModule {}
