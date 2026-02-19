@@ -10,6 +10,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../../users/entities/user.entity';
 import { Scenario } from './scenario.entity';
 import { Scene } from './scene.entity';
+import { GameProgress } from './game-progress.entity';
 
 @Entity('player_actions')
 export class PlayerAction {
@@ -34,12 +35,12 @@ export class PlayerAction {
     scenario: Scenario;
 
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-    @Column({ name: 'progress_id' })
+    @Column({ name: 'progress_id', nullable: true })
     progressId: string;
 
-    @ManyToOne('GameProgress')
+    @ManyToOne(() => GameProgress)
     @JoinColumn({ name: 'progress_id' })
-    progress: any;
+    progress: GameProgress;
 
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
     @Column({ name: 'scene_id' })
