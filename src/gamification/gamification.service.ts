@@ -9,6 +9,7 @@ import { Badge } from './entities/badge.entity';
 import { UserBadge } from './entities/user-badge.entity';
 import { GameOutcome } from '../engine/entities/game-outcome.entity';
 import { OutcomeType } from '../shared/enums/outcome-type.enum';
+import { Scenario } from '../engine/entities/scenario.entity';
 import { Leaderboard } from './entities/leaderboard.entity';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
 import { CreateBadgeDto } from './dto/create-badge.dto';
@@ -25,7 +26,7 @@ export class GamificationService {
     private userBadgeRepository: Repository<UserBadge>,
     @InjectRepository(Leaderboard)
     private leaderboardRepository: Repository<Leaderboard>,
-  ) {}
+  ) { }
 
   /**
    * Get all badges
@@ -111,12 +112,12 @@ export class GamificationService {
     }
 
     // Fetch scenario to check which one it is
-    const scenario = (await this.userBadgeRepository.manager.findOne(
-      'Scenario',
+    const scenario = await this.userBadgeRepository.manager.findOne(
+      Scenario,
       {
         where: { id: outcome.scenarioId },
       },
-    )) as any;
+    );
 
     if (!scenario) return awardedBadges;
 

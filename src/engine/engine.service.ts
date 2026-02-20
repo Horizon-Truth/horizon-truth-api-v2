@@ -21,6 +21,7 @@ import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { GameProgressStatus } from '../shared/enums/game-progress-status.enum';
 import { OutcomeType } from '../shared/enums/outcome-type.enum';
 import { GamificationService } from '../gamification/gamification.service';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
 
 @Injectable()
 export class EngineService {
@@ -42,7 +43,7 @@ export class EngineService {
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
-  ) {}
+  ) { }
 
   /**
    * Get list of scenarios with optional filtering
@@ -221,6 +222,7 @@ export class EngineService {
       description: scene.description,
       order: scene.order,
       sceneType: scene.sceneType,
+      contentType: scene.contentType,
       content: scene.content || null,
       chatMessages: scene.content?.chatMessages || [],
       feedItems: scene.content?.feedItems || [],
@@ -325,18 +327,18 @@ export class EngineService {
 
       if (templateOutcome) {
         // Update persistent trust score
-        const playerProfile = (await queryRunner.manager.findOne(
-          'PlayerProfile',
+        const playerProfile = await queryRunner.manager.findOne(
+          PlayerProfile,
           {
             where: { userId },
           },
-        )) as any;
+        );
 
         if (playerProfile) {
           playerProfile.currentTrustScore =
             (playerProfile.currentTrustScore || 50) +
             (templateOutcome.trustScoreDelta || 0);
-          await queryRunner.manager.save('PlayerProfile', playerProfile);
+          await queryRunner.manager.save(PlayerProfile, playerProfile);
         }
 
         // Process message templates
@@ -465,19 +467,19 @@ export class EngineService {
 
     // Update player's persistent trust score
     try {
-      const playerProfile = (await this.gameProgressRepository.manager.findOne(
-        'PlayerProfile',
+      const playerProfile = await this.gameProgressRepository.manager.findOne(
+        PlayerProfile,
         {
           where: { userId: progress.userId },
         },
-      )) as any;
+      );
 
       if (playerProfile) {
         playerProfile.currentTrustScore =
           (playerProfile.currentTrustScore || 0) +
           (outcome.trustScoreDelta || 0);
         await this.gameProgressRepository.manager.save(
-          'PlayerProfile',
+          PlayerProfile,
           playerProfile,
         );
       }
@@ -500,6 +502,7 @@ export class EngineService {
           outcomeType,
           score,
           feedback: outcome.feedback,
+          progressId: progress.id,
           completedAt: outcome.completedAt,
           scenario: {
             id: progress.scenarioId,
@@ -517,6 +520,7 @@ export class EngineService {
           outcomeType,
           score,
           feedback: outcome.feedback,
+          progressId: progress.id,
           completedAt: outcome.completedAt,
           scenario: {
             id: progress.scenarioId,
@@ -552,9 +556,9 @@ export class EngineService {
       completedAt: outcome.completedAt,
       scenario: scenario
         ? {
-            id: scenario.id,
-            title: scenario.title,
-          }
+          id: scenario.id,
+          title: scenario.title,
+        }
         : null,
     };
   }
