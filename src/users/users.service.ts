@@ -20,18 +20,28 @@ export class UsersService {
     private usersRepository: Repository<User>,
     @InjectRepository(UserActivity)
     private activityRepository: Repository<UserActivity>,
-  ) {}
+  ) { }
 
   async findOneByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'passwordHash', 'fullName', 'role', 'apiKey'], // explicitly select passwordHash for auth
+      relations: ['playerProfile'],
+      select: [
+        'id',
+        'email',
+        'passwordHash',
+        'fullName',
+        'role',
+        'apiKey',
+        'username',
+      ],
     });
   }
 
   async findOneByUsername(username: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { username },
+      relations: ['playerProfile'],
       select: [
         'id',
         'email',
@@ -73,12 +83,16 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id } });
+    return this.usersRepository.findOne({
+      where: { id },
+      relations: ['playerProfile'],
+    });
   }
 
   async findByIdWithRefreshToken(id: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { id },
+      relations: ['playerProfile'],
       select: ['id', 'email', 'username', 'role', 'hashedRefreshToken'],
     });
   }

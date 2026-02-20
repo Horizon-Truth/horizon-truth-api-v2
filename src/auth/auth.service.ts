@@ -19,7 +19,7 @@ export class AuthService {
     private configService: ConfigService,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
-  ) {}
+  ) { }
 
   async validateUser(emailOrUsername: string, pass: string): Promise<any> {
     let user = await this.usersService.findOneByEmail(emailOrUsername);
@@ -45,7 +45,7 @@ export class AuthService {
       sub: user.id,
       role: user.role,
     };
-    const tokens = await this.getTokens(user.id, user.username, user.role);
+    const tokens = await this.getTokens(user);
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
     // Create session
@@ -92,7 +92,7 @@ export class AuthService {
       throw new UnauthorizedException('Session expired or invalid');
     }
 
-    const tokens = await this.getTokens(user.id, user.username!, user.role);
+    const tokens = await this.getTokens(user);
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
     // Update session with new refresh token
@@ -101,7 +101,8 @@ export class AuthService {
     return tokens;
   }
 
-  async getTokens(userId: string, username: string, role: string) {
+  async getTokens(user: any) {
+    const { id: userId, username, role } = user;
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         {
@@ -132,7 +133,12 @@ export class AuthService {
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      user: { userId, username, role },
+      user: {
+        userId,
+        username,
+        role,
+        onboardingCompleted: (user as any)?.playerProfile?.onboardingCompleted,
+      },
     };
   }
 
