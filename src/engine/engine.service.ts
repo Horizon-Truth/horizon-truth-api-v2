@@ -252,11 +252,27 @@ export class EngineService {
 
     try {
       // 1. Fetch progress with PESSIMISTIC_WRITE lock and verify ownership
-      const progress = await queryRunner.manager.findOne(GameProgress, {
-        where: { id: progressId, userId },
-        relations: ['scenario', 'scenario.scenes'],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const progress = await queryRunner.manager
+        .createQueryBuilder(GameProgress, 'progress')
+        .setLock('pessimistic_write')
+        .where('progress.id = :id AND progress.userId = :userId', {
+          id: progressId,
+          userId,
+        })
+        .getOne();
+
+      if (progress) {
+        // Fetch relations separately to avoid FOR UPDATE on outer join error
+        const scenario = await queryRunner.manager.findOne(Scenario, {
+          where: { id: progress.scenarioId },
+          relations: ['scenes'],
+        });
+
+        if (!scenario) {
+          throw new NotFoundException('Scenario not found for this game');
+        }
+        progress.scenario = scenario;
+      }
 
       if (!progress) {
         throw new NotFoundException('Game progress not found or unauthorized');
