@@ -502,6 +502,7 @@ export class EngineService {
           outcomeType,
           score,
           feedback: outcome.feedback,
+          progressId: progress.id,
           completedAt: outcome.completedAt,
           scenario: {
             id: progress.scenarioId,
@@ -519,6 +520,7 @@ export class EngineService {
           outcomeType,
           score,
           feedback: outcome.feedback,
+          progressId: progress.id,
           completedAt: outcome.completedAt,
           scenario: {
             id: progress.scenarioId,
