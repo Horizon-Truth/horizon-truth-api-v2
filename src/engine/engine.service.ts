@@ -465,8 +465,18 @@ export class EngineService {
 
     await this.gameProgressRepository.save(progress);
 
-    // Calculate score (simple: 100 points per scenario completed)
-    const score = 100;
+    // Calculate score based on outcome type
+    const scoreMap: Record<string, number> = {
+      [OutcomeType.PERFECT_PASS]: 150,
+      [OutcomeType.PASS]: 100,
+      [OutcomeType.SUCCESS]: 100,
+      [OutcomeType.NEUTRAL]: 60,
+      [OutcomeType.PARTIAL_FAIL]: 40,
+      [OutcomeType.FAIL]: 20,
+      [OutcomeType.FAILURE]: 20,
+      [OutcomeType.DEATH]: 0,
+    };
+    const score = scoreMap[outcomeType] ?? 50;
 
     // Create game outcome
     const outcome = this.gameOutcomeRepository.create({
@@ -481,30 +491,8 @@ export class EngineService {
 
     await this.gameOutcomeRepository.save(outcome);
 
-    // Update player's persistent trust score
-    try {
-      const playerProfile = await this.gameProgressRepository.manager.findOne(
-        PlayerProfile,
-        {
-          where: { userId: progress.userId },
-        },
-      );
-
-      if (playerProfile) {
-        playerProfile.currentTrustScore =
-          (playerProfile.currentTrustScore || 0) +
-          (outcome.trustScoreDelta || 0);
-        await this.gameProgressRepository.manager.save(
-          PlayerProfile,
-          playerProfile,
-        );
-      }
-    } catch (error) {
-      console.error(
-        'Failed to update player persistent trust score:',
-        error.message,
-      );
-    }
+    // Note: Trust score was already updated in submitChoice() when the
+    // player made their final decision. No need to update again here.
 
     // Trigger badge awards and leaderboard updates
     try {
@@ -646,10 +634,14 @@ export class EngineService {
    */
   private generateFeedback(outcomeType: OutcomeType, score: number): string {
     const feedbackMap = {
+      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Score: ${score}`,
+      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Score: ${score}`,
       [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Score: ${score}`,
-      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
       [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement. Score: ${score}`,
-      [OutcomeType.DEATH]: `Game over! Make better choices next time. Score: ${score}`,
+      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but didn't follow through with action. Score: ${score}`,
+      [OutcomeType.FAIL]: `This didn't end well. Review the scenario to understand where things went wrong. Score: ${score}`,
+      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
+      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Learn from this experience. Score: ${score}`,
     };
 
     return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
@@ -670,11 +662,15 @@ export class EngineService {
     }
 
     // Fetch all outcomes for this specific progress session
-    const outcomes = await this.gameOutcomeRepository.find({
+    const allOutcomes = await this.gameOutcomeRepository.find({
       where: { progressId, userId },
       relations: ['playerChoice'],
       order: { createdAt: 'ASC' },
     });
+
+    // Filter out system-generated completion outcomes (no playerChoiceId)
+    // These are created by completeGame() and don't represent player actions
+    const outcomes = allOutcomes.filter((o) => o.playerChoiceId != null);
 
     const summary = outcomes.map((outcome) => ({
       action: outcome.playerChoice?.label || 'Unknown Action',
