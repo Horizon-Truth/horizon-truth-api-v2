@@ -9,3 +9,11 @@ import { UserStatus } from '../../shared/enums/user-status.enum';
 @Injectable()
 export class SystemSeederService {
   private readonly logger = new Logger(SystemSeederService.name);
+
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
+
+  async seed() {
+    this.logger.log('Starting system data seeding...');
