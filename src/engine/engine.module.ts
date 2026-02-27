@@ -15,6 +15,7 @@ import { EngineController } from './engine.controller';
 import { GamificationModule } from '../gamification/gamification.module';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { ScenarioAdminController } from './admin/scenario-admin.controller';
+import { SceneAdminController } from './admin/scene-admin.controller';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { ScenarioAdminController } from './admin/scenario-admin.controller';
     ]),
     forwardRef(() => GamificationModule),
   ],
-  controllers: [EngineController, ScenarioAdminController],
+  controllers: [EngineController, ScenarioAdminController, SceneAdminController],
   providers: [EngineService],
   exports: [EngineService, TypeOrmModule],
 })

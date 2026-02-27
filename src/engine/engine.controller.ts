@@ -23,7 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Game Engine')
 @Controller('engine')
 export class EngineController {
-  constructor(private readonly engineService: EngineService) {}
+  constructor(private readonly engineService: EngineService) { }
 
   @Get('scenarios')
   @ApiOperation({ summary: 'List all available game scenarios' })
@@ -108,6 +108,7 @@ export class EngineController {
     @Request() req,
     @Param('progressId') progressId: string,
   ) {
+    console.log(`[EngineController] getScenarioSummary hit for progressId=${progressId}, userId=${req.user?.userId}`);
     return this.engineService.getScenarioSummary(req.user.userId, progressId);
   }
 
