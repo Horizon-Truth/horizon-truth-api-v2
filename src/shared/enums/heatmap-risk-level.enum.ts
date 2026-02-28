@@ -1,4 +1,4 @@
-export enum IncidentSeverity {
+export enum HeatmapRiskLevel {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
