@@ -931,8 +931,8 @@ export class EngineService {
       );
     } else {
       // Fallback path: no user-specific GameOutcome rows exist.
-      // Look up PlayerAction records, find those with a real template GameOutcome (terminal choices only),
-      // and show only those in the summary. Filter out intermediate navigation choices with no outcome.
+      // Show all PlayerAction records. Use template GameOutcome messages when available;
+      // otherwise use a concise contextual label for navigation choices.
       const playerActions = await this.playerActionRepository.find({
         where: { userId, progressId },
         order: { createdAt: 'ASC' },
@@ -940,26 +940,30 @@ export class EngineService {
 
       const summaryItems: any[] = [];
       for (const action of playerActions) {
-        // Find the PlayerChoice matching this action's choiceKey in the same scene
         const matchingChoice = await this.playerChoiceRepository.findOne({
           where: { sceneId: action.sceneId, label: action.choiceKey },
         });
 
-        if (!matchingChoice) continue;
+        let consequence = `You chose to ${action.choiceKey?.toLowerCase().replace(/_/g, ' ')}.`;
+        let trustDelta = 0;
+        let outcomeType = 'NEUTRAL';
 
-        // Only include choices that have a real template outcome (endScenario choices)
-        // Skip intermediate navigation choices that have no consequence
-        const templateOutcome = await this.gameOutcomeRepository.findOne({
-          where: { playerChoiceId: matchingChoice.id, userId: IsNull() },
-        });
-
-        if (!templateOutcome) continue; // Skip choices without outcomes (navigation-only)
+        if (matchingChoice) {
+          const templateOutcome = await this.gameOutcomeRepository.findOne({
+            where: { playerChoiceId: matchingChoice.id, userId: IsNull() },
+          });
+          if (templateOutcome) {
+            consequence = templateOutcome.message || consequence;
+            trustDelta = templateOutcome.trustScoreDelta || 0;
+            outcomeType = templateOutcome.outcomeType || outcomeType;
+          }
+        }
 
         summaryItems.push({
           action: action.choiceKey || 'Unknown Action',
-          consequence: templateOutcome.message || 'No specific impact recorded.',
-          trustDelta: templateOutcome.trustScoreDelta || 0,
-          outcomeType: templateOutcome.outcomeType || 'NEUTRAL',
+          consequence,
+          trustDelta,
+          outcomeType,
         });
       }
 
