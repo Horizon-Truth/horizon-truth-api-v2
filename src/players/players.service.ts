@@ -246,15 +246,23 @@ export class PlayersService {
     const gamesPlayed = parseInt(stats.total, 10) || 0;
     const gamesCompleted = parseInt(stats.completed, 10) || 0;
 
-    // 2. Get Score (using query directly since we can't easily inject GamificationService due to circular dep)
-    const scoreResult = await manager
-      .createQueryBuilder()
-      .select('SUM(score)', 'totalScore')
-      .from('game_outcomes', 'go')
-      .where('go.user_id = :userId', { userId })
-      .getRawOne();
+    // 2. Get Score — only count each scenario ONCE (first completion only).
+    // Replaying an already-completed scenario should NOT add to the level.
+    // game_outcomes rows created by completeGame() have no player_choice_id (they are the final score rows).
+    const scoreResult = await manager.query(
+      `SELECT COALESCE(SUM(first_score), 0) AS "totalScore"
+       FROM (
+         SELECT DISTINCT ON (scenario_id) score AS first_score
+         FROM game_outcomes
+         WHERE user_id = $1
+           AND player_choice_id IS NULL
+         ORDER BY scenario_id, created_at ASC
+       ) unique_completions`,
+      [userId],
+    );
 
-    const totalScore = parseInt(scoreResult.totalScore, 10) || 0;
+    const totalScore = parseInt(scoreResult[0]?.totalScore, 10) || 0;
+
 
     // 3. Get Badges Count
     const badgesCount = await manager
