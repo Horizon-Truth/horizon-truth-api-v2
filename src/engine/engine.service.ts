@@ -931,8 +931,8 @@ export class EngineService {
       );
     } else {
       // Fallback path: no user-specific GameOutcome rows exist.
-      // Look up PlayerAction records and try to find the template GameOutcome
-      // for each choice (userId IS NULL) to show real consequence messages.
+      // Look up PlayerAction records, find those with a real template GameOutcome (terminal choices only),
+      // and show only those in the summary. Filter out intermediate navigation choices with no outcome.
       const playerActions = await this.playerActionRepository.find({
         where: { userId, progressId },
         order: { createdAt: 'ASC' },
@@ -945,28 +945,21 @@ export class EngineService {
           where: { sceneId: action.sceneId, label: action.choiceKey },
         });
 
-        let consequence = 'Your decision has been recorded in the system logs.';
-        let trustDelta = 0;
-        let outcomeType = 'NEUTRAL';
+        if (!matchingChoice) continue;
 
-        if (matchingChoice) {
-          // Try to find a template outcome (userId IS NULL) for this choice
-          const templateOutcome = await this.gameOutcomeRepository.findOne({
-            where: { playerChoiceId: matchingChoice.id, userId: IsNull() },
-          });
+        // Only include choices that have a real template outcome (endScenario choices)
+        // Skip intermediate navigation choices that have no consequence
+        const templateOutcome = await this.gameOutcomeRepository.findOne({
+          where: { playerChoiceId: matchingChoice.id, userId: IsNull() },
+        });
 
-          if (templateOutcome) {
-            consequence = templateOutcome.message || consequence;
-            trustDelta = templateOutcome.trustScoreDelta || 0;
-            outcomeType = templateOutcome.outcomeType || outcomeType;
-          }
-        }
+        if (!templateOutcome) continue; // Skip choices without outcomes (navigation-only)
 
         summaryItems.push({
           action: action.choiceKey || 'Unknown Action',
-          consequence,
-          trustDelta,
-          outcomeType,
+          consequence: templateOutcome.message || 'No specific impact recorded.',
+          trustDelta: templateOutcome.trustScoreDelta || 0,
+          outcomeType: templateOutcome.outcomeType || 'NEUTRAL',
         });
       }
 
