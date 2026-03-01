@@ -6,7 +6,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull } from 'typeorm';
+import { Repository, DataSource, IsNull, In } from 'typeorm';
 import { Scenario } from './entities/scenario.entity';
 import { Scene } from './entities/scene.entity';
 import { GameLevel } from './entities/game-level.entity';
@@ -14,6 +14,7 @@ import { GameProgress } from './entities/game-progress.entity';
 import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
 import { PlayerChoice } from './entities/player-choice.entity';
+import { SceneContent } from './entities/scene-content.entity';
 import { ScenarioQueryDto } from './dto/scenario-query.dto';
 import { SubmitChoiceDto } from './dto/submit-choice.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
@@ -40,6 +41,8 @@ export class EngineService {
     private gameLevelRepository: Repository<GameLevel>,
     @InjectRepository(PlayerChoice)
     private playerChoiceRepository: Repository<PlayerChoice>,
+    @InjectRepository(SceneContent)
+    private sceneContentRepository: Repository<SceneContent>,
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
@@ -240,7 +243,7 @@ export class EngineService {
           label: c.label,
           actionType: c.actionType,
         })) || [],
-      availableChoices: scene.availableChoices || ['VERIFY', 'SHARE', 'IGNORE'],
+      availableChoices: scene.availableChoices || ['CHOICE', 'NEXT', 'FINISH'],
     };
   }
 
@@ -596,6 +599,194 @@ export class EngineService {
 
   // Admin Methods
 
+  async getScenes(scenarioId: string): Promise<Scene[]> {
+    return this.sceneRepository.find({
+      where: { scenarioId },
+      order: { order: 'ASC' },
+      relations: ['content', 'choices', 'choices.outcomes'],
+    });
+  }
+
+  async createScene(scenarioId: string, createDto: any): Promise<Scene> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Create main scene
+      const scene = this.sceneRepository.create({
+        scenarioId,
+        title: createDto.title,
+        description: createDto.description,
+        order: createDto.order,
+        sceneType: createDto.sceneType,
+        contentType: createDto.contentType,
+        isTerminal: createDto.isTerminal || false,
+        availableChoices: createDto.choices ? createDto.choices.map((c: any) => c.label) : ['CHOICE', 'NEXT', 'FINISH'],
+      });
+      const savedScene = await queryRunner.manager.save(scene);
+
+      // Create content
+      if (createDto.content) {
+        const content = this.sceneContentRepository.create({
+          sceneId: savedScene.id,
+          contentType: createDto.content.contentType || createDto.contentType,
+          textBody: createDto.content.textBody,
+          imageUrl: createDto.content.imageUrl,
+          videoUrl: createDto.content.videoUrl,
+        });
+        await queryRunner.manager.save(content);
+      }
+
+      // Create choices and outcomes (consequences)
+      if (createDto.choices && createDto.choices.length > 0) {
+        for (const choiceDto of createDto.choices) {
+          const choice = this.playerChoiceRepository.create({
+            sceneId: savedScene.id,
+            label: choiceDto.label,
+            actionType: choiceDto.actionType || 'CHOICE',
+            nextSceneId: choiceDto.nextSceneId,
+          });
+          const savedChoice = await queryRunner.manager.save(choice);
+
+          if (choiceDto.outcomes && choiceDto.outcomes.length > 0) {
+            for (const outcomeDto of choiceDto.outcomes) {
+              const outcome = this.gameOutcomeRepository.create({
+                scenarioId,
+                playerChoiceId: savedChoice.id,
+                outcomeType: outcomeDto.outcomeType,
+                score: outcomeDto.score || 0,
+                trustScoreDelta: outcomeDto.trustScoreDelta || 0,
+                message: outcomeDto.message,
+                endScenario: outcomeDto.endScenario || false,
+              });
+              await queryRunner.manager.save(outcome);
+            }
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return this.sceneRepository.findOne({
+        where: { id: savedScene.id },
+        relations: ['content', 'choices', 'choices.outcomes'],
+      }) as unknown as Scene;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async updateScene(id: string, updateDto: any): Promise<Scene> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const scene = await queryRunner.manager.findOne(Scene, { where: { id }, relations: ['content'] });
+      if (!scene) throw new NotFoundException('Scene not found');
+
+      // Update basic fields
+      if (updateDto.title !== undefined) scene.title = updateDto.title;
+      if (updateDto.description !== undefined) scene.description = updateDto.description;
+      if (updateDto.order !== undefined) scene.order = updateDto.order;
+      if (updateDto.sceneType !== undefined) scene.sceneType = updateDto.sceneType;
+      if (updateDto.contentType !== undefined) scene.contentType = updateDto.contentType;
+      if (updateDto.isTerminal !== undefined) scene.isTerminal = updateDto.isTerminal;
+      if (updateDto.choices) {
+        scene.availableChoices = updateDto.choices.map((c: any) => c.label);
+      }
+
+      await queryRunner.manager.save(scene);
+
+      // Update content
+      if (updateDto.content) {
+        let content = scene.content;
+        if (!content) {
+          content = this.sceneContentRepository.create({ sceneId: id });
+        }
+        if (updateDto.content.contentType !== undefined) content.contentType = updateDto.content.contentType;
+        if (updateDto.content.textBody !== undefined) content.textBody = updateDto.content.textBody;
+        if (updateDto.content.imageUrl !== undefined) content.imageUrl = updateDto.content.imageUrl;
+        if (updateDto.content.videoUrl !== undefined) content.videoUrl = updateDto.content.videoUrl;
+        await queryRunner.manager.save(SceneContent, content);
+      }
+
+      // Recreate choices (simplified approach: delete old, create new)
+      if (updateDto.choices !== undefined) {
+        const oldChoices = await queryRunner.manager.find(PlayerChoice, { where: { sceneId: id } });
+        const oldChoiceIds = oldChoices.map(c => c.id);
+
+        if (oldChoiceIds.length > 0) {
+          await queryRunner.manager.delete(GameOutcome, { playerChoiceId: In(oldChoiceIds), userId: IsNull() });
+          await queryRunner.manager.delete(PlayerChoice, { id: In(oldChoiceIds) });
+        }
+
+        for (const choiceDto of updateDto.choices) {
+          const choice = this.playerChoiceRepository.create({
+            sceneId: id,
+            label: choiceDto.label,
+            actionType: choiceDto.actionType || 'CHOICE',
+            nextSceneId: choiceDto.nextSceneId,
+          });
+          const savedChoice = await queryRunner.manager.save(choice);
+
+          if (choiceDto.outcomes && choiceDto.outcomes.length > 0) {
+            for (const outcomeDto of choiceDto.outcomes) {
+              const outcome = this.gameOutcomeRepository.create({
+                scenarioId: scene.scenarioId,
+                playerChoiceId: savedChoice.id,
+                outcomeType: outcomeDto.outcomeType,
+                score: outcomeDto.score || 0,
+                trustScoreDelta: outcomeDto.trustScoreDelta || 0,
+                message: outcomeDto.message,
+                endScenario: outcomeDto.endScenario || false,
+              });
+              await queryRunner.manager.save(outcome);
+            }
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return this.sceneRepository.findOne({
+        where: { id },
+        relations: ['content', 'choices', 'choices.outcomes'],
+      }) as unknown as Scene;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteScene(id: string): Promise<void> {
+    const scene = await this.sceneRepository.findOne({
+      where: { id },
+      relations: ['choices', 'choices.outcomes', 'content'],
+    });
+    if (!scene) throw new NotFoundException('Scene not found');
+
+    // Delete child entities manually to avoid FK violations
+    for (const choice of scene.choices || []) {
+      if (choice.outcomes?.length) {
+        await this.gameOutcomeRepository.delete(choice.outcomes.map((o) => o.id));
+      }
+    }
+    if (scene.choices?.length) {
+      await this.playerChoiceRepository.delete(scene.choices.map((c) => c.id));
+    }
+    if (scene.content) {
+      await this.sceneContentRepository.delete(scene.content.id);
+    }
+
+    await this.sceneRepository.delete(id);
+  }
+
   async createScenario(createDto: any): Promise<Scenario> {
     const { type, ...rest } = createDto;
 
@@ -659,11 +850,14 @@ export class EngineService {
    * Get summary of player choices and consequences for the "Investigation Reveal" screen
    */
   async getScenarioSummary(userId: string, progressId: string): Promise<any> {
+    console.log(`[EngineService] getScenarioSummary: userId=${userId}, progressId=${progressId}`);
     // Verify progress belongs to user
     const progress = await this.gameProgressRepository.findOne({
       where: { id: progressId, userId },
       relations: ['scenario'],
     });
+    console.log(`[EngineService] getScenarioSummary: progress found = ${progress ? 'true' : 'false'}`);
+    console.log(`[EngineService] getScenarioSummary: progress object = ${JSON.stringify(progress)}`);
 
     if (!progress) {
       throw new NotFoundException('Game progress not found');
