@@ -930,21 +930,48 @@ export class EngineService {
         0,
       );
     } else {
-      // Fallback path: no GameOutcome rows were created (scenario had no template outcomes in DB)
-      // Use PlayerAction records instead to at least show what the player did
+      // Fallback path: no user-specific GameOutcome rows exist.
+      // Look up PlayerAction records and try to find the template GameOutcome
+      // for each choice (userId IS NULL) to show real consequence messages.
       const playerActions = await this.playerActionRepository.find({
         where: { userId, progressId },
         order: { createdAt: 'ASC' },
       });
 
-      summary = playerActions.map((action) => ({
-        action: action.choiceKey || 'Unknown Action',
-        consequence: 'Your decision has been recorded in the system logs.',
-        trustDelta: 0,
-        outcomeType: 'NEUTRAL',
-      }));
+      const summaryItems: any[] = [];
+      for (const action of playerActions) {
+        // Find the PlayerChoice matching this action's choiceKey in the same scene
+        const matchingChoice = await this.playerChoiceRepository.findOne({
+          where: { sceneId: action.sceneId, label: action.choiceKey },
+        });
 
-      totalTrustDelta = 0;
+        let consequence = 'Your decision has been recorded in the system logs.';
+        let trustDelta = 0;
+        let outcomeType = 'NEUTRAL';
+
+        if (matchingChoice) {
+          // Try to find a template outcome (userId IS NULL) for this choice
+          const templateOutcome = await this.gameOutcomeRepository.findOne({
+            where: { playerChoiceId: matchingChoice.id, userId: IsNull() },
+          });
+
+          if (templateOutcome) {
+            consequence = templateOutcome.message || consequence;
+            trustDelta = templateOutcome.trustScoreDelta || 0;
+            outcomeType = templateOutcome.outcomeType || outcomeType;
+          }
+        }
+
+        summaryItems.push({
+          action: action.choiceKey || 'Unknown Action',
+          consequence,
+          trustDelta,
+          outcomeType,
+        });
+      }
+
+      summary = summaryItems;
+      totalTrustDelta = summaryItems.reduce((sum, s) => sum + (s.trustDelta || 0), 0);
     }
 
     return {
