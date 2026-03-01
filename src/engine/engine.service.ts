@@ -46,7 +46,7 @@ export class EngineService {
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
-  ) {}
+  ) { }
 
   /**
    * Get list of scenarios with optional filtering
@@ -384,7 +384,7 @@ export class EngineService {
           id: undefined,
           userId,
           progressId,
-          playerChoiceId: templateOutcome.playerChoiceId, // Ensure link to choice remains
+          playerChoiceId: choice?.id || templateOutcome.playerChoiceId, // Explicitly link to the incoming choice
           message: processedMessage,
           completedAt: new Date(),
         });
@@ -481,11 +481,11 @@ export class EngineService {
       [OutcomeType.SUCCESS]: 100,
       [OutcomeType.NEUTRAL]: 60,
       [OutcomeType.PARTIAL_FAIL]: 40,
-      [OutcomeType.FAIL]: 20,
-      [OutcomeType.FAILURE]: 20,
+      [OutcomeType.FAIL]: 0,
+      [OutcomeType.FAILURE]: 0,
       [OutcomeType.DEATH]: 0,
     };
-    const score = scoreMap[outcomeType] ?? 50;
+    const score = scoreMap[outcomeType] ?? 0;
 
     // Create game outcome
     const outcome = this.gameOutcomeRepository.create({
@@ -503,6 +503,12 @@ export class EngineService {
     // Note: Trust score was already updated in submitChoice() when the
     // player made their final decision. No need to update again here.
 
+    // Calculate total trust delta from all choices in this progress
+    const allSessionOutcomes = await this.gameOutcomeRepository.find({
+      where: { progressId, userId: progress.userId },
+    });
+    const totalTrustDelta = allSessionOutcomes.reduce((sum, o) => sum + (o.trustScoreDelta || 0), 0);
+
     // Trigger badge awards and leaderboard updates
     try {
       const badgesAwarded =
@@ -514,6 +520,7 @@ export class EngineService {
         outcome: {
           outcomeType,
           score,
+          totalTrustDelta,
           feedback: outcome.feedback,
           progressId: progress.id,
           completedAt: outcome.completedAt,
@@ -532,6 +539,7 @@ export class EngineService {
         outcome: {
           outcomeType,
           score,
+          totalTrustDelta,
           feedback: outcome.feedback,
           progressId: progress.id,
           completedAt: outcome.completedAt,
@@ -562,16 +570,22 @@ export class EngineService {
       where: { id: outcome.scenarioId },
     });
 
+    const allSessionOutcomes = await this.gameOutcomeRepository.find({
+      where: { progressId },
+    });
+    const totalTrustDelta = allSessionOutcomes.reduce((sum, o) => sum + (o.trustScoreDelta || 0), 0);
+
     return {
       outcomeType: outcome.outcomeType,
       score: outcome.score,
+      totalTrustDelta,
       feedback: outcome.feedback,
       completedAt: outcome.completedAt,
       scenario: scenario
         ? {
-            id: scenario.id,
-            title: scenario.title,
-          }
+          id: scenario.id,
+          title: scenario.title,
+        }
         : null,
     };
   }
