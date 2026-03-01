@@ -46,7 +46,7 @@ export class EngineService {
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
-  ) { }
+  ) {}
 
   /**
    * Get list of scenarios with optional filtering
@@ -354,12 +354,9 @@ export class EngineService {
 
       if (templateOutcome) {
         // Update persistent trust score
-        const playerProfile = await queryRunner.manager.findOne(
-          PlayerProfile,
-          {
-            where: { userId },
-          },
-        );
+        const playerProfile = await queryRunner.manager.findOne(PlayerProfile, {
+          where: { userId },
+        });
 
         if (playerProfile) {
           playerProfile.currentTrustScore =
@@ -387,6 +384,7 @@ export class EngineService {
           id: undefined,
           userId,
           progressId,
+          playerChoiceId: templateOutcome.playerChoiceId, // Ensure link to choice remains
           message: processedMessage,
           completedAt: new Date(),
         });
@@ -571,9 +569,9 @@ export class EngineService {
       completedAt: outcome.completedAt,
       scenario: scenario
         ? {
-          id: scenario.id,
-          title: scenario.title,
-        }
+            id: scenario.id,
+            title: scenario.title,
+          }
         : null,
     };
   }
@@ -622,7 +620,9 @@ export class EngineService {
         sceneType: createDto.sceneType,
         contentType: createDto.contentType,
         isTerminal: createDto.isTerminal || false,
-        availableChoices: createDto.choices ? createDto.choices.map((c: any) => c.label) : ['CHOICE', 'NEXT', 'FINISH'],
+        availableChoices: createDto.choices
+          ? createDto.choices.map((c: any) => c.label)
+          : ['CHOICE', 'NEXT', 'FINISH'],
       });
       const savedScene = await queryRunner.manager.save(scene);
 
@@ -685,16 +685,23 @@ export class EngineService {
     await queryRunner.startTransaction();
 
     try {
-      const scene = await queryRunner.manager.findOne(Scene, { where: { id }, relations: ['content'] });
+      const scene = await queryRunner.manager.findOne(Scene, {
+        where: { id },
+        relations: ['content'],
+      });
       if (!scene) throw new NotFoundException('Scene not found');
 
       // Update basic fields
       if (updateDto.title !== undefined) scene.title = updateDto.title;
-      if (updateDto.description !== undefined) scene.description = updateDto.description;
+      if (updateDto.description !== undefined)
+        scene.description = updateDto.description;
       if (updateDto.order !== undefined) scene.order = updateDto.order;
-      if (updateDto.sceneType !== undefined) scene.sceneType = updateDto.sceneType;
-      if (updateDto.contentType !== undefined) scene.contentType = updateDto.contentType;
-      if (updateDto.isTerminal !== undefined) scene.isTerminal = updateDto.isTerminal;
+      if (updateDto.sceneType !== undefined)
+        scene.sceneType = updateDto.sceneType;
+      if (updateDto.contentType !== undefined)
+        scene.contentType = updateDto.contentType;
+      if (updateDto.isTerminal !== undefined)
+        scene.isTerminal = updateDto.isTerminal;
       if (updateDto.choices) {
         scene.availableChoices = updateDto.choices.map((c: any) => c.label);
       }
@@ -707,21 +714,32 @@ export class EngineService {
         if (!content) {
           content = this.sceneContentRepository.create({ sceneId: id });
         }
-        if (updateDto.content.contentType !== undefined) content.contentType = updateDto.content.contentType;
-        if (updateDto.content.textBody !== undefined) content.textBody = updateDto.content.textBody;
-        if (updateDto.content.imageUrl !== undefined) content.imageUrl = updateDto.content.imageUrl;
-        if (updateDto.content.videoUrl !== undefined) content.videoUrl = updateDto.content.videoUrl;
+        if (updateDto.content.contentType !== undefined)
+          content.contentType = updateDto.content.contentType;
+        if (updateDto.content.textBody !== undefined)
+          content.textBody = updateDto.content.textBody;
+        if (updateDto.content.imageUrl !== undefined)
+          content.imageUrl = updateDto.content.imageUrl;
+        if (updateDto.content.videoUrl !== undefined)
+          content.videoUrl = updateDto.content.videoUrl;
         await queryRunner.manager.save(SceneContent, content);
       }
 
       // Recreate choices (simplified approach: delete old, create new)
       if (updateDto.choices !== undefined) {
-        const oldChoices = await queryRunner.manager.find(PlayerChoice, { where: { sceneId: id } });
-        const oldChoiceIds = oldChoices.map(c => c.id);
+        const oldChoices = await queryRunner.manager.find(PlayerChoice, {
+          where: { sceneId: id },
+        });
+        const oldChoiceIds = oldChoices.map((c) => c.id);
 
         if (oldChoiceIds.length > 0) {
-          await queryRunner.manager.delete(GameOutcome, { playerChoiceId: In(oldChoiceIds), userId: IsNull() });
-          await queryRunner.manager.delete(PlayerChoice, { id: In(oldChoiceIds) });
+          await queryRunner.manager.delete(GameOutcome, {
+            playerChoiceId: In(oldChoiceIds),
+            userId: IsNull(),
+          });
+          await queryRunner.manager.delete(PlayerChoice, {
+            id: In(oldChoiceIds),
+          });
         }
 
         for (const choiceDto of updateDto.choices) {
@@ -755,7 +773,6 @@ export class EngineService {
         where: { id },
         relations: ['content', 'choices', 'choices.outcomes'],
       }) as unknown as Scene;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -774,7 +791,9 @@ export class EngineService {
     // Delete child entities manually to avoid FK violations
     for (const choice of scene.choices || []) {
       if (choice.outcomes?.length) {
-        await this.gameOutcomeRepository.delete(choice.outcomes.map((o) => o.id));
+        await this.gameOutcomeRepository.delete(
+          choice.outcomes.map((o) => o.id),
+        );
       }
     }
     if (scene.choices?.length) {
@@ -833,31 +852,37 @@ export class EngineService {
    */
   private generateFeedback(outcomeType: OutcomeType, score: number): string {
     const feedbackMap = {
-      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Score: ${score}`,
-      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Score: ${score}`,
-      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Score: ${score}`,
-      [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement. Score: ${score}`,
-      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but didn't follow through with action. Score: ${score}`,
-      [OutcomeType.FAIL]: `This didn't end well. Review the scenario to understand where things went wrong. Score: ${score}`,
-      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
-      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Learn from this experience. Score: ${score}`,
+      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action.`,
+      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation.`,
+      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills.`,
+      [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement.`,
+      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but didn't follow through with action.`,
+      [OutcomeType.FAIL]: `This didn't end well. Review the scenario to understand where things went wrong.`,
+      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present.`,
+      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Learn from this experience.`,
     };
 
-    return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+    return feedbackMap[outcomeType] || `Game completed.`;
   }
 
   /**
    * Get summary of player choices and consequences for the "Investigation Reveal" screen
    */
   async getScenarioSummary(userId: string, progressId: string): Promise<any> {
-    console.log(`[EngineService] getScenarioSummary: userId=${userId}, progressId=${progressId}`);
+    console.log(
+      `[EngineService] getScenarioSummary: userId=${userId}, progressId=${progressId}`,
+    );
     // Verify progress belongs to user
     const progress = await this.gameProgressRepository.findOne({
       where: { id: progressId, userId },
       relations: ['scenario'],
     });
-    console.log(`[EngineService] getScenarioSummary: progress found = ${progress ? 'true' : 'false'}`);
-    console.log(`[EngineService] getScenarioSummary: progress object = ${JSON.stringify(progress)}`);
+    console.log(
+      `[EngineService] getScenarioSummary: progress found = ${progress ? 'true' : 'false'}`,
+    );
+    console.log(
+      `[EngineService] getScenarioSummary: progress object = ${JSON.stringify(progress)}`,
+    );
 
     if (!progress) {
       throw new NotFoundException('Game progress not found');
