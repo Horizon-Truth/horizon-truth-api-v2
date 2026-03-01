@@ -42,3 +42,30 @@ The API provides core business logic, data persistence, authentication, authoriz
 ```
 src/
 ├── users/          # User management, profiles, and authentication
+├── claims/         # Claim tracking, submission, and lifecycle
+├── reviews/        # Community reviews, verification, and moderation
+├── common/         # Shared utilities, guards, filters, and decorators
+├── config/         # Configuration and environment setup
+└── app.module.ts   # Root application module
+```
+
+## 🛠️ Quick Start
+
+### Prerequisites
+
+- Node.js v18 or higher
+- npm or yarn
+- PostgreSQL v13 or higher (for production)
+
+### Installation & Setup
+
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/Horizon-Truth/horizon-truth-api-v2
+    cd horizon-truth-api-v2
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
