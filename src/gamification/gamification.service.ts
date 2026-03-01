@@ -193,12 +193,37 @@ export class GamificationService {
 
     const perfectCount = parseInt(perfectScoresCount.count, 10) || 0;
 
+    // Check for "All Levels Completed"
+    // Count total active levels
+    const totalLevelsCount = await manager
+      .createQueryBuilder()
+      .select('COUNT(id)', 'count')
+      .from('game_levels', 'gl')
+      .where('gl.is_active = :isActive', { isActive: true })
+      .getRawOne();
+
+    const totalLevels = parseInt(totalLevelsCount.count, 10) || 0;
+
+    // Count levels where user has completed at least one scenario
+    const completedLevelsCount = await manager
+      .createQueryBuilder()
+      .select('COUNT(DISTINCT s.game_level_id)', 'count')
+      .from('game_progress', 'gp')
+      .innerJoin('scenarios', 's', 'gp.scenario_id = s.id')
+      .where('gp.userId = :userId', { userId })
+      .andWhere('gp.status = :status', { status: 'COMPLETED' })
+      .getRawOne();
+
+    const completedLevels = parseInt(completedLevelsCount.count, 10) || 0;
+    const hasCompletedAllLevels = totalLevels > 0 && completedLevels >= totalLevels;
+
     // 2. Define Badge Criteria
     const criteria = [
       { code: 'FIRST_GAME', Met: gamesCount >= 1 },
       { code: 'FACT_FINDER', Met: gamesCount >= 5 },
       { code: 'SCENARIO_MASTER', Met: gamesCount >= 10 },
       { code: 'PERFECT_SCORE', Met: perfectCount >= 1 },
+      { code: 'HORIZON_MASTER', Met: hasCompletedAllLevels },
     ];
 
     // 3. Process Awards

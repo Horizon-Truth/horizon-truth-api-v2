@@ -110,7 +110,7 @@ export class EngineService {
     // Check if scenario exists and is active
     const scenario = await this.scenarioRepository.findOne({
       where: { id: scenarioId },
-      relations: ['scenes'],
+      relations: ['scenes', 'gameLevel'],
     });
 
     if (!scenario) {
@@ -119,6 +119,14 @@ export class EngineService {
 
     if (!scenario.isActive) {
       throw new BadRequestException('This scenario is not currently available');
+    }
+
+    // Check if user meets the score requirement for this level
+    if (scenario.gameLevel && scenario.gameLevel.minScoreRequired > 0) {
+      const userScore = await this.gamificationService.calculateScore(userId);
+      if (userScore < scenario.gameLevel.minScoreRequired) {
+        throw new BadRequestException(`You are not eligible to play next play`);
+      }
     }
 
     // Check if user already has an in-progress game for this scenario

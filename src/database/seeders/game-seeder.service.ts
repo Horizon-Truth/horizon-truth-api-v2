@@ -64,24 +64,38 @@ export class GameSeederService {
         levelNumber: 0,
         name: 'Trainee',
         description: 'Begin your journey into truth verification',
+        minScoreRequired: 0,
       },
       {
         levelNumber: 1,
         name: 'Novice',
         description: 'Just getting started with truth verification',
+        minScoreRequired: 100,
       },
       {
         levelNumber: 2,
         name: 'Apprentice',
         description: 'Building your fact-checking skills',
+        minScoreRequired: 250,
       },
       {
         levelNumber: 3,
         name: 'Investigator',
         description: 'Skilled at identifying misinformation',
+        minScoreRequired: 450,
       },
-      { levelNumber: 4, name: 'Detective', description: 'Expert truth seeker' },
-      { levelNumber: 5, name: 'Master', description: 'Elite fact-checker' },
+      {
+        levelNumber: 4,
+        name: 'Detective',
+        description: 'Expert truth seeker',
+        minScoreRequired: 700,
+      },
+      {
+        levelNumber: 5,
+        name: 'Master',
+        description: 'Elite fact-checker',
+        minScoreRequired: 1000,
+      },
     ];
 
     for (const levelData of levels) {
@@ -274,6 +288,13 @@ export class GameSeederService {
         iconUrl: '/badges/crisis-verifier.png',
         category: BadgeCategory.ACHIEVEMENT,
       },
+      {
+        code: 'HORIZON_MASTER',
+        name: 'Horizon Master',
+        description: 'Completed scenarios in every available game level',
+        iconUrl: '/badges/horizon-master.png',
+        category: BadgeCategory.ACHIEVEMENT,
+      }
     ];
 
     for (const badgeData of badges) {

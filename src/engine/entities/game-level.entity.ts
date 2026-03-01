@@ -18,6 +18,10 @@ export class GameLevel {
   @Column({ name: 'level_number', type: 'int' })
   levelNumber: number;
 
+  @ApiProperty({ example: 0 })
+  @Column({ name: 'min_score_required', type: 'int', default: 0 })
+  minScoreRequired: number;
+
   @ApiProperty({ example: 'The Basics of Misinformation' })
   @Column()
   name: string;
