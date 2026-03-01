@@ -913,17 +913,39 @@ export class EngineService {
     // These are created by completeGame() and don't represent player actions
     const outcomes = allOutcomes.filter((o) => o.playerChoiceId != null);
 
-    const summary = outcomes.map((outcome) => ({
-      action: outcome.playerChoice?.label || 'Unknown Action',
-      consequence: outcome.message || 'No specific impact recorded.',
-      trustDelta: outcome.trustScoreDelta,
-      outcomeType: outcome.outcomeType,
-    }));
+    let summary: any[];
+    let totalTrustDelta: number;
 
-    const totalTrustDelta = outcomes.reduce(
-      (sum, o) => sum + (o.trustScoreDelta || 0),
-      0,
-    );
+    if (outcomes.length > 0) {
+      // Primary path: use GameOutcome rows linked to choices
+      summary = outcomes.map((outcome) => ({
+        action: outcome.playerChoice?.label || 'Unknown Action',
+        consequence: outcome.message || 'No specific impact recorded.',
+        trustDelta: outcome.trustScoreDelta,
+        outcomeType: outcome.outcomeType,
+      }));
+
+      totalTrustDelta = outcomes.reduce(
+        (sum, o) => sum + (o.trustScoreDelta || 0),
+        0,
+      );
+    } else {
+      // Fallback path: no GameOutcome rows were created (scenario had no template outcomes in DB)
+      // Use PlayerAction records instead to at least show what the player did
+      const playerActions = await this.playerActionRepository.find({
+        where: { userId, progressId },
+        order: { createdAt: 'ASC' },
+      });
+
+      summary = playerActions.map((action) => ({
+        action: action.choiceKey || 'Unknown Action',
+        consequence: 'Your decision has been recorded in the system logs.',
+        trustDelta: 0,
+        outcomeType: 'NEUTRAL',
+      }));
+
+      totalTrustDelta = 0;
+    }
 
     return {
       scenarioTitle: progress.scenario.title,
