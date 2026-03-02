@@ -115,4 +115,15 @@ export class ReportsService {
 
     return saved;
   }
+
+  async update(id: string, updateDto: any): Promise<Report> {
+    const report = await this.findById(id);
+    Object.assign(report, updateDto);
+    return this.reportRepository.save(report);
+  }
+
+  async remove(id: string): Promise<void> {
+    const report = await this.findById(id);
+    await this.reportRepository.remove(report);
+  }
 }

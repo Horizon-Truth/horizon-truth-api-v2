@@ -5,6 +5,8 @@ import {
   Body,
   Param,
   Query,
+  Patch,
+  Delete,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -48,5 +50,21 @@ export class ReportsController {
     @Request() req: any,
   ) {
     return this.reportsService.addVerification(id, req.user.userId, verificationData);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a report (Admin)' })
+  update(@Param('id') id: string, @Body() updateDto: any) {
+    return this.reportsService.update(id, updateDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a report (Admin)' })
+  remove(@Param('id') id: string) {
+    return this.reportsService.remove(id);
   }
 }
