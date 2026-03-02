@@ -6,12 +6,14 @@ import {
   UpdateDateColumn,
   ManyToOne,
   ManyToMany,
+  OneToMany,
   JoinTable,
   JoinColumn,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../../users/entities/user.entity';
 import { ReportTag } from './report-tag.entity';
+import { ReportVerification } from './report-verification.entity';
 import { ReportStatus } from '../../shared/enums/report-status.enum';
 import { ReportContentType } from '../../shared/enums/report-content-type.enum';
 import { ReportPriorityLevel } from '../../shared/enums/report-priority-level.enum';
@@ -81,6 +83,13 @@ export class Report {
     inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
   })
   tags: ReportTag[];
+
+  @OneToMany(() => ReportVerification, (verification) => verification.report)
+  verifications: ReportVerification[];
+
+  @ApiProperty({ example: 85, default: 0 })
+  @Column({ name: 'credibility_score', type: 'int', default: 0 })
+  credibilityScore: number;
 
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at' })

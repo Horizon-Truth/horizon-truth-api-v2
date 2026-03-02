@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Reports')
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(private readonly reportsService: ReportsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -36,5 +36,17 @@ export class ReportsController {
   @ApiOperation({ summary: 'Get a report by ID' })
   findOne(@Param('id') id: string) {
     return this.reportsService.findById(id);
+  }
+
+  @Post(':id/verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add community verification to a report' })
+  addVerification(
+    @Param('id') id: string,
+    @Body() verificationData: { comment: string; status: string; rating?: number },
+    @Request() req: any,
+  ) {
+    return this.reportsService.addVerification(id, req.user.userId, verificationData);
   }
 }
