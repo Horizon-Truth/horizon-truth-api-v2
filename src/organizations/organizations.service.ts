@@ -9,7 +9,7 @@ export class OrganizationsService {
   constructor(
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
-  ) {}
+  ) { }
 
   async findAll(query: any): Promise<any> {
     const { status, type, country, page = 1, limit = 10 } = query;
@@ -75,5 +75,31 @@ export class OrganizationsService {
   ): Promise<Organization> {
     await this.organizationRepository.update(id, { status });
     return this.findById(id);
+  }
+
+  async findOrganizationUsers(orgId: string): Promise<any[]> {
+    const org = await this.organizationRepository.findOne({
+      where: { id: orgId },
+      relations: ['users', 'users.user'],
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+    return org.users;
+  }
+
+  async addOrganizationUser(
+    orgId: string,
+    userId: string,
+    role: string,
+  ): Promise<any> {
+    const org = await this.findById(orgId);
+    // Note: In a real app, we'd inject OrganizationUserRepository here.
+    // Assuming the service has access to the repository or we can use the manager.
+    const manager = this.organizationRepository.manager;
+    const orgUser = manager.create('OrganizationUser', {
+      organizationId: orgId,
+      userId: userId,
+      role: role,
+    });
+    return manager.save(orgUser);
   }
 }
