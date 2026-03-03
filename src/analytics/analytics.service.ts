@@ -11,6 +11,9 @@ import { Resource } from '../resources/entities/resource.entity';
 import { Contact } from '../contacts/entities/contact.entity';
 import { GuestPlay } from '../engine/entities/guest-play.entity';
 
+import { OrganizationUser } from '../organizations/entities/organization-user.entity';
+import { Report } from '../reports/entities/report.entity';
+
 @Injectable()
 export class AnalyticsService {
     constructor(
@@ -32,71 +35,117 @@ export class AnalyticsService {
         private readonly contactRepository: Repository<Contact>,
         @InjectRepository(GuestPlay)
         private readonly guestPlayRepository: Repository<GuestPlay>,
+        @InjectRepository(OrganizationUser)
+        private readonly organizationUserRepository: Repository<OrganizationUser>,
+        @InjectRepository(Report)
+        private readonly reportRepository: Repository<Report>,
     ) { }
 
-    async getSystemStats() {
-        const [
-            totalUsers,
-            totalOrganizations,
-            totalPlayers,
-            totalScenarios,
-            totalFeedback,
-            totalBlogs,
-            totalResources,
-            totalContacts,
-            totalGuestPlays,
-        ] = await Promise.all([
-            this.userRepository.count(),
-            this.organizationRepository.count(),
-            this.playerProfileRepository.count(),
-            this.scenarioRepository.count(),
-            this.feedbackRepository.count(),
-            this.blogRepository.count(),
-            this.resourceRepository.count(),
-            this.contactRepository.count(),
-            this.guestPlayRepository.count(),
-        ]);
+    async getSystemStats(orgId?: string) {
+        let userCount, orgCount, playerCount, scenarioCount, feedbackCount, reportCount, blogCount, resourceCount, contactCount, guestCount;
 
-        const orgStatusDistribution = await this.organizationRepository
+        if (orgId) {
+            // Scoped requests
+            [
+                userCount,
+                orgCount,
+                playerCount,
+                scenarioCount,
+                feedbackCount,
+                reportCount,
+                blogCount,
+                resourceCount,
+                contactCount,
+                guestCount
+            ] = await Promise.all([
+                this.organizationUserRepository.count({ where: { organizationId: orgId } }),
+                Promise.resolve(1),
+                this.playerProfileRepository.createQueryBuilder('pp')
+                    .innerJoin('organization_users', 'ou', 'ou.user_id = pp.user_id')
+                    .where('ou.organization_id = :orgId', { orgId })
+                    .getCount(),
+                this.scenarioRepository.count(),
+                this.feedbackRepository.createQueryBuilder('fb')
+                    .innerJoin('organization_users', 'ou', 'ou.user_id = fb.user_id')
+                    .where('ou.organization_id = :orgId', { orgId })
+                    .getCount(),
+                this.reportRepository.createQueryBuilder('r')
+                    .innerJoin('organization_users', 'ou', 'ou.user_id = r.reporter_id')
+                    .where('ou.organization_id = :orgId', { orgId })
+                    .getCount(),
+                this.blogRepository.count(),
+                this.resourceRepository.count(),
+                this.contactRepository.count(),
+                this.guestPlayRepository.count()
+            ]);
+        } else {
+            // Global requests
+            [
+                userCount,
+                orgCount,
+                playerCount,
+                scenarioCount,
+                feedbackCount,
+                reportCount,
+                blogCount,
+                resourceCount,
+                contactCount,
+                guestCount
+            ] = await Promise.all([
+                this.userRepository.count(),
+                this.organizationRepository.count(),
+                this.playerProfileRepository.count(),
+                this.scenarioRepository.count(),
+                this.feedbackRepository.count(),
+                this.reportRepository.count(),
+                this.blogRepository.count(),
+                this.resourceRepository.count(),
+                this.contactRepository.count(),
+                this.guestPlayRepository.count()
+            ]);
+        }
+
+        // Distribution logic - for simplicity, we keep global distributions or empty for org admins
+        const orgTypesQuery = this.organizationRepository
             .createQueryBuilder('org')
             .select('org.status', 'status')
             .addSelect('COUNT(*)', 'count')
-            .groupBy('org.status')
-            .getRawMany();
+            .groupBy('org.status');
 
-        const feedbackStatusDistribution = await this.feedbackRepository
-            .createQueryBuilder('feedback')
-            .select('feedback.status', 'status')
+        if (orgId) {
+            orgTypesQuery.andWhere('org.id = :orgId', { orgId });
+        }
+        const orgTypes = await orgTypesQuery.getRawMany();
+
+        const feedbackStatusQuery = this.feedbackRepository
+            .createQueryBuilder('fb')
+            .select('fb.status', 'status')
             .addSelect('COUNT(*)', 'count')
-            .groupBy('feedback.status')
-            .getRawMany();
+            .groupBy('fb.status');
+
+        if (orgId) {
+            feedbackStatusQuery.innerJoin('organization_users', 'ou', 'ou.user_id = fb.user_id')
+                .andWhere('ou.organization_id = :orgId', { orgId });
+        }
+        const feedbackStatus = await feedbackStatusQuery.getRawMany();
 
         return {
             overview: {
-                users: totalUsers,
-                organizations: totalOrganizations,
-                players: totalPlayers,
-                scenarios: totalScenarios,
-                feedback: totalFeedback,
-                blogs: totalBlogs,
-                resources: totalResources,
-                contacts: totalContacts,
-                guestPlays: totalGuestPlays,
+                users: userCount,
+                organizations: orgCount,
+                players: playerCount,
+                scenarios: scenarioCount,
+                feedback: feedbackCount,
+                reports: reportCount,
+                blogs: blogCount,
+                resources: resourceCount,
+                contacts: contactCount,
+                guestPlays: guestCount
             },
             distributions: {
-                organizations: orgStatusDistribution.reduce((acc, curr) => {
-                    acc[curr.status] = parseInt(curr.count);
-                    return acc;
-                }, {}),
-                feedback: feedbackStatusDistribution.reduce((acc, curr) => {
-                    acc[curr.status] = parseInt(curr.count);
-                    return acc;
-                }, {}),
-            },
-            contentBreakdown: {
-                blogs: totalBlogs,
-                resources: totalResources,
-            },
+                organizations: Object.fromEntries(orgTypes.map(t => [t.status, parseInt(t.count)])),
+                feedback: Object.fromEntries(feedbackStatus.map(s => [s.status, parseInt(s.count)]))
+            }
         };
     }
 

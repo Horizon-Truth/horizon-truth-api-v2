@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Organization } from './entities/organization.entity';
 import { OrganizationStatus } from '../shared/enums/organization-status.enum';
+import { UsersService } from '../users/users.service';
+import { UserRole } from '../shared/enums/user-role.enum';
+import { OrganizationUserRole } from '../shared/enums/organization-user-role.enum';
+import { OrganizationUser } from './entities/organization-user.entity';
 
 @Injectable()
 export class OrganizationsService {
   constructor(
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
+    private readonly usersService: UsersService,
+    private readonly dataSource: DataSource,
   ) { }
 
   async findAll(query: any): Promise<any> {
@@ -54,8 +60,47 @@ export class OrganizationsService {
   }
 
   async create(createDto: any): Promise<Organization> {
-    const org = this.organizationRepository.create(createDto);
-    return this.organizationRepository.save(Array.isArray(org) ? org[0] : org);
+    const { adminEmail, adminPassword, adminFullName, ...orgData } = createDto;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Create Organization
+      const org = this.organizationRepository.create(orgData as Partial<Organization>);
+      const savedOrg = await queryRunner.manager.save(org);
+
+      // 2. Create Admin User if details provided
+      if (adminEmail && adminPassword) {
+        const user = await this.usersService.create({
+          email: adminEmail,
+          password: adminPassword,
+          fullName: adminFullName || orgData.name + ' Admin',
+          role: UserRole.ORG_ADMIN,
+          username: adminEmail.split('@')[0] + '_' + Math.random().toString(36).substring(2, 5),
+        });
+
+        // 3. Link User to Organization
+        const orgUser = queryRunner.manager.create(OrganizationUser, {
+          organizationId: savedOrg.id,
+          userId: user.id,
+          role: OrganizationUserRole.ADMIN,
+        });
+        await queryRunner.manager.save(orgUser);
+      }
+
+      await queryRunner.commitTransaction();
+      return savedOrg;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      if (err.message?.includes('already exists')) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async update(id: string, updateDto: any): Promise<Organization> {
@@ -91,15 +136,21 @@ export class OrganizationsService {
     userId: string,
     role: string,
   ): Promise<any> {
-    const org = await this.findById(orgId);
-    // Note: In a real app, we'd inject OrganizationUserRepository here.
-    // Assuming the service has access to the repository or we can use the manager.
+    await this.findById(orgId);
     const manager = this.organizationRepository.manager;
-    const orgUser = manager.create('OrganizationUser', {
+    const orgUser = manager.create(OrganizationUser, {
       organizationId: orgId,
       userId: userId,
-      role: role,
+      role: role as OrganizationUserRole,
     });
     return manager.save(orgUser);
+  }
+
+  async findUserOrganization(userId: string): Promise<string | null> {
+    const orgUser = await this.dataSource.getRepository(OrganizationUser).findOne({
+      where: { userId },
+      select: ['organizationId'],
+    });
+    return orgUser ? orgUser.organizationId : null;
   }
 }

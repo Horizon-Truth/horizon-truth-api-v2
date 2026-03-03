@@ -19,9 +19,13 @@ import { Blog } from '../blogs/entities/blog.entity';
 import { Resource } from '../resources/entities/resource.entity';
 import { Contact } from '../contacts/entities/contact.entity';
 import { GuestPlay } from '../engine/entities/guest-play.entity';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { OrganizationUser } from '../organizations/entities/organization-user.entity';
+import { Report } from '../reports/entities/report.entity';
 
 @Module({
   imports: [
+    OrganizationsModule,
     TypeOrmModule.forFeature([
       AnalyticsSnapshot,
       MisinformationHeatmap,
@@ -38,6 +42,8 @@ import { GuestPlay } from '../engine/entities/guest-play.entity';
       Resource,
       Contact,
       GuestPlay,
+      OrganizationUser,
+      Report,
     ]),
   ],
   controllers: [AnalyticsController],
