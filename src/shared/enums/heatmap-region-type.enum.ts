@@ -1,5 +1,5 @@
 export enum HeatmapRegionType {
-    COUNTRY = 'COUNTRY',
-    REGION = 'REGION',
-    CITY = 'CITY',
+  COUNTRY = 'COUNTRY',
+  REGION = 'REGION',
+  CITY = 'CITY',
 }

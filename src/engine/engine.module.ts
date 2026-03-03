@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameLevel } from './entities/game-level.entity';
 import { Scenario } from './entities/scenario.entity';
@@ -7,23 +7,37 @@ import { SceneContent } from './entities/scene-content.entity';
 import { SceneChatMessage } from './entities/scene-chat-message.entity';
 import { SceneFeedItem } from './entities/scene-feed-item.entity';
 import { PlayerChoice } from './entities/player-choice.entity';
+import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
 import { GameProgress } from './entities/game-progress.entity';
+import { GuestPlay } from './entities/guest-play.entity';
+import { EngineService } from './engine.service';
+import { EngineController } from './engine.controller';
+import { GamificationModule } from '../gamification/gamification.module';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
+import { ScenarioAdminController } from './admin/scenario-admin.controller';
+import { SceneAdminController } from './admin/scene-admin.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            GameLevel,
-            Scenario,
-            Scene,
-            SceneContent,
-            SceneChatMessage,
-            SceneFeedItem,
-            PlayerChoice,
-            GameOutcome,
-            GameProgress,
-        ]),
-    ],
-    exports: [TypeOrmModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      GameLevel,
+      Scenario,
+      Scene,
+      SceneContent,
+      SceneChatMessage,
+      SceneFeedItem,
+      PlayerChoice,
+      PlayerAction,
+      GameOutcome,
+      GameProgress,
+      PlayerProfile,
+      GuestPlay,
+    ]),
+    forwardRef(() => GamificationModule),
+  ],
+  controllers: [EngineController, ScenarioAdminController, SceneAdminController],
+  providers: [EngineService],
+  exports: [EngineService, TypeOrmModule],
 })
 export class EngineModule { }

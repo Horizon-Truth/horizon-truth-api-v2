@@ -1,7 +1,9 @@
 export enum OrganizationType {
-    SCHOOL = 'SCHOOL',
-    NGO = 'NGO',
-    GOVERNMENT = 'GOVERNMENT',
-    MEDIA = 'MEDIA',
-    OTHER = 'OTHER',
+  SCHOOL = 'SCHOOL',
+  NGO = 'NGO',
+  GOVERNMENT = 'GOVERNMENT',
+  MEDIA = 'MEDIA',
+  CROWDSOURCED = 'CROWDSOURCED',
+  ACADEMIC = 'ACADEMIC',
+  OTHER = 'OTHER',
 }

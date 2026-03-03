@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -13,10 +15,24 @@ import { EngineModule } from './engine/engine.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SeederModule } from './database/seeders/seeder.module';
+import { ReportsModule } from './reports/reports.module';
+import { LanguagesModule } from './reports/languages.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { BlogsModule } from './blogs/blogs.module';
+import { ResourcesModule } from './resources/resources.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 300000, // Time window in milliseconds (5 minutes = 300000ms)
+        limit: 200, // Max requests per time window (global default)
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -27,7 +43,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, 
+        synchronize: true,
       }),
       inject: [ConfigService],
     }),
@@ -40,8 +56,22 @@ import { AnalyticsModule } from './analytics/analytics.module';
     IncidentsModule,
     GamificationModule,
     AnalyticsModule,
+    SeederModule,
+    ReportsModule,
+    LanguagesModule,
+    FeedbackModule,
+    BlogsModule,
+    ResourcesModule,
+    ContactsModule,
+    NewsletterModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule { }

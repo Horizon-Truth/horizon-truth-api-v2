@@ -1,80 +1,38 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UsersService } from './users/users.service';
-import { UserRole } from './shared/enums/user-role.enum';
-import { UserStatus } from './shared/enums/user-status.enum';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { PlayerProfile } from './players/entities/player-profile.entity';
-import { Avatar } from './players/entities/avatar.entity';
-import { Repository } from 'typeorm';
-import { AvatarGender } from './shared/enums/avatar-gender.enum';
-import { AvatarAgeGroup } from './shared/enums/avatar-age-group.enum';
+import { GameSeederService } from './database/seeders/game-seeder.service';
+import { SystemSeederService } from './database/seeders/system-seeder.service';
+import { ReportsSeederService } from './database/seeders/reports-seeder.service';
+import { BlogResourceSeederService } from './database/seeders/blog-resource-seeder.service';
 
 async function bootstrap() {
-    const app = await NestFactory.createApplicationContext(AppModule);
-    const usersService = app.get(UsersService);
-    const playerProfileRepo = app.get<Repository<PlayerProfile>>(getRepositoryToken(PlayerProfile));
-    const avatarRepo = app.get<Repository<Avatar>>(getRepositoryToken(Avatar));
+  const app = await NestFactory.createApplicationContext(AppModule);
 
-    console.log('--- Starting Seeding ---');
+  const gameSeeder = app.get(GameSeederService);
+  const systemSeeder = app.get(SystemSeederService);
+  const reportsSeeder = app.get(ReportsSeederService);
+  const blogResourceSeeder = app.get(BlogResourceSeederService);
 
-    // 1. Seed default avatar if none exists
-    let defaultAvatar = await avatarRepo.findOne({ where: {} });
-    if (!defaultAvatar) {
-        console.log('Seeding default avatar...');
-        defaultAvatar = avatarRepo.create({
-            name: 'Default Hero',
-            imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-            gender: AvatarGender.MALE,
-            ageGroup: AvatarAgeGroup.ADULT,
-        });
-        defaultAvatar = await avatarRepo.save(defaultAvatar);
-    }
+  try {
+    console.log('--- Starting System Seeding ---');
+    await systemSeeder.seed();
 
-    const roles = Object.values(UserRole);
-    const defaultPassword = 'password123';
+    console.log('--- Starting Game Data Seeding ---');
+    await gameSeeder.seed();
 
-    for (const role of roles) {
-        const email = `${role.toLowerCase()}@horizon.com`;
-        const username = role.toLowerCase();
+    console.log('--- Starting Reports Data Seeding ---');
+    await reportsSeeder.seed();
 
-        const existingUser = await usersService.findOneByEmail(email);
-        if (existingUser) {
-            console.log(`User for role ${role} already exists, skipping...`);
-            continue;
-        }
+    console.log('--- Starting Blog and Resource Data Seeding ---');
+    await blogResourceSeeder.seed();
 
-        console.log(`Creating user for role: ${role}...`);
-        const user = await usersService.create({
-            email,
-            username,
-            fullName: `${role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())} User`,
-            role,
-            status: UserStatus.ACTIVE,
-            password: defaultPassword,
-            isVerified: true,
-        });
-
-        // 2. If role is PLAYER, create a profile
-        if (role === UserRole.PLAYER) {
-            console.log('Creating player profile...');
-            const profile = playerProfileRepo.create({
-                userId: user.id,
-                nickname: 'HorizonExplorer',
-                avatarId: defaultAvatar.id,
-                trustScoreInitial: 50,
-                onboardingCompleted: true,
-                onboardingCompletedAt: new Date(),
-            });
-            await playerProfileRepo.save(profile);
-        }
-    }
-
-    console.log('--- Seeding Completed Successfully ---');
+    console.log('✅ All database seeding completed successfully!');
+  } catch (error) {
+    console.error('❌ Error seeding database:', error);
+    process.exit(1);
+  } finally {
     await app.close();
+  }
 }
 
-bootstrap().catch((err) => {
-    console.error('Seeding failed:', err);
-    process.exit(1);
-});
+bootstrap();
