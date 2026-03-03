@@ -21,6 +21,8 @@ import { LanguagesModule } from './reports/languages.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { BlogsModule } from './blogs/blogs.module';
 import { ResourcesModule } from './resources/resources.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { ResourcesModule } from './resources/resources.module';
     FeedbackModule,
     BlogsModule,
     ResourcesModule,
+    ContactsModule,
+    NewsletterModule,
   ],
   controllers: [AppController],
   providers: [
