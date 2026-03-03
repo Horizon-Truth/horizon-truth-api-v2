@@ -19,6 +19,10 @@ import { SeederModule } from './database/seeders/seeder.module';
 import { ReportsModule } from './reports/reports.module';
 import { LanguagesModule } from './reports/languages.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { BlogsModule } from './blogs/blogs.module';
+import { ResourcesModule } from './resources/resources.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 
 @Module({
   imports: [
@@ -56,6 +60,10 @@ import { FeedbackModule } from './feedback/feedback.module';
     ReportsModule,
     LanguagesModule,
     FeedbackModule,
+    BlogsModule,
+    ResourcesModule,
+    ContactsModule,
+    NewsletterModule,
   ],
   controllers: [AppController],
   providers: [
@@ -66,4 +74,4 @@ import { FeedbackModule } from './feedback/feedback.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -7,7 +7,7 @@ import {
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Report } from './report.entity';
 
 @Entity('report_tags')
@@ -27,6 +27,14 @@ export class ReportTag {
   @ApiProperty({ default: true })
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
+
+  @ApiPropertyOptional({ example: 'ShieldCheck' })
+  @Column({ nullable: true })
+  icon?: string;
+
+  @ApiPropertyOptional({ example: '#3b82f6' })
+  @Column({ nullable: true })
+  color?: string;
 
   @ManyToMany(() => Report, (report) => report.tags)
   reports: Report[];

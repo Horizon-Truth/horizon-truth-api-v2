@@ -12,9 +12,14 @@ import { Region } from '../../players/entities/region.entity';
 import { Badge } from '../../gamification/entities/badge.entity';
 import { GameLevel } from '../../engine/entities/game-level.entity';
 import { ReportTag } from '../../reports/entities/report-tag.entity';
+import { Report } from '../../reports/entities/report.entity';
+import { ReportVerification } from '../../reports/entities/report-verification.entity';
 import { Language } from '../../reports/entities/language.entity';
 import { PlayerChoice } from '../../engine/entities/player-choice.entity';
 import { GameOutcome } from '../../engine/entities/game-outcome.entity';
+import { Blog } from '../../blogs/entities/blog.entity';
+import { Resource } from '../../resources/entities/resource.entity';
+import { BlogResourceSeederService } from './blog-resource-seeder.service';
 
 @Module({
   imports: [
@@ -28,12 +33,27 @@ import { GameOutcome } from '../../engine/entities/game-outcome.entity';
       GameLevel,
       User,
       ReportTag,
+      Report,
+      ReportVerification,
       Language,
       PlayerChoice,
       GameOutcome,
+      Blog,
+
+      Resource,
     ]),
   ],
-  providers: [GameSeederService, SystemSeederService, ReportsSeederService],
-  exports: [GameSeederService, SystemSeederService, ReportsSeederService],
+  providers: [
+    GameSeederService,
+    SystemSeederService,
+    ReportsSeederService,
+    BlogResourceSeederService,
+  ],
+  exports: [
+    GameSeederService,
+    SystemSeederService,
+    ReportsSeederService,
+    BlogResourceSeederService,
+  ],
 })
-export class SeederModule {}
+export class SeederModule { }

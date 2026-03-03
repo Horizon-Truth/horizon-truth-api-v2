@@ -28,7 +28,7 @@ import { OrganizationStatus } from '../shared/enums/organization-status.enum';
 @Roles(UserRole.SYSTEM_ADMIN)
 @Controller('admin/organizations')
 export class AdminOrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(private readonly organizationsService: OrganizationsService) { }
 
   @Get()
   @ApiOperation({ summary: 'List all organizations (Admin only)' })
@@ -67,5 +67,20 @@ export class AdminOrganizationsController {
   @ApiOperation({ summary: 'Delete organization' })
   async remove(@Param('id') id: string) {
     return this.organizationsService.delete(id);
+  }
+
+  @Get(':id/users')
+  @ApiOperation({ summary: 'Get organization users' })
+  async findUsers(@Param('id') id: string) {
+    return this.organizationsService.findOrganizationUsers(id);
+  }
+
+  @Post(':id/users')
+  @ApiOperation({ summary: 'Add user to organization' })
+  async addUser(
+    @Param('id') id: string,
+    @Body() data: { userId: string; role: string },
+  ) {
+    return this.organizationsService.addOrganizationUser(id, data.userId, data.role);
   }
 }
