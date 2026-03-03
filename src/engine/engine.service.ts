@@ -24,6 +24,9 @@ import { OutcomeType } from '../shared/enums/outcome-type.enum';
 import { GamificationService } from '../gamification/gamification.service';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 
+import { GuestPlay } from './entities/guest-play.entity';
+import { SaveGuestPlayDto } from './dto/save-guest-play.dto';
+
 @Injectable()
 export class EngineService {
   constructor(
@@ -43,10 +46,33 @@ export class EngineService {
     private playerChoiceRepository: Repository<PlayerChoice>,
     @InjectRepository(SceneContent)
     private sceneContentRepository: Repository<SceneContent>,
+    @InjectRepository(GuestPlay)
+    private guestPlayRepository: Repository<GuestPlay>,
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
   ) { }
+
+  /**
+   * Save anonymous guest play data
+   */
+  async saveGuestPlay(dto: SaveGuestPlayDto): Promise<GuestPlay> {
+    const guestPlay = this.guestPlayRepository.create({
+      ...dto,
+      completedAt: new Date(),
+    });
+    return this.guestPlayRepository.save(guestPlay);
+  }
+
+  /**
+   * Get all guest plays (for admin)
+   */
+  async getGuestPlays(): Promise<GuestPlay[]> {
+    return this.guestPlayRepository.find({
+      relations: ['scenario'],
+      order: { createdAt: 'DESC' },
+    });
+  }
 
   /**
    * Get list of scenarios with optional filtering

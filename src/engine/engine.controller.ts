@@ -18,12 +18,33 @@ import { EngineService } from './engine.service';
 import { StartGameDto } from './dto/start-game.dto';
 import { SubmitChoiceDto } from './dto/submit-choice.dto';
 import { ScenarioQueryDto } from './dto/scenario-query.dto';
+import { SaveGuestPlayDto } from './dto/save-guest-play.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../shared/enums/user-role.enum';
 
 @ApiTags('Game Engine')
 @Controller('engine')
 export class EngineController {
   constructor(private readonly engineService: EngineService) { }
+
+  @Post('guest/play')
+  @ApiOperation({ summary: 'Save anonymous guest play data' })
+  @ApiResponse({ status: 201, description: 'Guest play saved successfully.' })
+  async saveGuestPlay(@Body() saveGuestPlayDto: SaveGuestPlayDto) {
+    return this.engineService.saveGuestPlay(saveGuestPlayDto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Get('admin/guest-plays')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all guest plays (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Guest plays retrieved.' })
+  async getGuestPlays() {
+    return this.engineService.getGuestPlays();
+  }
 
   @Get('scenarios')
   @ApiOperation({ summary: 'List all available game scenarios' })
