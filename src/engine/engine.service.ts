@@ -122,7 +122,13 @@ export class EngineService {
   async getScenarioById(id: string): Promise<Scenario> {
     const scenario = await this.scenarioRepository.findOne({
       where: { id },
-      relations: ['gameLevel', 'scenes'],
+      relations: [
+        'gameLevel',
+        'scenes',
+        'scenes.content',
+        'scenes.choices',
+        'scenes.choices.outcomes',
+      ],
     });
 
     if (!scenario) {
