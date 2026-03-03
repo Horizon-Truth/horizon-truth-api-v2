@@ -26,8 +26,9 @@ export class SystemSeederService {
   private async seedSuperAdmin() {
     this.logger.log('Seeding super admin...');
 
-    const superAdminEmail = 'admin@horizon.ai';
-    const superAdminUsername = 'superadmin';
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@horizon.ai';
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
 
     const existing = await this.userRepository.findOne({
       where: [{ email: superAdminEmail }, { username: superAdminUsername }],
@@ -38,7 +39,7 @@ export class SystemSeederService {
       return;
     }
 
-    const passwordHash = await bcrypt.hash('Admin@123', 10);
+    const passwordHash = await bcrypt.hash(superAdminPassword, 10);
 
     const superAdmin = this.userRepository.create({
       email: superAdminEmail,
@@ -55,6 +56,6 @@ export class SystemSeederService {
 
     await this.userRepository.save(superAdmin);
     this.logger.log('Super admin created successfully!');
-    this.logger.log(`Credentials: ${superAdminEmail} / Admin@123`);
+    this.logger.log(`Credentials: ${superAdminEmail} / ${superAdminPassword}`);
   }
 }

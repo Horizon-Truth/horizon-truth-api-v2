@@ -10,6 +10,7 @@ import { PlayerChoice } from './entities/player-choice.entity';
 import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
 import { GameProgress } from './entities/game-progress.entity';
+import { GuestPlay } from './entities/guest-play.entity';
 import { EngineService } from './engine.service';
 import { EngineController } from './engine.controller';
 import { GamificationModule } from '../gamification/gamification.module';
@@ -31,6 +32,7 @@ import { SceneAdminController } from './admin/scene-admin.controller';
       GameOutcome,
       GameProgress,
       PlayerProfile,
+      GuestPlay,
     ]),
     forwardRef(() => GamificationModule),
   ],
