@@ -6,3 +6,7 @@ import { LeaderboardPeriod } from '../../shared/enums/leaderboard-period.enum';
 
 export class LeaderboardQueryDto {
   @ApiProperty({
+    description: 'Type of leaderboard',
+    enum: LeaderboardType,
+    default: LeaderboardType.GAME_SCORE,
+  })

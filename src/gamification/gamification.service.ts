@@ -35,3 +35,41 @@ export class GamificationService {
     return this.badgeRepository.find({
       where: { isActive: true },
     });
+  }
+
+  /**
+   * Get user's earned badges
+   */
+  async getUserBadges(userId: string): Promise<any> {
+    const userBadges = await this.userBadgeRepository.find({
+      where: { userId },
+      relations: ['badge'],
+      order: { earnedAt: 'DESC' },
+    });
+
+    return userBadges.map((ub) => ({
+      id: ub.id,
+      badgeCode: ub.badge.code,
+      badgeName: ub.badge.name,
+      description: ub.badge.description,
+      iconUrl: ub.badge.iconUrl,
+      category: ub.badge.category,
+      earnedAt: ub.earnedAt,
+      metadata: ub.metadata,
+    }));
+  }
+
+  /**
+   * Award a badge to a user
+   */
+  async awardBadge(
+    userId: string,
+    badgeCode: string,
+    metadata?: Record<string, any>,
+  ): Promise<UserBadge> {
+    // Find the badge
+    const badge = await this.badgeRepository.findOne({
+      where: { code: badgeCode },
+    });
+
+    if (!badge) {
