@@ -24,6 +24,7 @@ import { OutcomeType } from '../shared/enums/outcome-type.enum';
 import { GamificationService } from '../gamification/gamification.service';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 
+import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
 import { GuestPlay } from './entities/guest-play.entity';
 import { SaveGuestPlayDto } from './dto/save-guest-play.dto';
 
@@ -48,6 +49,8 @@ export class EngineService {
     private sceneContentRepository: Repository<SceneContent>,
     @InjectRepository(GuestPlay)
     private guestPlayRepository: Repository<GuestPlay>,
+    @InjectRepository(PlayerScenarioRecord)
+    private playerScenarioRecordRepository: Repository<PlayerScenarioRecord>,
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
@@ -75,9 +78,9 @@ export class EngineService {
   }
 
   /**
-   * Get list of scenarios with optional filtering
+   * Get list of scenarios with optional filtering and user records
    */
-  async getScenarios(query: ScenarioQueryDto): Promise<any> {
+  async getScenarios(query: ScenarioQueryDto, userId?: string): Promise<any> {
     const { difficulty, scenarioType, isActive, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
@@ -105,8 +108,25 @@ export class EngineService {
 
     const [scenarios, total] = await queryBuilder.getManyAndCount();
 
+    // If userId provided, fetch user records for these scenarios
+    let userRecords: PlayerScenarioRecord[] = [];
+    if (userId && scenarios.length > 0) {
+      userRecords = await this.playerScenarioRecordRepository.find({
+        where: {
+          userId,
+          scenarioId: In(scenarios.map((s) => s.id)),
+        },
+      });
+    }
+
+    // Map records to scenarios
+    const scenariosWithRecords = scenarios.map((scenario) => ({
+      ...scenario,
+      userRecord: userRecords.find((r) => r.scenarioId === scenario.id) || null,
+    }));
+
     return {
-      data: scenarios,
+      data: scenariosWithRecords,
       meta: {
         total,
         page,
@@ -474,6 +494,8 @@ export class EngineService {
       // Refresh progress and return next scene
       result.nextScene = await this.getCurrentScene(progressId);
       result.progress = await this.getGameProgress(progressId);
+      result.totalScore = result.progress.totalScore;
+      result.influenceScore = result.progress.influenceScore;
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -540,6 +562,38 @@ export class EngineService {
 
     await this.gameOutcomeRepository.save(outcome);
 
+    // Update or create player scenario record
+    try {
+      let record = await this.playerScenarioRecordRepository.findOne({
+        where: { userId: progress.userId, scenarioId: progress.scenarioId },
+      });
+
+      if (!record) {
+        record = this.playerScenarioRecordRepository.create({
+          userId: progress.userId,
+          scenarioId: progress.scenarioId,
+          bestScore: progress.totalScore || 0,
+          bestInfluence: progress.influenceScore || 0,
+          isCompleted: progress.passed || false,
+          attempts: 1,
+        });
+      } else {
+        record.attempts += 1;
+        if ((progress.totalScore || 0) > record.bestScore) {
+          record.bestScore = progress.totalScore;
+        }
+        if ((progress.influenceScore || 0) > record.bestInfluence) {
+          record.bestInfluence = progress.influenceScore;
+        }
+        if (progress.passed) {
+          record.isCompleted = true;
+        }
+      }
+      await this.playerScenarioRecordRepository.save(record);
+    } catch (recordErr) {
+      console.error('Failed to update player scenario record:', recordErr);
+    }
+
     // Note: Trust score was already updated in submitChoice() when the
     // player made their final decision. No need to update again here.
 
@@ -564,6 +618,8 @@ export class EngineService {
         },
         badgesAwarded,
         progress,
+        totalScore: progress.totalScore,
+        influenceScore: progress.influenceScore,
       };
     } catch (error) {
       // If gamification fails, still return success
@@ -581,6 +637,8 @@ export class EngineService {
           },
         },
         progress,
+        totalScore: progress.totalScore,
+        influenceScore: progress.influenceScore,
       };
     }
   }
@@ -684,6 +742,8 @@ export class EngineService {
             label: choiceDto.label,
             actionType: choiceDto.actionType || 'CHOICE',
             nextSceneId: choiceDto.nextSceneId,
+            scoreImpact: choiceDto.scoreImpact || 0,
+            influenceImpact: choiceDto.influenceImpact || 0,
           });
           const savedChoice = await queryRunner.manager.save(choice);
 
@@ -768,6 +828,8 @@ export class EngineService {
             label: choiceDto.label,
             actionType: choiceDto.actionType || 'CHOICE',
             nextSceneId: choiceDto.nextSceneId,
+            scoreImpact: choiceDto.scoreImpact || 0,
+            influenceImpact: choiceDto.influenceImpact || 0,
           });
           const savedChoice = await queryRunner.manager.save(choice);
 
@@ -912,12 +974,38 @@ export class EngineService {
     // These are created by completeGame() and don't represent player actions
     const outcomes = allOutcomes.filter((o) => o.playerChoiceId != null);
 
-    const summary = outcomes.map((outcome) => ({
-      action: outcome.playerChoice?.label || 'Unknown Action',
-      consequence: outcome.message || 'No specific impact recorded.',
-      trustDelta: outcome.trustScoreDelta,
-      outcomeType: outcome.outcomeType,
-    }));
+    // Fetch all scenes for this scenario to provide a complete review
+    const scenes = await this.sceneRepository.find({
+      where: { scenarioId: progress.scenarioId },
+      relations: ['choices'],
+      order: { order: 'ASC' },
+    });
+
+    const summary = scenes.map((scene) => {
+      const userOutcome = outcomes.find(
+        (o) => o.playerChoice?.sceneId === scene.id,
+      );
+
+      // Identify the "Best Protocol" choice (highest score impact)
+      const bestChoice =
+        scene.choices?.length > 0
+          ? [...scene.choices].sort(
+            (a, b) => (b.scoreImpact || 0) - (a.scoreImpact || 0),
+          )[0]
+          : null;
+
+      return {
+        sceneTitle: scene.title || 'Investigation Phase',
+        userAction: userOutcome?.playerChoice?.label || 'Protocol Bypassed',
+        userConsequence: userOutcome?.message || 'No direct impact recorded.',
+        userTrustDelta: userOutcome?.trustScoreDelta || 0,
+        isPerfect:
+          userOutcome && bestChoice
+            ? userOutcome.playerChoiceId === bestChoice.id
+            : false,
+        bestAction: bestChoice?.label || 'N/A',
+      };
+    });
 
     const totalTrustDelta = outcomes.reduce(
       (sum, o) => sum + (o.trustScoreDelta || 0),

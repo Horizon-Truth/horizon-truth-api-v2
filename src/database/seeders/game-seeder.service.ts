@@ -308,6 +308,7 @@ export class GameSeederService {
       levelNumber: 0,
       scenarioType: ScenarioType.CHAT_CONVERSATION,
       difficulty: ScenarioDifficulty.EASY,
+      minimumScore: 0,
       learningObjective:
         'Player realizes that their online actions shape the digital world around them.',
       theme: 'Digital Identity & Social Influence',
@@ -330,11 +331,15 @@ export class GameSeederService {
             {
               label: 'SELECT_FRIENDS',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 5,
+              influenceImpact: 5,
               nextSceneTitle: 'Group Chat',
             },
             {
               label: 'SKIP',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Group Chat',
             },
           ],
@@ -355,11 +360,15 @@ export class GameSeederService {
             {
               label: 'READ_MORE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 5,
+              influenceImpact: 2,
               nextSceneTitle: 'Influencer Post',
             },
             {
               label: 'SCROLL_PAST',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Influencer Post',
             },
           ],
@@ -427,6 +436,7 @@ export class GameSeederService {
       levelNumber: 1,
       scenarioType: ScenarioType.SOCIAL_POST,
       difficulty: ScenarioDifficulty.EASY,
+      minimumScore: 70,
       learningObjective:
         'Understand how liking, ignoring, and verifying each have real consequences in the spread of misinformation.',
       psychologicalTrigger: 'Fear of missing out (FOMO) and exam anxiety',
@@ -452,16 +462,22 @@ export class GameSeederService {
             {
               label: 'LIKE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: 15,
               nextSceneTitle: 'Notification Flood',
             },
             {
               label: 'IGNORE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 0,
+              influenceImpact: -5,
               nextSceneTitle: 'Continued Feed',
             },
             {
               label: 'VERIFY',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 20,
+              influenceImpact: 10,
               nextSceneTitle: 'Fact Check Result',
             },
           ],
@@ -483,6 +499,8 @@ export class GameSeederService {
             {
               label: 'SHARE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -30,
+              influenceImpact: 20,
               outcome: {
                 trustScoreDelta: -20,
                 outcomeType: OutcomeType.FAIL,
@@ -494,11 +512,15 @@ export class GameSeederService {
             {
               label: 'VERIFY',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 5,
               nextSceneTitle: 'Fake Source Detected',
             },
             {
               label: 'IGNORE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -5,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -5,
                 outcomeType: OutcomeType.PARTIAL_FAIL,
@@ -526,6 +548,8 @@ export class GameSeederService {
             {
               label: 'REPORT',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 10,
+              influenceImpact: 5,
               outcome: {
                 trustScoreDelta: 10,
                 outcomeType: OutcomeType.PASS,
@@ -537,6 +561,8 @@ export class GameSeederService {
             {
               label: 'IGNORE_FINDING',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -5,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -5,
                 outcomeType: OutcomeType.PARTIAL_FAIL,
@@ -564,11 +590,15 @@ export class GameSeederService {
             {
               label: 'VERIFY_NOW',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 10,
+              influenceImpact: 5,
               nextSceneTitle: 'Fake Source Detected After Ignore',
             },
             {
               label: 'CONTINUE_IGNORING',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -15,
+              influenceImpact: -10,
               outcome: {
                 trustScoreDelta: -10,
                 outcomeType: OutcomeType.FAIL,
@@ -596,6 +626,8 @@ export class GameSeederService {
             {
               label: 'REPORT_IT',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 10,
+              influenceImpact: 5,
               outcome: {
                 trustScoreDelta: 15,
                 outcomeType: OutcomeType.PASS,
@@ -607,6 +639,8 @@ export class GameSeederService {
             {
               label: 'WALK_AWAY',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -10,
                 outcomeType: OutcomeType.FAIL,
@@ -634,6 +668,8 @@ export class GameSeederService {
             {
               label: 'REPORT_POST',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 20,
+              influenceImpact: 10,
               outcome: {
                 trustScoreDelta: 20,
                 outcomeType: OutcomeType.PERFECT_PASS,
@@ -645,6 +681,8 @@ export class GameSeederService {
             {
               label: 'IGNORE_RESULT',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -5,
                 outcomeType: OutcomeType.FAIL,
@@ -670,6 +708,7 @@ export class GameSeederService {
       levelNumber: 1,
       scenarioType: ScenarioType.SOCIAL_POST,
       difficulty: ScenarioDifficulty.MEDIUM,
+      minimumScore: 80,
       learningObjective:
         'Recognize financial phishing tactics: fake domains, urgency, social proof from friends, and requests for sensitive data.',
       psychologicalTrigger: 'Greed and social proof (friends engaging)',
@@ -695,16 +734,22 @@ export class GameSeederService {
             {
               label: 'LIKE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: 15,
               nextSceneTitle: 'Friends Engaging',
             },
             {
               label: 'CLICK_LINK',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -20,
+              influenceImpact: 5,
               nextSceneTitle: 'Phishing Page',
             },
             {
               label: 'VERIFY',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 10,
               nextSceneTitle: 'Bank Website Check',
             },
           ],
@@ -726,16 +771,22 @@ export class GameSeederService {
             {
               label: 'CLICK_LINK_NOW',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -20,
+              influenceImpact: 5,
               nextSceneTitle: 'Fake Form Appears',
             },
             {
               label: 'VERIFY_FIRST',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 10,
               nextSceneTitle: 'Fake Domain Detected',
             },
             {
               label: 'SCROLL_PAST',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -5,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -5,
                 outcomeType: OutcomeType.PARTIAL_FAIL,
@@ -763,6 +814,8 @@ export class GameSeederService {
             {
               label: 'SUBMIT',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -30,
+              influenceImpact: 20,
               outcome: {
                 trustScoreDelta: -25,
                 outcomeType: OutcomeType.FAIL,
@@ -774,6 +827,8 @@ export class GameSeederService {
             {
               label: 'VERIFY_FORM',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 10,
               nextSceneTitle: 'Fake Domain Detected',
             },
           ],
@@ -902,6 +957,7 @@ export class GameSeederService {
       levelNumber: 2,
       scenarioType: ScenarioType.VIDEO_CLIP,
       difficulty: ScenarioDifficulty.HARD,
+      minimumScore: 85,
       learningObjective:
         'Demonstrate how emotional triggers and "witness" testimony bypass logic and fuel real-world conflict.',
       psychologicalTrigger:
@@ -934,21 +990,29 @@ export class GameSeederService {
             {
               label: 'FORWARD',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -25,
+              influenceImpact: 35,
               nextSceneTitle: 'Network Propagation Map',
             },
             {
               label: 'POST_ANGRY_STATUS',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -20,
+              influenceImpact: 30,
               nextSceneTitle: 'Friends Reacting To Status',
             },
             {
               label: 'SEARCH_NEWS',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 5,
               nextSceneTitle: 'No Reports Found',
             },
             {
               label: 'MUTE_SLEEP',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: 0,
               nextSceneTitle: 'Morning After Silence',
             },
           ],
@@ -991,11 +1055,15 @@ export class GameSeederService {
             {
               label: 'MARK_VERIFIED',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -30,
+              influenceImpact: 20,
               nextSceneTitle: 'Community Protector Badge',
             },
             {
               label: 'IGNORE_VOICE_NOTE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -15,
+              influenceImpact: -5,
               nextSceneTitle: 'Morning After Tragedy',
             },
           ],
@@ -1129,11 +1197,15 @@ export class GameSeederService {
             {
               label: 'MARK_AS_VERIFIED_C',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -30,
+              influenceImpact: 25,
               nextSceneTitle: 'Community Protector Badge',
             },
             {
               label: 'REPORT_SUSPICIOUS',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 40,
+              influenceImpact: 15,
               outcome: {
                 trustScoreDelta: 30,
                 outcomeType: OutcomeType.PASS,
@@ -1179,21 +1251,15 @@ export class GameSeederService {
   }
 
   private async createScenario(data: any) {
-    const existing = await this.scenarioRepository.findOne({
+    let scenario = await this.scenarioRepository.findOne({
       where: { title: data.title },
     });
 
-    if (existing) {
-      this.logger.log(`Scenario already exists: ${data.title}`);
-      return;
-    }
-
-    // Get the specific game level
     const gameLevel = await this.gameLevelRepository.findOne({
       where: { levelNumber: data.levelNumber ?? 1 },
     });
 
-    const scenario = this.scenarioRepository.create({
+    const scenarioData = {
       title: data.title,
       description: data.description,
       scenarioType: data.scenarioType,
@@ -1205,16 +1271,29 @@ export class GameSeederService {
       psychologicalTrigger: data.psychologicalTrigger,
       preventionLesson: data.preventionLesson,
       theme: data.theme,
-    });
+      minimumScore: data.minimumScore ?? 70,
+      totalScenes: data.scenes.length,
+    };
+
+    if (scenario) {
+      this.logger.log(`Updating scenario: ${data.title}`);
+      Object.assign(scenario, scenarioData);
+    } else {
+      this.logger.log(`Creating scenario: ${data.title}`);
+      scenario = this.scenarioRepository.create(scenarioData);
+    }
 
     const savedScenario = await this.scenarioRepository.save(scenario);
-    this.logger.log(`Created scenario: ${data.title}`);
 
     const sceneMap = new Map<string, string>(); // Title -> ID
 
-    // Create scenes first
+    // Create/Update scenes
     for (const sceneData of data.scenes) {
-      const scene = this.sceneRepository.create({
+      let scene = await this.sceneRepository.findOne({
+        where: { scenarioId: savedScenario.id, title: sceneData.title },
+      });
+
+      const sceneValues = {
         scenarioId: savedScenario.id,
         title: sceneData.title,
         description: sceneData.description,
@@ -1223,40 +1302,72 @@ export class GameSeederService {
         contentType: sceneData.contentType,
         availableChoices: sceneData.availableChoices,
         isTerminal: sceneData.isTerminal || false,
-      });
+      };
+
+      if (scene) {
+        Object.assign(scene, sceneValues);
+      } else {
+        scene = this.sceneRepository.create(sceneValues);
+      }
 
       const savedScene = await this.sceneRepository.save(scene);
       sceneMap.set(sceneData.title, savedScene.id);
 
-      // Create scene content
-      const content = this.sceneContentRepository.create({
+      // Create/Update scene content
+      let content = await this.sceneContentRepository.findOne({
+        where: { sceneId: savedScene.id },
+      });
+
+      const contentValues = {
         sceneId: savedScene.id,
         contentType: sceneData.contentType,
         ...sceneData.content,
-      });
+      };
 
-      await this.sceneContentRepository.save(content);
+      if (content) {
+        Object.assign(content, contentValues);
+        await this.sceneContentRepository.save(content);
+      } else {
+        const newContent = this.sceneContentRepository.create(contentValues);
+        await this.sceneContentRepository.save(newContent);
+      }
     }
 
-    // Create choices and their outcomes
+    // Create/Update choices and their outcomes
     for (const sceneData of data.scenes) {
       const currentSceneId = sceneMap.get(sceneData.title);
       if (!currentSceneId) continue;
 
       if (sceneData.choices) {
         for (const choiceData of sceneData.choices) {
-          const choice = this.playerChoiceRepository.create({
+          let choice = await this.playerChoiceRepository.findOne({
+            where: { sceneId: currentSceneId, label: choiceData.label },
+          });
+
+          const choiceValues = {
             sceneId: currentSceneId,
             label: choiceData.label,
             actionType: choiceData.actionType,
+            scoreImpact: choiceData.scoreImpact ?? 0,
+            influenceImpact: choiceData.influenceImpact ?? 0,
             nextSceneId: choiceData.nextSceneTitle
               ? sceneMap.get(choiceData.nextSceneTitle)
               : undefined,
-          });
+          };
+
+          if (choice) {
+            Object.assign(choice, choiceValues);
+          } else {
+            choice = this.playerChoiceRepository.create(choiceValues);
+          }
           const savedChoice = await this.playerChoiceRepository.save(choice);
 
           if (choiceData.outcome) {
-            const outcome = this.gameOutcomeRepository.create({
+            let outcome = await this.gameOutcomeRepository.findOne({
+              where: { playerChoiceId: savedChoice.id },
+            });
+
+            const outcomeValues = {
               scenarioId: savedScenario.id,
               playerChoiceId: savedChoice.id,
               outcomeType: choiceData.outcome.outcomeType,
@@ -1264,13 +1375,19 @@ export class GameSeederService {
               message: choiceData.outcome.message,
               endScenario: choiceData.outcome.endScenario,
               score: choiceData.outcome.score || 0,
-            });
+            };
+
+            if (outcome) {
+              Object.assign(outcome, outcomeValues);
+            } else {
+              outcome = this.gameOutcomeRepository.create(outcomeValues);
+            }
             await this.gameOutcomeRepository.save(outcome);
           }
         }
       }
     }
 
-    this.logger.log(`Setup ${data.scenes.length} scenes for: ${data.title}`);
+    this.logger.log(`Setup/Updated ${data.scenes.length} scenes for: ${data.title}`);
   }
 }
