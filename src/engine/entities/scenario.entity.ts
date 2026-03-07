@@ -83,4 +83,12 @@ export class Scenario {
   @ApiPropertyOptional({ example: 'Cybersecurity' })
   @Column({ name: 'theme', type: 'varchar', length: 255, nullable: true })
   theme: string;
+
+  @ApiProperty({ example: 70 })
+  @Column({ name: 'minimum_score', type: 'int', default: 70 })
+  minimumScore: number;
+
+  @ApiProperty({ example: 5 })
+  @Column({ name: 'total_scenes', type: 'int', default: 1 })
+  totalScenes: number;
 }

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsInt } from 'class-validator';
 import { SceneContentType } from '../../shared/enums/scene-content-type.enum';
 import { PlayerActionType } from '../../shared/enums/player-action-type.enum';
 import { OutcomeType } from '../../shared/enums/outcome-type.enum';
@@ -32,6 +33,16 @@ export class CreatePlayerChoiceDto {
 
     @ApiProperty({ type: () => CreateGameOutcomeDto, isArray: true, required: false })
     outcomes?: CreateGameOutcomeDto[];
+
+    @ApiPropertyOptional({ example: 10 })
+    @IsOptional()
+    @IsInt()
+    scoreImpact?: number;
+
+    @ApiPropertyOptional({ example: 5 })
+    @IsOptional()
+    @IsInt()
+    influenceImpact?: number;
 }
 
 export class CreateSceneContentDto {

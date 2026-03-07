@@ -431,11 +431,20 @@ export class EngineService {
           console.error('Badge error:', bErr.message);
         }
 
+        // Aggregate score and influence to progress
+        progress.totalScore = (progress.totalScore || 0) + (choice?.scoreImpact || 0);
+        progress.influenceScore = (progress.influenceScore || 0) + (choice?.influenceImpact || 0);
+
         // 7. Handle scenario termination
         if (templateOutcome.endScenario) {
+          await queryRunner.manager.save(progress);
           await queryRunner.commitTransaction();
           return this.completeGame(progressId, templateOutcome.outcomeType);
         }
+      } else if (choice) {
+        // Even if no outcome, still aggregate score/influence
+        progress.totalScore = (progress.totalScore || 0) + (choice.scoreImpact || 0);
+        progress.influenceScore = (progress.influenceScore || 0) + (choice.influenceImpact || 0);
       }
 
       // 8. Advance to next scene
@@ -454,6 +463,7 @@ export class EngineService {
           progress.currentSceneId = sequentialNext.id;
           await queryRunner.manager.save(progress);
         } else {
+          await queryRunner.manager.save(progress);
           await queryRunner.commitTransaction();
           return this.completeGame(progressId, OutcomeType.SUCCESS);
         }
@@ -497,6 +507,10 @@ export class EngineService {
     progress.status = GameProgressStatus.COMPLETED;
     progress.completedAt = new Date();
     progress.finalOutcome = outcomeType;
+
+    // Evaluate if passed based on scenario settings
+    const minRequired = progress.scenario.minimumScore || 70;
+    progress.passed = (progress.totalScore || 0) >= minRequired;
 
     await this.gameProgressRepository.save(progress);
 

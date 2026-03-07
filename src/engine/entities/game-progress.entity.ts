@@ -58,4 +58,13 @@ export class GameProgress {
 
   @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt: Date;
+
+  @Column({ name: 'total_score', type: 'int', default: 0 })
+  totalScore: number;
+
+  @Column({ name: 'influence_score', type: 'int', default: 0 })
+  influenceScore: number;
+
+  @Column({ name: 'passed', type: 'boolean', default: false })
+  passed: boolean;
 }

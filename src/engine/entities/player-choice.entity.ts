@@ -46,6 +46,14 @@ export class PlayerChoice {
   @JoinColumn({ name: 'next_scene_id' })
   nextScene: Scene;
 
+  @ApiProperty({ example: 10 })
+  @Column({ name: 'score_impact', type: 'int', default: 0 })
+  scoreImpact: number;
+
+  @ApiProperty({ example: 5 })
+  @Column({ name: 'influence_impact', type: 'int', default: 0 })
+  influenceImpact: number;
+
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

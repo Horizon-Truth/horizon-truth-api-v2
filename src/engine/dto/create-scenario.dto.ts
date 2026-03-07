@@ -57,4 +57,14 @@ export class CreateScenarioDto {
   @IsOptional()
   @IsString()
   theme?: string;
+
+  @ApiProperty({ example: 70 })
+  @IsOptional()
+  @IsInt()
+  minimumScore?: number;
+
+  @ApiProperty({ example: 5 })
+  @IsOptional()
+  @IsInt()
+  totalScenes?: number;
 }
