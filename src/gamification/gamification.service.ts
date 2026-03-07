@@ -104,8 +104,8 @@ export class GamificationService {
   async checkOutcomeBadgeEligibility(
     userId: string,
     outcome: GameOutcome,
-  ): Promise<string[]> {
-    const awardedBadges: string[] = [];
+  ): Promise<any[]> {
+    const awardedBadges: any[] = [];
 
     if (outcome.outcomeType !== OutcomeType.PASS) {
       return awardedBadges;
@@ -134,7 +134,10 @@ export class GamificationService {
       try {
         // awardBadge handles duplication check
         await this.awardBadge(userId, badgeToAward);
-        awardedBadges.push(badgeToAward);
+        const fullBadge = await this.badgeRepository.findOne({ where: { code: badgeToAward } });
+        if (fullBadge) {
+          awardedBadges.push(fullBadge);
+        }
       } catch (error) {
         // If it's just "User already has this badge", we ignore it
         if (
@@ -157,8 +160,8 @@ export class GamificationService {
   /**
    * Check badge eligibility for a user after game completion
    */
-  async checkBadgeEligibility(userId: string): Promise<string[]> {
-    const awardedBadges: string[] = [];
+  async checkBadgeEligibility(userId: string): Promise<any[]> {
+    const awardedBadges: any[] = [];
     const manager = this.userBadgeRepository.manager;
 
     // Get user's existing badges
@@ -206,7 +209,10 @@ export class GamificationService {
       if (criterion.Met && !existingBadgeCodes.has(criterion.code)) {
         try {
           await this.awardBadge(userId, criterion.code);
-          awardedBadges.push(criterion.code);
+          const fullBadge = await this.badgeRepository.findOne({ where: { code: criterion.code } });
+          if (fullBadge) {
+            awardedBadges.push(fullBadge);
+          }
           existingBadgeCodes.add(criterion.code); // Prevent double awarding in same loop
         } catch (error) {
           console.error(

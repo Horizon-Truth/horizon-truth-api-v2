@@ -1102,9 +1102,14 @@ export class EngineService {
     // These are created by completeGame() and don't represent player actions
     const outcomes = allOutcomes.filter((o) => o.playerChoiceId != null);
 
-    // Fetch all scenes for this scenario to provide a complete review
+    // Fetch only the scenes that the player actually interacted with during this session
+    // We determine this by checking the sceneId of the choices the player made
+    const visitedSceneIds = outcomes.map((o) => o.playerChoice?.sceneId).filter(Boolean);
+
     const scenes = await this.sceneRepository.find({
-      where: { scenarioId: progress.scenarioId },
+      where: {
+        id: In(visitedSceneIds)
+      },
       relations: ['choices'],
       order: { order: 'ASC' },
     });
