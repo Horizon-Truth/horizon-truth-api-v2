@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../../users/entities/user.entity';
 import { Scenario } from './scenario.entity';
 import { Scene } from './scene.entity';
@@ -67,4 +68,19 @@ export class GameProgress {
 
   @Column({ name: 'passed', type: 'boolean', default: false })
   passed: boolean;
+
+  @ApiPropertyOptional({
+    example: 'TRUTH_VICTORY',
+    description: 'Narrative ending: TRUTH_VICTORY | CONTAINED_EARLY | VIRAL_MISINFORMATION | COMMUNITY_CRISIS',
+  })
+  @Column({ name: 'narrative_ending', type: 'varchar', nullable: true })
+  narrativeEnding: string;
+
+  @ApiProperty({ example: 5, description: 'Total number of choices made in this game session' })
+  @Column({ name: 'total_decisions', type: 'int', default: 0 })
+  totalDecisions: number;
+
+  @ApiProperty({ example: 4, description: 'Number of correct (positive score impact) decisions in this session' })
+  @Column({ name: 'correct_decisions', type: 'int', default: 0 })
+  correctDecisions: number;
 }

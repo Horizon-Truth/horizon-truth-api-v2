@@ -120,10 +120,27 @@ export class EngineService {
     }
 
     // Map records to scenarios
-    const scenariosWithRecords = scenarios.map((scenario) => ({
-      ...scenario,
-      userRecord: userRecords.find((r) => r.scenarioId === scenario.id) || null,
-    }));
+    const scenariosWithRecords = scenarios.map((scenario) => {
+      const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
+
+      // Compute lock_status
+      let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
+      if (userRecord?.isCompleted) {
+        lockStatus = 'VERIFIED';
+      } else if (scenario.unlockScenarioId) {
+        // Check if the prerequisite scenario was passed
+        const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
+        if (!prereqRecord?.isCompleted) {
+          lockStatus = 'LOCKED';
+        }
+      }
+
+      return {
+        ...scenario,
+        userRecord,
+        lockStatus,
+      };
+    });
 
     return {
       data: scenariosWithRecords,
@@ -277,7 +294,9 @@ export class EngineService {
       description: scene.description,
       order: scene.order,
       sceneType: scene.sceneType,
+      sceneTypeLabel: scene.sceneTypeLabel,
       contentType: scene.contentType,
+      decisionTimeLimit: scene.decisionTimeLimit || null,
       content: scene.content || null,
       chatMessages: scene.content?.chatMessages || [],
       feedItems: scene.content?.feedItems || [],
@@ -286,6 +305,8 @@ export class EngineService {
           id: c.id,
           label: c.label,
           actionType: c.actionType,
+          spreadSimulation: c.spreadSimulation || null,
+          psychologicalTrap: c.psychologicalTrap || null,
         })) || [],
       availableChoices: scene.availableChoices || ['CHOICE', 'NEXT', 'FINISH'],
     };
@@ -454,6 +475,11 @@ export class EngineService {
         // Aggregate score and influence to progress
         progress.totalScore = (progress.totalScore || 0) + (choice?.scoreImpact || 0);
         progress.influenceScore = (progress.influenceScore || 0) + (choice?.influenceImpact || 0);
+        // Track accuracy
+        progress.totalDecisions = (progress.totalDecisions || 0) + 1;
+        if ((choice?.scoreImpact || 0) > 0) {
+          progress.correctDecisions = (progress.correctDecisions || 0) + 1;
+        }
 
         // 7. Handle scenario termination
         if (templateOutcome.endScenario) {
@@ -465,6 +491,11 @@ export class EngineService {
         // Even if no outcome, still aggregate score/influence
         progress.totalScore = (progress.totalScore || 0) + (choice.scoreImpact || 0);
         progress.influenceScore = (progress.influenceScore || 0) + (choice.influenceImpact || 0);
+        // Track accuracy
+        progress.totalDecisions = (progress.totalDecisions || 0) + 1;
+        if ((choice.scoreImpact || 0) > 0) {
+          progress.correctDecisions = (progress.correctDecisions || 0) + 1;
+        }
       }
 
       // 8. Advance to next scene
@@ -534,6 +565,19 @@ export class EngineService {
     const minRequired = progress.scenario.minimumScore || 70;
     progress.passed = (progress.totalScore || 0) >= minRequired;
 
+    // Compute narrative ending based on score + influence
+    const totalScore = progress.totalScore || 0;
+    const influenceScore = progress.influenceScore || 0;
+    let narrativeEnding = 'COMMUNITY_CRISIS';
+    if (totalScore >= 85 && influenceScore >= 70) {
+      narrativeEnding = 'TRUTH_VICTORY';
+    } else if (totalScore >= progress.scenario.minimumScore) {
+      narrativeEnding = 'CONTAINED_EARLY';
+    } else if (influenceScore < 30) {
+      narrativeEnding = 'VIRAL_MISINFORMATION';
+    }
+    progress.narrativeEnding = narrativeEnding;
+
     await this.gameProgressRepository.save(progress);
 
     // Calculate score based on outcome type
@@ -597,6 +641,61 @@ export class EngineService {
     // Note: Trust score was already updated in submitChoice() when the
     // player made their final decision. No need to update again here.
 
+    // Update player reputation role and streak
+    try {
+      const playerProfile = await this.dataSource.getRepository(PlayerProfile).findOne({
+        where: { userId: progress.userId },
+      });
+
+      if (playerProfile) {
+        // Update reputation role based on influence score
+        const totalInfluence = playerProfile.currentTrustScore || 0;
+        if (influenceScore >= 80 || totalInfluence >= 200) {
+          playerProfile.reputationRole = 'TRUSTED_VERIFIER';
+        } else if (influenceScore >= 50 || totalInfluence >= 100) {
+          playerProfile.reputationRole = 'FACT_CHECKER';
+        } else if (influenceScore >= 80 && progress.passed) {
+          playerProfile.reputationRole = 'MODERATOR';
+        }
+
+        // Update streak
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        const lastPlayed = playerProfile.lastPlayedDate
+          ? new Date(playerProfile.lastPlayedDate).toISOString().split('T')[0]
+          : null;
+
+        if (lastPlayed === null) {
+          // First ever play
+          playerProfile.currentStreak = 1;
+        } else {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+          if (lastPlayed === todayStr) {
+            // Already played today — streak unchanged
+          } else if (lastPlayed === yesterdayStr) {
+            // Played yesterday — increment streak
+            playerProfile.currentStreak = (playerProfile.currentStreak || 0) + 1;
+          } else {
+            // Missed a day — reset streak
+            playerProfile.currentStreak = 1;
+          }
+        }
+
+        if (playerProfile.currentStreak > (playerProfile.longestStreak || 0)) {
+          playerProfile.longestStreak = playerProfile.currentStreak;
+        }
+        playerProfile.lastPlayedDate = today;
+
+        await this.dataSource.getRepository(PlayerProfile).save(playerProfile);
+      }
+    } catch (profileErr) {
+      console.error('Failed to update player profile after game:', profileErr);
+    }
+
     // Trigger badge awards and leaderboard updates
     try {
       const badgesAwarded =
@@ -611,6 +710,10 @@ export class EngineService {
           feedback: outcome.feedback,
           progressId: progress.id,
           completedAt: outcome.completedAt,
+          narrativeEnding,
+          accuracyRate: progress.totalDecisions > 0
+            ? Math.round((progress.correctDecisions / progress.totalDecisions) * 100)
+            : null,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -631,6 +734,10 @@ export class EngineService {
           feedback: outcome.feedback,
           progressId: progress.id,
           completedAt: outcome.completedAt,
+          narrativeEnding,
+          accuracyRate: progress.totalDecisions > 0
+            ? Math.round((progress.correctDecisions / progress.totalDecisions) * 100)
+            : null,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,

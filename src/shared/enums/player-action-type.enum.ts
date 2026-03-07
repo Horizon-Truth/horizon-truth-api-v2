@@ -3,4 +3,10 @@ export enum PlayerActionType {
   CHOICE = 'CHOICE',
   INPUT = 'INPUT',
   FINISH = 'FINISH',
+  VERIFY = 'VERIFY',
+  SHARE = 'SHARE',
+  IGNORE = 'IGNORE',
+  REPORT = 'REPORT',
+  INVESTIGATE = 'INVESTIGATE',
+  FACT_CHECK = 'FACT_CHECK',
 }

@@ -62,6 +62,25 @@ export class PlayerProfile {
   })
   onboardingCompletedAt: Date;
 
+  @ApiPropertyOptional({
+    example: 'FACT_CHECKER',
+    description: 'Reputation role: OBSERVER | FACT_CHECKER | TRUSTED_VERIFIER | MODERATOR',
+  })
+  @Column({ name: 'reputation_role', type: 'varchar', default: 'OBSERVER' })
+  reputationRole: string;
+
+  @ApiProperty({ example: 3 })
+  @Column({ name: 'current_streak', type: 'int', default: 0 })
+  currentStreak: number;
+
+  @ApiProperty({ example: 7 })
+  @Column({ name: 'longest_streak', type: 'int', default: 0 })
+  longestStreak: number;
+
+  @ApiPropertyOptional()
+  @Column({ name: 'last_played_date', type: 'date', nullable: true })
+  lastPlayedDate: Date;
+
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

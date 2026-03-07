@@ -54,6 +54,17 @@ export class PlayerChoice {
   @Column({ name: 'influence_impact', type: 'int', default: 0 })
   influenceImpact: number;
 
+  @ApiPropertyOptional({
+    example: { reach: 500, reshares: 120, credibility_loss: 35 },
+    description: 'Simulated spread impact if this choice is made (shown post-choice for wrong answers)',
+  })
+  @Column({ name: 'spread_simulation', type: 'jsonb', nullable: true })
+  spreadSimulation: { reach: number; reshares: number; credibility_loss: number } | null;
+
+  @ApiPropertyOptional({ example: 'Authority Bias', description: 'Psychological trap this choice exploits' })
+  @Column({ name: 'psychological_trap', type: 'varchar', nullable: true })
+  psychologicalTrap: string;
+
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
