@@ -312,6 +312,7 @@ export class GameSeederService {
       learningObjective:
         'Player realizes that their online actions shape the digital world around them.',
       theme: 'Digital Identity & Social Influence',
+      campaignTag: 'ONBOARDING',
       preventionLesson:
         'Everything you do online shapes what others see. Your digital footprint starts before you even realize it.',
       scenes: [
@@ -321,6 +322,7 @@ export class GameSeederService {
           description:
             '5 friends with mixed personalities appear. You feel a sense of belonging.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Setup',
           contentType: SceneContentType.CHAT,
           availableChoices: ['SELECT_FRIENDS', 'SKIP'],
           content: {
@@ -350,6 +352,7 @@ export class GameSeederService {
           description:
             'A class group is discussing upcoming exams. You feel mild anxiety.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Group Chat',
           contentType: SceneContentType.CHAT,
           availableChoices: ['READ_MORE', 'SCROLL_PAST'],
           content: {
@@ -379,6 +382,7 @@ export class GameSeederService {
           description:
             'A popular youth influencer makes a bold claim. You feel authority bias.',
           sceneType: 'DECISION',
+          sceneTypeLabel: 'Critical Decision',
           contentType: SceneContentType.FEED,
           availableChoices: ['FOLLOW', 'VERIFY_CLAIM', 'IGNORE'],
           content: {
@@ -389,6 +393,8 @@ export class GameSeederService {
             {
               label: 'FOLLOW',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 0,
+              influenceImpact: 5,
               outcome: {
                 trustScoreDelta: 0,
                 outcomeType: OutcomeType.NEUTRAL,
@@ -400,6 +406,8 @@ export class GameSeederService {
             {
               label: 'VERIFY_CLAIM',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 10,
+              influenceImpact: 10,
               outcome: {
                 trustScoreDelta: 5,
                 outcomeType: OutcomeType.PASS,
@@ -411,6 +419,8 @@ export class GameSeederService {
             {
               label: 'IGNORE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 0,
+              influenceImpact: 0,
               outcome: {
                 trustScoreDelta: 0,
                 outcomeType: OutcomeType.NEUTRAL,
@@ -444,6 +454,8 @@ export class GameSeederService {
       preventionLesson:
         'Every interaction — even a Like — amplifies a message. Verification is the only responsible first step.',
       theme: 'Academic Fraud & Social Manipulation',
+      campaignTag: 'MISINFORMATION_101',
+      unlockAfterTitle: 'Priming Phase — Identity & Context',
       scenes: [
         // ── ENTRY ──
         {
@@ -452,6 +464,8 @@ export class GameSeederService {
           description:
             'A sensational post appears in your Telegram feed claiming leaked exam questions.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Feed',
+          decisionTimeLimit: 20,
           contentType: SceneContentType.FEED,
           availableChoices: ['LIKE', 'IGNORE', 'VERIFY'],
           content: {
@@ -464,6 +478,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -10,
               influenceImpact: 15,
+              spreadSimulation: { reach: 4200, reshares: 2800, credibility_loss: 15 },
+              psychologicalTrap: 'FOMO — Fear of Missing Out',
               nextSceneTitle: 'Notification Flood',
             },
             {
@@ -489,6 +505,7 @@ export class GameSeederService {
           description:
             'After liking, your notifications explode. Your friends are sharing the post.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Alert Feed',
           contentType: SceneContentType.FEED,
           availableChoices: ['SHARE', 'VERIFY', 'IGNORE'],
           content: {
@@ -501,6 +518,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
+              spreadSimulation: { reach: 15000, reshares: 8100, credibility_loss: 35 },
+              psychologicalTrap: 'Social Proof + Bandwagon Effect',
               outcome: {
                 trustScoreDelta: -20,
                 outcomeType: OutcomeType.FAIL,
@@ -538,6 +557,7 @@ export class GameSeederService {
           description:
             'Your verification reveals the post is from a known scam network.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['REPORT', 'IGNORE_FINDING'],
           content: {
@@ -580,6 +600,7 @@ export class GameSeederService {
           description:
             'You scrolled past, but the post keeps appearing. Your friends are still sharing it.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Feed',
           contentType: SceneContentType.FEED,
           availableChoices: ['VERIFY_NOW', 'CONTINUE_IGNORING'],
           content: {
@@ -616,6 +637,7 @@ export class GameSeederService {
           description:
             'Better late than never — your verification catches the scam.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['REPORT_IT', 'WALK_AWAY'],
           content: {
@@ -658,6 +680,7 @@ export class GameSeederService {
           description:
             'You chose to verify first — the smartest move. The source is clearly fake.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['REPORT_POST', 'IGNORE_RESULT'],
           content: {
@@ -716,6 +739,8 @@ export class GameSeederService {
       preventionLesson:
         'Legitimate banks never ask for account numbers via social media. Always verify giveaways on the official bank website.',
       theme: 'Financial Phishing & Social Engineering',
+      campaignTag: 'MISINFORMATION_101',
+      unlockAfterTitle: 'The Exam Leak',
       scenes: [
         // ── ENTRY ──
         {
@@ -724,6 +749,7 @@ export class GameSeederService {
           description:
             'A professional-looking Facebook post announces a bank giveaway.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Feed',
           contentType: SceneContentType.FEED,
           availableChoices: ['LIKE', 'CLICK_LINK', 'VERIFY'],
           content: {
@@ -743,6 +769,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -20,
               influenceImpact: 5,
+              spreadSimulation: { reach: 8700, reshares: 5400, credibility_loss: 25 },
+              psychologicalTrap: 'Greed + Urgency Pressure',
               nextSceneTitle: 'Phishing Page',
             },
             {
@@ -761,6 +789,7 @@ export class GameSeederService {
           description:
             'After you liked the post, you see your friends are already engaging with it.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Proof',
           contentType: SceneContentType.FEED,
           availableChoices: ['CLICK_LINK_NOW', 'VERIFY_FIRST', 'SCROLL_PAST'],
           content: {
@@ -804,6 +833,8 @@ export class GameSeederService {
           description:
             'A form appears requesting your bank account number and phone number.',
           sceneType: 'DECISION',
+          sceneTypeLabel: 'Phishing Alert',
+          decisionTimeLimit: 20,
           contentType: SceneContentType.TEXT,
           availableChoices: ['SUBMIT', 'VERIFY_FORM'],
           content: {
@@ -816,6 +847,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
+              spreadSimulation: { reach: 2000, reshares: 0, credibility_loss: 80 },
+              psychologicalTrap: 'Sunk Cost Fallacy',
               outcome: {
                 trustScoreDelta: -25,
                 outcomeType: OutcomeType.FAIL,
@@ -840,6 +873,7 @@ export class GameSeederService {
           description:
             'Verification reveals the domain is fake — it\'s not the real X-Bank.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['REPORT_SCAM', 'IGNORE_WARNING'],
           content: {
@@ -850,6 +884,8 @@ export class GameSeederService {
             {
               label: 'REPORT_SCAM',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 20,
+              influenceImpact: 15,
               outcome: {
                 trustScoreDelta: 15,
                 outcomeType: OutcomeType.PASS,
@@ -861,6 +897,8 @@ export class GameSeederService {
             {
               label: 'IGNORE_WARNING',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -10,
+              influenceImpact: -10,
               outcome: {
                 trustScoreDelta: -10,
                 outcomeType: OutcomeType.FAIL,
@@ -878,6 +916,7 @@ export class GameSeederService {
           description:
             'The link takes you to a page that looks almost like X-Bank — but something is off.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Phishing Alert',
           contentType: SceneContentType.TEXT,
           availableChoices: ['SUBMIT_INFO', 'CHECK_URL'],
           content: {
@@ -888,6 +927,8 @@ export class GameSeederService {
             {
               label: 'SUBMIT_INFO',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -30,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -25,
                 outcomeType: OutcomeType.FAIL,
@@ -899,6 +940,8 @@ export class GameSeederService {
             {
               label: 'CHECK_URL',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 15,
+              influenceImpact: 10,
               nextSceneTitle: 'Fake Domain Detected',
             },
           ],
@@ -910,6 +953,7 @@ export class GameSeederService {
           description:
             'You go directly to X-Bank\'s official website to check for announcements.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['REPORT_FAKE', 'IGNORE_IT'],
           content: {
@@ -920,6 +964,8 @@ export class GameSeederService {
             {
               label: 'REPORT_FAKE',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: 25,
+              influenceImpact: 15,
               outcome: {
                 trustScoreDelta: 20,
                 outcomeType: OutcomeType.PERFECT_PASS,
@@ -931,6 +977,8 @@ export class GameSeederService {
             {
               label: 'IGNORE_IT',
               actionType: PlayerActionType.CHOICE,
+              scoreImpact: -5,
+              influenceImpact: -5,
               outcome: {
                 trustScoreDelta: -5,
                 outcomeType: OutcomeType.FAIL,
@@ -967,6 +1015,8 @@ export class GameSeederService {
       preventionLesson:
         'In a crisis, your anger is a weapon used by others. Check the date, beware the "Forwarded" tag, and follow the 5-Minute Rule: if a post makes you want to act violently, wait 5 minutes — real news will be on official channels.',
       theme: 'Ethnic Polarization & Crisis Misinformation',
+      campaignTag: 'MISINFORMATION_101',
+      unlockAfterTitle: 'X-Bank Giveaway Scam',
       scenes: [
         // ── ENTRY ──
         {
@@ -975,6 +1025,7 @@ export class GameSeederService {
           description:
             'A shaky night-vision video of a burning building appears in your group with alarming claims.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Crisis Alert',
           contentType: SceneContentType.VIDEO,
           availableChoices: [
             'FORWARD',
@@ -992,6 +1043,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -25,
               influenceImpact: 35,
+              spreadSimulation: { reach: 15400, reshares: 9200, credibility_loss: 50 },
+              psychologicalTrap: 'Fear + Tribal Identity',
               nextSceneTitle: 'Network Propagation Map',
             },
             {
@@ -999,6 +1052,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -20,
               influenceImpact: 30,
+              spreadSimulation: { reach: 8500, reshares: 3400, credibility_loss: 40 },
+              psychologicalTrap: 'Anger + Emotional Hijacking',
               nextSceneTitle: 'Friends Reacting To Status',
             },
             {
@@ -1024,6 +1079,7 @@ export class GameSeederService {
           description:
             'A visual map shows how your forward created a chain reaction across groups.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Impact Analysis',
           contentType: SceneContentType.TEXT,
           availableChoices: ['CONTINUE'],
           content: {
@@ -1034,6 +1090,8 @@ export class GameSeederService {
             {
               label: 'CONTINUE',
               actionType: PlayerActionType.NEXT,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Voice Note Appears',
             },
           ],
@@ -1045,6 +1103,8 @@ export class GameSeederService {
           description:
             'A crying voice note appears — a woman begging for help. It sounds devastatingly real.',
           sceneType: 'DECISION',
+          sceneTypeLabel: 'Critical Decision',
+          decisionTimeLimit: 15,
           contentType: SceneContentType.TEXT,
           availableChoices: ['MARK_VERIFIED', 'IGNORE_VOICE_NOTE'],
           content: {
@@ -1057,6 +1117,8 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
+              spreadSimulation: { reach: 25000, reshares: 12000, credibility_loss: 65 },
+              psychologicalTrap: 'Empathy Exploitation',
               nextSceneTitle: 'Community Protector Badge',
             },
             {
@@ -1075,6 +1137,7 @@ export class GameSeederService {
           description:
             'You feel proud — you\'re helping coordinate a community response.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'False Reward',
           contentType: SceneContentType.TEXT,
           availableChoices: ['CONTINUE_TO_MORNING'],
           content: {
@@ -1085,6 +1148,8 @@ export class GameSeederService {
             {
               label: 'CONTINUE_TO_MORNING',
               actionType: PlayerActionType.NEXT,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Morning After Tragedy',
             },
           ],
@@ -1096,6 +1161,7 @@ export class GameSeederService {
           description:
             'You wake up at 6:00 AM to devastating news.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Consequence Reveal',
           contentType: SceneContentType.TEXT,
           availableChoices: ['VIEW_INVESTIGATION'],
           content: {
@@ -1106,6 +1172,8 @@ export class GameSeederService {
             {
               label: 'VIEW_INVESTIGATION',
               actionType: PlayerActionType.NEXT,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Investigation Reveal',
             },
           ],
@@ -1117,6 +1185,7 @@ export class GameSeederService {
           description:
             'The full investigation reveals every piece of "evidence" was fabricated.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Final Reveal',
           contentType: SceneContentType.TEXT,
           availableChoices: ['ACKNOWLEDGE'],
           isTerminal: true,
@@ -1128,6 +1197,8 @@ export class GameSeederService {
             {
               label: 'ACKNOWLEDGE',
               actionType: PlayerActionType.FINISH,
+              scoreImpact: -50,
+              influenceImpact: -30,
               outcome: {
                 trustScoreDelta: -50,
                 outcomeType: OutcomeType.FAIL,
@@ -1145,6 +1216,7 @@ export class GameSeederService {
           description:
             'Your angry status post is trending in youth circles.',
           sceneType: 'INVESTIGATION',
+          sceneTypeLabel: 'Social Amplification',
           contentType: SceneContentType.FEED,
           availableChoices: ['CONTINUE_TO_VOICE'],
           content: {
@@ -1155,6 +1227,8 @@ export class GameSeederService {
             {
               label: 'CONTINUE_TO_VOICE',
               actionType: PlayerActionType.NEXT,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Voice Note Appears',
             },
           ],
@@ -1166,6 +1240,7 @@ export class GameSeederService {
           description:
             'You search official news sites — nothing confirms the attack.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
           availableChoices: ['CONTINUE_TO_VOICE_C'],
           content: {
@@ -1176,6 +1251,8 @@ export class GameSeederService {
             {
               label: 'CONTINUE_TO_VOICE_C',
               actionType: PlayerActionType.NEXT,
+              scoreImpact: 0,
+              influenceImpact: 0,
               nextSceneTitle: 'Voice Note After Search',
             },
           ],
@@ -1187,6 +1264,8 @@ export class GameSeederService {
           description:
             'Despite finding no news confirmation, the emotional voice note still pulls at you.',
           sceneType: 'DECISION',
+          sceneTypeLabel: 'Critical Decision',
+          decisionTimeLimit: 15,
           contentType: SceneContentType.TEXT,
           availableChoices: ['MARK_AS_VERIFIED_C', 'REPORT_SUSPICIOUS'],
           content: {
@@ -1223,6 +1302,7 @@ export class GameSeederService {
           description:
             'You muted the group and went to sleep. You wake up to tragedy.',
           sceneType: 'ANALYSIS',
+          sceneTypeLabel: 'Consequence Reveal',
           contentType: SceneContentType.TEXT,
           availableChoices: ['ACKNOWLEDGE_SILENCE'],
           isTerminal: true,
@@ -1234,6 +1314,8 @@ export class GameSeederService {
             {
               label: 'ACKNOWLEDGE_SILENCE',
               actionType: PlayerActionType.FINISH,
+              scoreImpact: -15,
+              influenceImpact: -10,
               outcome: {
                 trustScoreDelta: -15,
                 outcomeType: OutcomeType.FAIL,
@@ -1259,6 +1341,11 @@ export class GameSeederService {
       where: { levelNumber: data.levelNumber ?? 1 },
     });
 
+    const totalPossibleScore = data.scenes.reduce((acc, scene) => {
+      const maxImpact = scene.choices?.length ? Math.max(...scene.choices.map(c => c.scoreImpact || 0)) : 0;
+      return acc + maxImpact;
+    }, 0);
+
     const scenarioData = {
       title: data.title,
       description: data.description,
@@ -1273,6 +1360,8 @@ export class GameSeederService {
       theme: data.theme,
       minimumScore: data.minimumScore ?? 70,
       totalScenes: data.scenes.length,
+      campaignTag: data.campaignTag ?? null,
+      totalPossibleScore,
     };
 
     if (scenario) {
@@ -1284,6 +1373,17 @@ export class GameSeederService {
     }
 
     const savedScenario = await this.scenarioRepository.save(scenario);
+
+    // Handle unlock chain: if unlockAfterTitle is set, link it
+    if (data.unlockAfterTitle) {
+      const prereq = await this.scenarioRepository.findOne({
+        where: { title: data.unlockAfterTitle },
+      });
+      if (prereq) {
+        savedScenario.unlockScenarioId = prereq.id;
+        await this.scenarioRepository.save(savedScenario);
+      }
+    }
 
     const sceneMap = new Map<string, string>(); // Title -> ID
 
@@ -1302,6 +1402,8 @@ export class GameSeederService {
         contentType: sceneData.contentType,
         availableChoices: sceneData.availableChoices,
         isTerminal: sceneData.isTerminal || false,
+        decisionTimeLimit: sceneData.decisionTimeLimit ?? null,
+        sceneTypeLabel: sceneData.sceneTypeLabel ?? null,
       };
 
       if (scene) {
@@ -1353,6 +1455,8 @@ export class GameSeederService {
             nextSceneId: choiceData.nextSceneTitle
               ? sceneMap.get(choiceData.nextSceneTitle)
               : undefined,
+            spreadSimulation: choiceData.spreadSimulation ?? null,
+            psychologicalTrap: choiceData.psychologicalTrap ?? null,
           };
 
           if (choice) {

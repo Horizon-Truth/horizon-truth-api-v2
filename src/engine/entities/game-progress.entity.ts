@@ -83,4 +83,8 @@ export class GameProgress {
   @ApiProperty({ example: 4, description: 'Number of correct (positive score impact) decisions in this session' })
   @Column({ name: 'correct_decisions', type: 'int', default: 0 })
   correctDecisions: number;
+
+  @ApiProperty({ example: 80, description: 'Real-time accuracy percentage (0-100)' })
+  @Column({ name: 'accuracy_rate', type: 'int', default: 0 })
+  accuracyRate: number;
 }

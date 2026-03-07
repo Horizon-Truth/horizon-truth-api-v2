@@ -99,4 +99,8 @@ export class Scenario {
   @ApiPropertyOptional({ example: 'ELECTION_CAMPAIGN', description: 'Campaign/story arc this scenario belongs to' })
   @Column({ name: 'campaign_tag', type: 'varchar', nullable: true })
   campaignTag: string | null;
+
+  @ApiProperty({ example: 500, description: 'Total possible points achievable in this scenario' })
+  @Column({ name: 'total_possible_score', type: 'int', default: 0 })
+  totalPossibleScore: number;
 }

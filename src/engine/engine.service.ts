@@ -108,16 +108,18 @@ export class EngineService {
 
     const [scenarios, total] = await queryBuilder.getManyAndCount();
 
-    // If userId provided, fetch user records for these scenarios
+    // If userId provided, fetch ALL user records (not just current page scenarios)
+    // so prerequisite lookups always work across scenario pages
     let userRecords: PlayerScenarioRecord[] = [];
-    if (userId && scenarios.length > 0) {
+    if (userId) {
       userRecords = await this.playerScenarioRecordRepository.find({
-        where: {
-          userId,
-          scenarioId: In(scenarios.map((s) => s.id)),
-        },
+        where: { userId },
       });
     }
+
+    // Build a map of all scenarios by id for prerequisite minimumScore lookup
+    const allScenarios = await this.scenarioRepository.find({ select: ['id', 'minimumScore', 'unlockScenarioId'] });
+    const scenarioMap = new Map(allScenarios.map(s => [s.id, s]));
 
     // Map records to scenarios
     const scenariosWithRecords = scenarios.map((scenario) => {
@@ -128,12 +130,17 @@ export class EngineService {
       if (userRecord?.isCompleted) {
         lockStatus = 'VERIFIED';
       } else if (scenario.unlockScenarioId) {
-        // Check if the prerequisite scenario was passed
+        // Prerequisite exists — check if the player completed it with sufficient accuracy rate (%)
         const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
-        if (!prereqRecord?.isCompleted) {
+        const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
+        const requiredScore = prereqScenario?.minimumScore ?? 70;
+
+        // Use bestAccuracyRate for comparison with percentage-based minimumScore
+        if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
           lockStatus = 'LOCKED';
         }
       }
+      // If unlockScenarioId is null/undefined → stays 'AVAILABLE' (no prerequisite)
 
       return {
         ...scenario,
@@ -417,22 +424,42 @@ export class EngineService {
 
       const result: any = { status: 'scene_completed' };
 
-      if (templateOutcome) {
-        // Update persistent trust score
+      // 6. Aggregate score and influence to progress (Always do this if choice exists)
+      if (choice) {
+        progress.totalScore = (progress.totalScore || 0) + (choice.scoreImpact || 0);
+        progress.influenceScore = (progress.influenceScore || 0) + (choice.influenceImpact || 0);
+
+        // Track accuracy metrics
+        progress.totalDecisions = (progress.totalDecisions || 0) + 1;
+        if ((choice.scoreImpact || 0) > 0) {
+          progress.correctDecisions = (progress.correctDecisions || 0) + 1;
+        }
+
+        // Calculate real-time percentage based on score vs total possible
+        const maxScore = progress.scenario.totalPossibleScore || 100;
+        progress.accuracyRate = Math.max(0, Math.round(((progress.totalScore || 0) / maxScore) * 100));
+
+        // 7. Update persistent trust score (Sync with choice quality)
         const playerProfile = await queryRunner.manager.findOne(
           PlayerProfile,
-          {
-            where: { userId },
-          },
+          { where: { userId } },
         );
 
         if (playerProfile) {
-          playerProfile.currentTrustScore =
-            (playerProfile.currentTrustScore || 50) +
-            (templateOutcome.trustScoreDelta || 0);
-          await queryRunner.manager.save(PlayerProfile, playerProfile);
-        }
+          // Use trustScoreDelta if available, otherwise fallback to scoreImpact
+          const trustDelta = templateOutcome?.trustScoreDelta !== undefined
+            ? templateOutcome.trustScoreDelta
+            : (choice.scoreImpact || 0);
 
+          playerProfile.currentTrustScore = (playerProfile.currentTrustScore || 50) + trustDelta;
+          await queryRunner.manager.save(PlayerProfile, playerProfile);
+
+          // Update result for frontend feedback
+          result.trustScoreDelta = trustDelta;
+        }
+      }
+
+      if (templateOutcome) {
         // Process message templates
         let processedMessage = templateOutcome.message || '';
         if (
@@ -458,9 +485,8 @@ export class EngineService {
         await queryRunner.manager.save(userOutcome);
 
         result.message = processedMessage;
-        result.trustScoreDelta = templateOutcome.trustScoreDelta;
 
-        // Check badges (Gamification is treated as side-effect, but we can't easily wrap it in this queryRunner's transaction without modifying it)
+        // Check badges
         try {
           const awardedMidGame =
             await this.gamificationService.checkOutcomeBadgeEligibility(
@@ -471,35 +497,18 @@ export class EngineService {
         } catch (bErr) {
           console.error('Badge error:', bErr.message);
         }
-
-        // Aggregate score and influence to progress
-        progress.totalScore = (progress.totalScore || 0) + (choice?.scoreImpact || 0);
-        progress.influenceScore = (progress.influenceScore || 0) + (choice?.influenceImpact || 0);
-        // Track accuracy
-        progress.totalDecisions = (progress.totalDecisions || 0) + 1;
-        if ((choice?.scoreImpact || 0) > 0) {
-          progress.correctDecisions = (progress.correctDecisions || 0) + 1;
-        }
-
-        // 7. Handle scenario termination
-        if (templateOutcome.endScenario) {
-          await queryRunner.manager.save(progress);
-          await queryRunner.commitTransaction();
-          return this.completeGame(progressId, templateOutcome.outcomeType);
-        }
-      } else if (choice) {
-        // Even if no outcome, still aggregate score/influence
-        progress.totalScore = (progress.totalScore || 0) + (choice.scoreImpact || 0);
-        progress.influenceScore = (progress.influenceScore || 0) + (choice.influenceImpact || 0);
-        // Track accuracy
-        progress.totalDecisions = (progress.totalDecisions || 0) + 1;
-        if ((choice.scoreImpact || 0) > 0) {
-          progress.correctDecisions = (progress.correctDecisions || 0) + 1;
-        }
       }
 
-      // 8. Advance to next scene
+      // 8. Handle scenario termination or advance to next scene
       const nextSceneId = choice?.nextSceneId;
+      const endScenarioRequested = templateOutcome?.endScenario;
+
+      if (endScenarioRequested) {
+        await queryRunner.manager.save(progress);
+        await queryRunner.commitTransaction();
+        return this.completeGame(progressId, templateOutcome?.outcomeType || OutcomeType.SUCCESS);
+      }
+
       if (nextSceneId) {
         progress.currentSceneId = nextSceneId;
         await queryRunner.manager.save(progress);
@@ -561,9 +570,9 @@ export class EngineService {
     progress.completedAt = new Date();
     progress.finalOutcome = outcomeType;
 
-    // Evaluate if passed based on scenario settings
+    // Evaluate if passed based on scenario settings (using percentage)
     const minRequired = progress.scenario.minimumScore || 70;
-    progress.passed = (progress.totalScore || 0) >= minRequired;
+    progress.passed = (progress.accuracyRate || 0) >= minRequired;
 
     // Compute narrative ending based on score + influence
     const totalScore = progress.totalScore || 0;
@@ -571,7 +580,7 @@ export class EngineService {
     let narrativeEnding = 'COMMUNITY_CRISIS';
     if (totalScore >= 85 && influenceScore >= 70) {
       narrativeEnding = 'TRUTH_VICTORY';
-    } else if (totalScore >= progress.scenario.minimumScore) {
+    } else if (progress.passed) {
       narrativeEnding = 'CONTAINED_EARLY';
     } else if (influenceScore < 30) {
       narrativeEnding = 'VIRAL_MISINFORMATION';
@@ -617,6 +626,7 @@ export class EngineService {
           userId: progress.userId,
           scenarioId: progress.scenarioId,
           bestScore: progress.totalScore || 0,
+          bestAccuracyRate: progress.accuracyRate || 0,
           bestInfluence: progress.influenceScore || 0,
           isCompleted: progress.passed || false,
           attempts: 1,
@@ -625,6 +635,10 @@ export class EngineService {
         record.attempts += 1;
         if ((progress.totalScore || 0) > record.bestScore) {
           record.bestScore = progress.totalScore;
+        }
+        const currentAccuracy = progress.accuracyRate || 0;
+        if (currentAccuracy > record.bestAccuracyRate) {
+          record.bestAccuracyRate = currentAccuracy;
         }
         if ((progress.influenceScore || 0) > record.bestInfluence) {
           record.bestInfluence = progress.influenceScore;
@@ -1023,7 +1037,14 @@ export class EngineService {
     id: string,
     updateDto: UpdateScenarioDto,
   ): Promise<Scenario> {
-    await this.scenarioRepository.update(id, updateDto);
+    // Map DTO fields to entity column names
+    const { type, ...rest } = updateDto as any;
+    const entityData: Partial<Scenario> = { ...rest };
+    if (type) {
+      entityData.scenarioType = type;
+    }
+
+    await this.scenarioRepository.update(id, entityData);
     const updated = await this.scenarioRepository.findOne({ where: { id } });
     if (!updated) throw new NotFoundException('Scenario not found');
     return updated;

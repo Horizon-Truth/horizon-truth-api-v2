@@ -39,6 +39,10 @@ export class PlayerScenarioRecord {
     @Column({ name: 'best_score', type: 'int', default: 0 })
     bestScore: number;
 
+    @ApiProperty({ example: 85 })
+    @Column({ name: 'best_accuracy_rate', type: 'int', default: 0 })
+    bestAccuracyRate: number;
+
     @ApiProperty({ example: 250 })
     @Column({ name: 'best_influence', type: 'int', default: 0 })
     bestInfluence: number;
