@@ -939,7 +939,17 @@ export class EngineService {
         const oldChoiceIds = oldChoices.map(c => c.id);
 
         if (oldChoiceIds.length > 0) {
+          // 1. Delete template outcomes (userId is null)
           await queryRunner.manager.delete(GameOutcome, { playerChoiceId: In(oldChoiceIds), userId: IsNull() });
+
+          // 2. Nullify playerChoiceId in player outcomes (userId is NOT null) to preserve history but allow deletion
+          await queryRunner.manager.createQueryBuilder()
+            .update(GameOutcome)
+            .set({ playerChoiceId: null as any })
+            .where({ playerChoiceId: In(oldChoiceIds) })
+            .execute();
+
+          // 3. Now it's safe to delete the choices
           await queryRunner.manager.delete(PlayerChoice, { id: In(oldChoiceIds) });
         }
 
