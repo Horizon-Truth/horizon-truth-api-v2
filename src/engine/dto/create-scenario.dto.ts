@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsOptional,
   IsInt,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
@@ -57,4 +58,24 @@ export class CreateScenarioDto {
   @IsOptional()
   @IsString()
   theme?: string;
+
+  @ApiProperty({ example: 70 })
+  @IsOptional()
+  @IsInt()
+  minimumScore?: number;
+
+  @ApiProperty({ example: 5 })
+  @IsOptional()
+  @IsInt()
+  totalScenes?: number;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'UUID of scenario that must be passed before this one unlocks' })
+  @IsOptional()
+  @IsUUID()
+  unlockScenarioId?: string;
+
+  @ApiPropertyOptional({ example: 'MISINFORMATION_101', description: 'Campaign tag for grouping scenarios' })
+  @IsOptional()
+  @IsString()
+  campaignTag?: string;
 }

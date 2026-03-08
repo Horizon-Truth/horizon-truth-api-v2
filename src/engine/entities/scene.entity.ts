@@ -8,7 +8,7 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Scenario } from './scenario.entity';
 import { SceneContentType } from '../../shared/enums/scene-content-type.enum';
 import { SceneContent } from './scene-content.entity';
@@ -59,6 +59,14 @@ export class Scene {
   @ApiProperty({ default: false })
   @Column({ name: 'is_terminal', type: 'boolean', default: false })
   isTerminal: boolean;
+
+  @ApiPropertyOptional({ example: 30, description: 'Time limit in seconds for the player to make a decision. Null = no limit.' })
+  @Column({ name: 'decision_time_limit', type: 'int', nullable: true })
+  decisionTimeLimit: number;
+
+  @ApiPropertyOptional({ example: 'POST', description: 'Semantic scene type for display: POST, CHAT, NEWS, VIDEO, COMMENT_THREAD' })
+  @Column({ name: 'scene_type_label', type: 'varchar', nullable: true })
+  sceneTypeLabel: string;
 
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../shared/enums/user-role.enum';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @ApiTags('Game Engine')
 @Controller('engine')
@@ -46,14 +47,15 @@ export class EngineController {
     return this.engineService.getGuestPlays();
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('scenarios')
   @ApiOperation({ summary: 'List all available game scenarios' })
   @ApiResponse({
     status: 200,
     description: 'Scenarios retrieved successfully.',
   })
-  async getScenarios(@Query() query: ScenarioQueryDto) {
-    return this.engineService.getScenarios(query);
+  async getScenarios(@Request() req, @Query() query: ScenarioQueryDto) {
+    return this.engineService.getScenarios(query, req.user?.userId);
   }
 
   @Get('scenarios/:id')
