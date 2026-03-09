@@ -37,3 +37,42 @@ export class AnalyticsService {
         private readonly resourceRepository: Repository<Resource>,
         @InjectRepository(Contact)
         private readonly contactRepository: Repository<Contact>,
+        @InjectRepository(GuestPlay)
+        private readonly guestPlayRepository: Repository<GuestPlay>,
+        @InjectRepository(OrganizationUser)
+        private readonly organizationUserRepository: Repository<OrganizationUser>,
+        @InjectRepository(Report)
+        private readonly reportRepository: Repository<Report>,
+        @InjectRepository(ReportVerification)
+        private readonly reportVerificationRepository: Repository<ReportVerification>,
+        @InjectRepository(GameOutcome)
+        private readonly gameOutcomeRepository: Repository<GameOutcome>,
+        @InjectRepository(PlayerScenarioRecord)
+        private readonly playerScenarioRecordRepository: Repository<PlayerScenarioRecord>,
+    ) { }
+
+    /**
+     * Aggregate, non-sensitive counts for the public landing page. No auth
+     * required — returns only headline totals, never per-user data.
+     */
+    async getPublicStats() {
+        const [
+            userCount,
+            guestCount,
+            reportsDebunked,
+            verifierRow,
+            credibilityRow,
+        ] = await Promise.all([
+            this.userRepository.count(),
+            this.guestPlayRepository.count(),
+            this.reportRepository.count({ where: { status: ReportStatus.VERIFIED } }),
+            this.reportVerificationRepository
+                .createQueryBuilder('rv')
+                .select('COUNT(DISTINCT rv.user_id)', 'count')
+                .getRawOne<{ count: string }>(),
+            this.reportRepository
+                .createQueryBuilder('r')
+                .select('AVG(r.credibilityScore)', 'avg')
+                .where('r.credibilityScore IS NOT NULL')
+                .getRawOne<{ avg: string }>(),
+        ]);
