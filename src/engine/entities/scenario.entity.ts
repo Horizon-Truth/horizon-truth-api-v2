@@ -83,4 +83,24 @@ export class Scenario {
   @ApiPropertyOptional({ example: 'Cybersecurity' })
   @Column({ name: 'theme', type: 'varchar', length: 255, nullable: true })
   theme: string;
+
+  @ApiProperty({ example: 70 })
+  @Column({ name: 'minimum_score', type: 'int', default: 70 })
+  minimumScore: number;
+
+  @ApiProperty({ example: 5 })
+  @Column({ name: 'total_scenes', type: 'int', default: 1 })
+  totalScenes: number;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'UUID of scenario that must be passed before this one unlocks' })
+  @Column({ name: 'unlock_scenario_id', type: 'uuid', nullable: true })
+  unlockScenarioId: string | null;
+
+  @ApiPropertyOptional({ example: 'ELECTION_CAMPAIGN', description: 'Campaign/story arc this scenario belongs to' })
+  @Column({ name: 'campaign_tag', type: 'varchar', nullable: true })
+  campaignTag: string | null;
+
+  @ApiProperty({ example: 500, description: 'Total possible points achievable in this scenario' })
+  @Column({ name: 'total_possible_score', type: 'int', default: 0 })
+  totalPossibleScore: number;
 }
