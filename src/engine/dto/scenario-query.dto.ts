@@ -31,6 +31,15 @@ export class ScenarioQueryDto {
   isActive?: boolean = true;
 
   @ApiPropertyOptional({
+    description: 'Filter archived scenarios',
+    default: false,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isArchived?: boolean = false;
+
+  @ApiPropertyOptional({
     description: 'Page number for pagination',
     default: 1,
     minimum: 1,

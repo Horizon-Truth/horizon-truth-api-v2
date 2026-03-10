@@ -19,6 +19,9 @@ import { GameProgress } from './entities/game-progress.entity';
 import { PlayerAction } from './entities/player-action.entity';
 import { GameOutcome } from './entities/game-outcome.entity';
 import { PlayerChoice } from './entities/player-choice.entity';
+import { SceneContent } from './entities/scene-content.entity';
+import { GuestPlay } from './entities/guest-play.entity';
+import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
 import { GameLevel } from './entities/game-level.entity';
 import { Badge } from '../gamification/entities/badge.entity';
 import { UserBadge } from '../gamification/entities/user-badge.entity';
@@ -77,8 +80,14 @@ function makeQueryRunner(overrides: any = {}) {
     release: jest.fn(),
     manager: {
       findOne: jest.fn(),
+      find: jest.fn(),
       save: jest.fn((entity, data) => ({ ...data })),
       create: jest.fn((entity, data) => data),
+      createQueryBuilder: jest.fn(() => ({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn(),
+      })),
     },
     ...overrides,
   };
@@ -113,6 +122,9 @@ describe('Phase 8 — Integrity Testing', () => {
     badgeRepo = makeRepo();
     userBadgeRepo = makeRepo();
     leaderboardRepo = makeRepo();
+    const sceneContentRepo = makeRepo();
+    const guestPlayRepo = makeRepo();
+    const playerScenarioRecordRepo = makeRepo();
 
     const qr = makeQueryRunner();
     dataSource = { createQueryRunner: jest.fn(() => qr) };
@@ -137,6 +149,9 @@ describe('Phase 8 — Integrity Testing', () => {
         { provide: getRepositoryToken(Badge), useValue: badgeRepo },
         { provide: getRepositoryToken(UserBadge), useValue: userBadgeRepo },
         { provide: getRepositoryToken(Leaderboard), useValue: leaderboardRepo },
+        { provide: getRepositoryToken(SceneContent), useValue: sceneContentRepo },
+        { provide: getRepositoryToken(GuestPlay), useValue: guestPlayRepo },
+        { provide: getRepositoryToken(PlayerScenarioRecord), useValue: playerScenarioRecordRepo },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
@@ -220,8 +235,13 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
         .mockResolvedValueOnce(null) // 2. Action (replay check)
         .mockResolvedValueOnce(choice) // 3. Choice
         .mockResolvedValueOnce(null); // 4. Outcome template
@@ -275,8 +295,13 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
         .mockResolvedValueOnce(null) // 2. Action (replay check)
         .mockResolvedValueOnce(choice) // 3. Choice
         .mockResolvedValueOnce(null); // 4. Outcome template
@@ -331,11 +356,16 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
-        .mockResolvedValueOnce(null) // 2. Action
-        .mockResolvedValueOnce(choice) // 3. Choice
-        .mockResolvedValueOnce(null); // 4. Outcome
+        .mockResolvedValueOnce(null) // 1. Action
+        .mockResolvedValueOnce(choice) // 2. Choice
+        .mockResolvedValueOnce(null); // 3. Outcome
+      qr.manager.find.mockResolvedValueOnce([]); // sceneChoices for accuracy
       dataSource.createQueryRunner.mockReturnValue(qr);
 
       // completeGame dependencies
@@ -379,10 +409,17 @@ describe('Phase 8 — Integrity Testing', () => {
       const completedProgress = {
         id: 'progress-1',
         userId: 'user-1',
+        scenarioId: 'scenario-1',
         status: GameProgressStatus.COMPLETED,
       };
 
-      qr.manager.findOne.mockResolvedValueOnce(completedProgress);
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(completedProgress),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce({ id: 'scenario-1', scenes: [] }); // 1. Scenario
 
       await expect(
         engineService.submitChoice('user-1', {
@@ -405,7 +442,11 @@ describe('Phase 8 — Integrity Testing', () => {
         scenario: { scenes: [] },
       };
 
-      qr.manager.findOne.mockResolvedValueOnce(progress);
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
 
       await expect(
         engineService.submitChoice('user-1', {
@@ -453,11 +494,16 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
-        .mockResolvedValueOnce(null) // 2. Action
-        .mockResolvedValueOnce(choice) // 3. Choice
-        .mockResolvedValueOnce(playerProfile); // 4. PlayerProfile
+        .mockResolvedValueOnce(null) // 1. Action
+        .mockResolvedValueOnce(choice) // 2. Choice
+        .mockResolvedValueOnce(playerProfile); // 3. PlayerProfile
+      qr.manager.find.mockResolvedValueOnce([]); // sceneChoices for accuracy
       qr.manager.save.mockImplementation((entity, data) =>
         data ? { ...data } : { ...entity },
       );
@@ -530,8 +576,13 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
         .mockResolvedValueOnce(null) // 2. Action
         .mockResolvedValueOnce(choice) // 3. Choice
         .mockResolvedValueOnce(playerProfile); // 4. Profile
@@ -615,8 +666,13 @@ describe('Phase 8 — Integrity Testing', () => {
       };
 
       const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // 1. Progress
         .mockResolvedValueOnce(null) // 2. Action
         .mockResolvedValueOnce(choice) // 3. Choice
         .mockResolvedValueOnce(playerProfile); // 4. Profile
@@ -680,24 +736,33 @@ describe('Phase 8 — Integrity Testing', () => {
         finalOutcome: OutcomeType.PASS,
       });
 
+      sceneRepo.find.mockResolvedValue([
+        { id: 'scene-1', title: 'Scene 1', choices: [{ id: 'choice-1', scoreImpact: 10, label: 'VERIFY' }] },
+        { id: 'scene-2', title: 'Scene 2', choices: [{ id: 'choice-2', scoreImpact: 5, label: 'IGNORE' }] },
+        { id: 'scene-3', title: 'Scene 3', choices: [{ id: 'choice-3', scoreImpact: 20, label: 'DOUBT' }] },
+      ]);
+
       gameOutcomeRepo.find.mockResolvedValue([
         {
           trustScoreDelta: 10,
           message: 'Good',
           outcomeType: OutcomeType.PASS,
-          playerChoice: { label: 'VERIFY' },
+          playerChoiceId: 'choice-1',
+          playerChoice: { id: 'choice-1', label: 'VERIFY', sceneId: 'scene-1' },
         },
         {
           trustScoreDelta: -5,
           message: 'Hmm',
           outcomeType: OutcomeType.NEUTRAL,
-          playerChoice: { label: 'IGNORE' },
+          playerChoiceId: 'choice-2',
+          playerChoice: { id: 'choice-2', label: 'IGNORE', sceneId: 'scene-2' },
         },
         {
           trustScoreDelta: 20,
           message: 'Excellent',
           outcomeType: OutcomeType.PASS,
-          playerChoice: { label: 'DOUBT' },
+          playerChoiceId: 'choice-3',
+          playerChoice: { id: 'choice-3', label: 'DOUBT', sceneId: 'scene-3' },
         },
       ]);
 
@@ -813,17 +878,23 @@ describe('Phase 8 — Integrity Testing', () => {
         getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
       });
 
-      badgeRepo.findOne.mockResolvedValue({
-        id: 'badge-1',
-        code: 'FIRST_GAME',
+      badgeRepo.findOne.mockImplementation(({ where }) => {
+        if (where.code === 'FIRST_GAME') {
+          return Promise.resolve({ id: 'badge-1', code: 'FIRST_GAME' });
+        }
+        if (where.code === 'PERFECT_SCORE') {
+          return Promise.resolve({ id: 'badge-4', code: 'PERFECT_SCORE' });
+        }
+        return Promise.resolve(null);
       });
       userBadgeRepo.findOne.mockResolvedValue(null);
+      userBadgeRepo.find.mockResolvedValue([]);
       userBadgeRepo.save.mockResolvedValue({ id: 'ub-1' });
 
       const awarded = await gamificationService.checkBadgeEligibility('user-1');
 
       // FIRST_GAME should be awarded exactly once
-      const firstGameAwards = awarded.filter((b) => b === 'FIRST_GAME');
+      const firstGameAwards = awarded.filter((b) => (typeof b === 'string' ? b === 'FIRST_GAME' : b.code === 'FIRST_GAME'));
       expect(firstGameAwards).toHaveLength(1);
     });
   });
@@ -1035,8 +1106,13 @@ describe('Phase 8 — Integrity Testing', () => {
 
       // 1st findOne: Progress (with lock)
       // 2nd findOne: Existing PlayerAction (to check replay)
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
       qr.manager.findOne
-        .mockResolvedValueOnce(progress) // Progress fetch
         .mockResolvedValueOnce({ id: 'act-1' }); // Replay found!
 
       await expect(
@@ -1057,10 +1133,17 @@ describe('Phase 8 — Integrity Testing', () => {
       const completedProgress = {
         id: 'progress-1',
         userId: 'user-1',
+        scenarioId: 'scenario-1',
         status: GameProgressStatus.COMPLETED,
       };
 
-      qr.manager.findOne.mockResolvedValueOnce(completedProgress);
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(completedProgress),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce({ id: 'scenario-1', scenes: [] }); // 1. Scenario
 
       await expect(
         engineService.submitChoice('user-1', {
@@ -1086,8 +1169,13 @@ describe('Phase 8 — Integrity Testing', () => {
       const qr = makeQueryRunner();
       dataSource.createQueryRunner.mockReturnValue(qr);
 
-      // Return null because ownership (userId) doesn't match
-      qr.manager.findOne.mockResolvedValueOnce(null);
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(null),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce(null); // 1. Scenario (if it reached here, but it won't)
 
       await expect(
         engineService.submitChoice('wrong-user', {

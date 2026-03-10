@@ -51,4 +51,11 @@ export class ScenarioAdminController {
   async remove(@Param('id') id: string) {
     return this.engineService.deleteScenario(id);
   }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all scenarios for management' })
+  @ApiResponse({ status: 200, description: 'Scenarios retrieved successfully.' })
+  async getScenarios(@Query() query: any) {
+    return this.engineService.getScenarios(query);
+  }
 }
