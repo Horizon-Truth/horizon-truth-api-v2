@@ -81,35 +81,38 @@ export class EngineService {
    * Get list of scenarios with optional filtering and user records
    */
   async getScenarios(query: ScenarioQueryDto, userId?: string): Promise<any> {
-    const { difficulty, scenarioType, isActive, page = 1, limit = 10 } = query;
+    const { difficulty, scenarioType, isActive, isArchived, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
+    // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
     const queryBuilder = this.scenarioRepository
       .createQueryBuilder('scenario')
-      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
-      .skip(skip)
-      .take(limit);
+      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel');
 
     if (difficulty) {
-      queryBuilder.andWhere('scenario.difficulty = :difficulty', {
-        difficulty,
-      });
+      queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
     }
 
     if (scenarioType) {
-      queryBuilder.andWhere('scenario.scenarioType = :scenarioType', {
-        scenarioType,
-      });
+      queryBuilder.andWhere('scenario.scenarioType = :scenarioType', { scenarioType });
     }
 
     if (isActive !== undefined) {
       queryBuilder.andWhere('scenario.isActive = :isActive', { isActive });
     }
 
-    const [scenarios, total] = await queryBuilder.getManyAndCount();
+    if (isArchived !== undefined) {
+      if (isArchived === false) {
+        // Support existing data where isArchived might be NULL
+        queryBuilder.andWhere('(scenario.isArchived = :isArchived OR scenario.isArchived IS NULL)', { isArchived });
+      } else {
+        queryBuilder.andWhere('scenario.isArchived = :isArchived', { isArchived });
+      }
+    }
 
-    // If userId provided, fetch ALL user records (not just current page scenarios)
-    // so prerequisite lookups always work across scenario pages
+    const scenarios = await queryBuilder.getMany();
+
+    // If userId provided, fetch ALL user records
     let userRecords: PlayerScenarioRecord[] = [];
     if (userId) {
       userRecords = await this.playerScenarioRecordRepository.find({
@@ -117,30 +120,26 @@ export class EngineService {
       });
     }
 
-    // Build a map of all scenarios by id for prerequisite minimumScore lookup
+    // Build a map for prerequisite lookups
     const allScenarios = await this.scenarioRepository.find({ select: ['id', 'minimumScore', 'unlockScenarioId'] });
     const scenarioMap = new Map(allScenarios.map(s => [s.id, s]));
 
-    // Map records to scenarios
+    // Map records and compute lockStatus
     const scenariosWithRecords = scenarios.map((scenario) => {
       const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
 
-      // Compute lock_status
       let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
       if (userRecord?.isCompleted) {
         lockStatus = 'VERIFIED';
       } else if (scenario.unlockScenarioId) {
-        // Prerequisite exists — check if the player completed it with sufficient accuracy rate (%)
         const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
         const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
         const requiredScore = prereqScenario?.minimumScore ?? 70;
 
-        // Use bestAccuracyRate for comparison with percentage-based minimumScore
         if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
           lockStatus = 'LOCKED';
         }
       }
-      // If unlockScenarioId is null/undefined → stays 'AVAILABLE' (no prerequisite)
 
       return {
         ...scenario,
@@ -149,14 +148,20 @@ export class EngineService {
       };
     });
 
+    // Custom sorting: Unlocked (AVAILABLE/VERIFIED) first, then LOCKED
+    scenariosWithRecords.sort((a, b) => {
+      const score = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
+      return score[a.lockStatus] - score[b.lockStatus];
+    });
+
+    // Manual pagination
+    const paginatedScenarios = scenariosWithRecords.slice(skip, skip + limit);
+
     return {
-      data: scenariosWithRecords,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      data: paginatedScenarios,
+      total: scenariosWithRecords.length,
+      page,
+      limit,
     };
   }
 
@@ -344,8 +349,13 @@ export class EngineService {
         })
         .getOne();
 
-      if (progress) {
-        // Fetch relations separately to avoid FOR UPDATE on outer join error
+      if (!progress) {
+        throw new NotFoundException('Game progress not found or unauthorized');
+      }
+
+      // 1. Scene Loading (Ensure full relations and correct level)
+      // Fetch relations separately to avoid FOR UPDATE on outer join error
+      if (!progress.scenario || !progress.scenario.scenes) {
         const scenario = await queryRunner.manager.findOne(Scenario, {
           where: { id: progress.scenarioId },
           relations: ['scenes'],
@@ -355,10 +365,6 @@ export class EngineService {
           throw new NotFoundException('Scenario not found for this game');
         }
         progress.scenario = scenario;
-      }
-
-      if (!progress) {
-        throw new NotFoundException('Game progress not found or unauthorized');
       }
 
       // 2. Status Immutability: Prevent modifications to completed games
@@ -435,9 +441,19 @@ export class EngineService {
           progress.correctDecisions = (progress.correctDecisions || 0) + 1;
         }
 
-        // Calculate real-time percentage based on score vs total possible
-        const maxScore = progress.scenario.totalPossibleScore || 100;
-        progress.accuracyRate = Math.max(0, Math.round(((progress.totalScore || 0) / maxScore) * 100));
+        // Calculate max possible score for this scene to update cumulative max
+        const sceneChoices = await queryRunner.manager.find(PlayerChoice, {
+          where: { sceneId: progress.currentSceneId },
+        });
+        const maxImpact = Math.max(0, ...sceneChoices.map(c => c.scoreImpact || 0));
+        progress.maxPossibleScore = (progress.maxPossibleScore || 0) + maxImpact;
+
+        // Calculate real-time percentage based on visited scenes
+        if (progress.maxPossibleScore > 0) {
+          progress.accuracyRate = Math.max(0, Math.round(((progress.totalScore || 0) / progress.maxPossibleScore) * 100));
+        } else {
+          progress.accuracyRate = 0;
+        }
 
         // 7. Update persistent trust score (Sync with choice quality)
         const playerProfile = await queryRunner.manager.findOne(
@@ -725,9 +741,7 @@ export class EngineService {
           progressId: progress.id,
           completedAt: outcome.completedAt,
           narrativeEnding,
-          accuracyRate: progress.totalDecisions > 0
-            ? Math.round((progress.correctDecisions / progress.totalDecisions) * 100)
-            : null,
+          accuracyRate: progress.accuracyRate,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -749,9 +763,7 @@ export class EngineService {
           progressId: progress.id,
           completedAt: outcome.completedAt,
           narrativeEnding,
-          accuracyRate: progress.totalDecisions > 0
-            ? Math.round((progress.correctDecisions / progress.totalDecisions) * 100)
-            : null,
+          accuracyRate: progress.accuracyRate,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,

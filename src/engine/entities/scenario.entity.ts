@@ -56,6 +56,10 @@ export class Scenario {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
+  @ApiProperty({ default: false })
+  @Column({ name: 'is_archived', type: 'boolean', default: false })
+  isArchived: boolean;
+
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

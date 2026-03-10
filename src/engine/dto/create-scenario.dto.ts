@@ -34,6 +34,11 @@ export class CreateScenarioDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @ApiProperty({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isArchived?: boolean;
+
   @ApiPropertyOptional({ example: 'Learn to identify phishing attempts' })
   @IsOptional()
   @IsString()
