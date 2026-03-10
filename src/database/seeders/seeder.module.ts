@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameSeederService } from './game-seeder.service';
 import { SystemSeederService } from './system-seeder.service';
 import { ReportsSeederService } from './reports-seeder.service';
+import { MassiveScenarioSeederService } from './massive-scenario-seeder.service';
 import { User } from '../../users/entities/user.entity';
 import { Scenario } from '../../engine/entities/scenario.entity';
 import { Scene } from '../../engine/entities/scene.entity';
@@ -48,12 +49,14 @@ import { BlogResourceSeederService } from './blog-resource-seeder.service';
     SystemSeederService,
     ReportsSeederService,
     BlogResourceSeederService,
+    MassiveScenarioSeederService,
   ],
   exports: [
     GameSeederService,
     SystemSeederService,
     ReportsSeederService,
     BlogResourceSeederService,
+    MassiveScenarioSeederService,
   ],
 })
 export class SeederModule { }
