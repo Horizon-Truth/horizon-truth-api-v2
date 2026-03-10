@@ -10,6 +10,7 @@ import {
   Delete,
   Patch,
   Ip,
+  Post,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -25,12 +26,13 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -176,6 +178,16 @@ export class UsersController {
     @Query('limit') limit?: number,
   ) {
     return this.usersService.getActivityHistory(id, page || 1, limit || 20);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Post()
+  @ApiOperation({ summary: 'Create a new user (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully.' })
+  async create(@Body() createUserDto: CreateUserDto) {
+    const password = createUserDto.password || Math.random().toString(36).slice(-8);
+    return this.usersService.create({ ...createUserDto, password });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
