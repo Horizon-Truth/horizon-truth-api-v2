@@ -49,6 +49,7 @@ export class Scene {
     name: 'content_type',
     type: 'enum',
     enum: SceneContentType,
+    default: SceneContentType.TEXT,
   })
   contentType: SceneContentType;
 
