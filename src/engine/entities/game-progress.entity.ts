@@ -87,4 +87,8 @@ export class GameProgress {
   @ApiProperty({ example: 80, description: 'Real-time accuracy percentage (0-100)' })
   @Column({ name: 'accuracy_rate', type: 'int', default: 0 })
   accuracyRate: number;
+
+  @ApiProperty({ example: 100, description: 'Sum of maximum possible scores for all scenes visited' })
+  @Column({ name: 'max_possible_score', type: 'int', default: 0 })
+  maxPossibleScore: number;
 }

@@ -23,6 +23,7 @@ import { BlogsModule } from './blogs/blogs.module';
 import { ResourcesModule } from './resources/resources.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
+import { TelemetryModule } from './telemetry/telemetry.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { NewsletterModule } from './newsletter/newsletter.module';
     ResourcesModule,
     ContactsModule,
     NewsletterModule,
+    TelemetryModule,
   ],
   controllers: [AppController],
   providers: [

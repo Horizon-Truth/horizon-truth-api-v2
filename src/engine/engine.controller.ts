@@ -55,6 +55,8 @@ export class EngineController {
     description: 'Scenarios retrieved successfully.',
   })
   async getScenarios(@Request() req, @Query() query: ScenarioQueryDto) {
+    // Players should never see archived scenarios
+    query.isArchived = false;
     return this.engineService.getScenarios(query, req.user?.userId);
   }
 
