@@ -15,7 +15,7 @@ export class FeedbackService {
   ) {}
 
   async create(
-    userId: string,
+    userId: string | null,
     createDto: CreateFeedbackDto,
   ): Promise<Feedback> {
     const feedback = this.feedbackRepository.create({
