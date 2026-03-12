@@ -17,6 +17,7 @@ import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { FeedbackQueryDto } from './dto/feedback-query.dto';
 import { UserRole } from '../shared/enums/user-role.enum';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
@@ -31,6 +32,13 @@ export class FeedbackController {
   @ApiOperation({ summary: 'Create new feedback' })
   create(@Request() req, @Body() createFeedbackDto: CreateFeedbackDto) {
     return this.feedbackService.create(req.user.userId, createFeedbackDto);
+  }
+
+  @Public()
+  @Post('guest')
+  @ApiOperation({ summary: 'Create new feedback as a guest' })
+  createGuest(@Body() createFeedbackDto: CreateFeedbackDto) {
+    return this.feedbackService.create(null, createFeedbackDto);
   }
 
   @Get()

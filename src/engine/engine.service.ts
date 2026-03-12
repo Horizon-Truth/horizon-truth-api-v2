@@ -849,7 +849,7 @@ export class EngineService {
         description: createDto.description,
         order: createDto.order,
         sceneType: createDto.sceneType,
-        contentType: createDto.contentType,
+        contentType: createDto.contentType || 'TEXT',
         isTerminal: createDto.isTerminal || false,
         availableChoices: createDto.choices ? createDto.choices.map((c: any) => c.label) : ['CHOICE', 'NEXT', 'FINISH'],
       });
