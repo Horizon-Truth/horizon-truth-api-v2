@@ -20,3 +20,25 @@ export class SessionContextDto {
 
     @IsEnum(DeviceType)
     device_type: DeviceType;
+
+    @IsEnum(NetworkState)
+    network_state: NetworkState;
+}
+
+export class DecisionOutcomeDto {
+    @IsEnum(DecisionType)
+    @IsOptional()
+    player_decision_type?: DecisionType;
+
+    @IsInt()
+    @IsOptional()
+    decision_confidence_level?: number;
+
+    @IsBoolean()
+    @IsOptional()
+    decision_changed?: boolean;
+
+    @IsInt()
+    @IsOptional()
+    decision_change_count?: number;
+}

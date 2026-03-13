@@ -6,3 +6,7 @@ export class VerificationAction {
     session_id: string;
 
     @Column({ type: 'int', default: 0 })
+    source_button_clicked_count: number;
+
+    @Column({ default: false })
+    learn_more_opened: boolean;

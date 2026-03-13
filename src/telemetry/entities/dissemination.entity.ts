@@ -5,3 +5,8 @@ export enum ShareChannelType {
     PRIVATE = 'private',
     GROUP = 'group',
 }
+
+@Entity('telemetry_dissemination')
+export class Dissemination {
+    @PrimaryColumn()
+    session_id: string;

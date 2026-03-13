@@ -4,3 +4,6 @@ export enum DecisionType {
     TRUST = 'trust',
     DISTRUST = 'distrust',
     SHARE = 'share',
+    IGNORE = 'ignore',
+    VERIFY = 'verify',
+}
