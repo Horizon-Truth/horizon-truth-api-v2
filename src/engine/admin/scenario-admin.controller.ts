@@ -22,6 +22,7 @@ import { UserRole } from '../../shared/enums/user-role.enum';
 import { EngineService } from '../engine.service';
 import { CreateScenarioDto } from '../dto/create-scenario.dto';
 import { UpdateScenarioDto } from '../dto/update-scenario.dto';
+import { ExportScenarioDto } from '../dto/export-scenario.dto';
 
 @ApiTags('Admin - Scenarios')
 @Controller('engine/admin/scenarios')
@@ -30,6 +31,20 @@ import { UpdateScenarioDto } from '../dto/update-scenario.dto';
 @ApiBearerAuth()
 export class ScenarioAdminController {
   constructor(private readonly engineService: EngineService) {}
+
+  @Post('export')
+  @ApiOperation({ summary: 'Export scenarios to JSON' })
+  @ApiResponse({ status: 200, description: 'Scenarios exported successfully.' })
+  async export(@Body() exportDto: ExportScenarioDto) {
+    return this.engineService.exportScenarios(exportDto.ids);
+  }
+
+  @Post('import')
+  @ApiOperation({ summary: 'Import scenarios from JSON' })
+  @ApiResponse({ status: 200, description: 'Scenarios imported successfully.' })
+  async import(@Body() scenarios: any[]) {
+    return this.engineService.importScenarios(scenarios);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new scenario' })
