@@ -24,7 +24,7 @@ export class SceneContent {
   @Column({ name: 'scene_id', unique: true })
   sceneId: string;
 
-  @OneToOne(() => Scene, (scene) => scene.content)
+  @OneToOne(() => Scene, (scene) => scene.content, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'scene_id' })
   scene: Scene;
 

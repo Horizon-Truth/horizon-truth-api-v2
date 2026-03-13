@@ -22,7 +22,7 @@ export class PlayerChoice {
   @Column({ name: 'scene_id' })
   sceneId: string;
 
-  @ManyToOne(() => Scene, (scene) => scene.choices)
+  @ManyToOne(() => Scene, (scene) => scene.choices, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'scene_id' })
   scene: Scene;
 
@@ -42,7 +42,7 @@ export class PlayerChoice {
   @Column({ name: 'next_scene_id', type: 'uuid', nullable: true })
   nextSceneId: string;
 
-  @ManyToOne(() => Scene)
+  @ManyToOne(() => Scene, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'next_scene_id' })
   nextScene: Scene;
 
