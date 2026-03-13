@@ -24,7 +24,7 @@ export class Scene {
   @Column({ name: 'scenario_id' })
   scenarioId: string;
 
-  @ManyToOne(() => Scenario, (scenario) => scenario.scenes)
+  @ManyToOne(() => Scenario, (scenario) => scenario.scenes, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'scenario_id' })
   scenario: Scenario;
 

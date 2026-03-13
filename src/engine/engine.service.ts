@@ -188,6 +188,55 @@ export class EngineService {
   }
 
   /**
+   * Export multiple scenarios by IDs
+   */
+  async exportScenarios(ids: string[]): Promise<Scenario[]> {
+    return this.scenarioRepository.find({
+      where: { id: In(ids) },
+      relations: [
+        'gameLevel',
+        'scenes',
+        'scenes.content',
+        'scenes.choices',
+        'scenes.choices.outcomes',
+      ],
+    });
+  }
+
+  /**
+   * Import scenarios from JSON data
+   */
+  async importScenarios(data: any[]): Promise<{ imported: number; skipped: number }> {
+    let imported = 0;
+    let skipped = 0;
+
+    for (const scenarioData of data) {
+      // Check if scenario already exists
+      const existing = await this.scenarioRepository.findOne({
+        where: { id: scenarioData.id },
+      });
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      // Create new scenario with relations
+      // TypeORM's save method for repositories handles deep saving if relations are set
+      try {
+        const scenario = this.scenarioRepository.create(scenarioData as Scenario);
+        await this.scenarioRepository.save(scenario);
+        imported++;
+      } catch (error) {
+        console.error(`Error importing scenario ${scenarioData.id}:`, error);
+        skipped++;
+      }
+    }
+
+    return { imported, skipped };
+  }
+
+  /**
    * Start a new game session for a user
    */
   async startGame(userId: string, scenarioId: string): Promise<any> {
