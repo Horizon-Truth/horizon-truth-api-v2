@@ -102,13 +102,19 @@ export class AuthService {
   }
 
   async getTokens(user: any) {
-    const { id: userId, username, role } = user;
+    const { id: userId, username, role, fullName, playerProfile } = user;
+    const avatarUrl = playerProfile?.avatar?.imageUrl;
+    const nickname = playerProfile?.nickname;
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         {
           sub: userId,
           username,
           role,
+          avatarUrl,
+          nickname,
+          fullName,
         },
         {
           secret: this.configService.get<string>('JWT_SECRET') || 'secretKey',
@@ -137,6 +143,9 @@ export class AuthService {
         userId,
         username,
         role,
+        fullName,
+        avatarUrl,
+        nickname,
         onboardingCompleted: (user as any)?.playerProfile?.onboardingCompleted,
       },
     };
