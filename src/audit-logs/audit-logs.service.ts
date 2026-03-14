@@ -40,11 +40,11 @@ export class AuditLogsService {
     }
 
     if (action) {
-      query.andWhere('log.action = :action', { action });
+      query.andWhere('log.action ILIKE :action', { action: `%${action}%` });
     }
 
     if (entityType) {
-      query.andWhere('log.entityType = :entityType', { entityType });
+      query.andWhere('log.entityType ILIKE :entityType', { entityType: `%${entityType}%` });
     }
 
     const [items, total] = await query
