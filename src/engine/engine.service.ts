@@ -675,7 +675,7 @@ export class EngineService {
       outcomeType,
       score,
       completedAt: progress.completedAt,
-      feedback: this.generateFeedback(outcomeType, score),
+      feedback: this.generateFeedback(outcomeType, score, progress.accuracyRate || 0),
     });
 
     await this.gameOutcomeRepository.save(outcome);
@@ -1128,21 +1128,30 @@ export class EngineService {
   }
 
   /**
-   * Generate feedback based on outcome
+   * Generate feedback based on outcome and accuracy
    */
-  private generateFeedback(outcomeType: OutcomeType, score: number): string {
+  private generateFeedback(outcomeType: OutcomeType, score: number, accuracyRate: number): string {
+    // If accuracy is very low, provide critical feedback regardless of outcome type
+    if (accuracyRate < 30) {
+      return `This didn't end well. Your accuracy was only ${accuracyRate}%. Review the scenario to understand where things went wrong.`;
+    }
+
+    if (accuracyRate < 70) {
+      return `You're on the right track! Your accuracy was ${accuracyRate}%. Some decisions were spot-on, others need refinement.`;
+    }
+
     const feedbackMap = {
-      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Score: ${score}`,
-      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Score: ${score}`,
-      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Score: ${score}`,
-      [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement. Score: ${score}`,
-      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but didn't follow through with action. Score: ${score}`,
-      [OutcomeType.FAIL]: `This didn't end well. Review the scenario to understand where things went wrong. Score: ${score}`,
-      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
-      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Learn from this experience. Score: ${score}`,
+      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.NEUTRAL]: `Good effort! Your decisions were generally sound. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but missed others. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.FAIL]: `Review the scenario to understand where things went wrong. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.FAILURE]: `Review the scenario to understand where misinformation was present. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Accuracy: ${accuracyRate}%`,
     };
 
-    return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+    return feedbackMap[outcomeType] || `Game completed. Accuracy: ${accuracyRate}%`;
   }
 
   /**
