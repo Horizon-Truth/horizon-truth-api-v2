@@ -107,4 +107,8 @@ export class Scenario {
   @ApiProperty({ example: 500, description: 'Total possible points achievable in this scenario' })
   @Column({ name: 'total_possible_score', type: 'int', default: 0 })
   totalPossibleScore: number;
+
+  @ApiProperty({ example: 1, description: 'Display order of the scenario' })
+  @Column({ name: 'order', type: 'int', default: 0 })
+  order: number;
 }

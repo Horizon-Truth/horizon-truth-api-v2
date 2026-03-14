@@ -83,4 +83,9 @@ export class CreateScenarioDto {
   @IsOptional()
   @IsString()
   campaignTag?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'Display order of the scenario' })
+  @IsOptional()
+  @IsInt()
+  order?: number;
 }

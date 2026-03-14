@@ -87,7 +87,8 @@ export class EngineService {
     // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
     const queryBuilder = this.scenarioRepository
       .createQueryBuilder('scenario')
-      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel');
+      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
+      .orderBy('scenario.order', 'ASC');
 
     if (difficulty) {
       queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
@@ -149,9 +150,12 @@ export class EngineService {
     });
 
     // Custom sorting: Unlocked (AVAILABLE/VERIFIED) first, then LOCKED
+    // Within the same status, sort by scenario.order
     scenariosWithRecords.sort((a, b) => {
-      const score = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
-      return score[a.lockStatus] - score[b.lockStatus];
+      const statusScore = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
+      const statusDiff = statusScore[a.lockStatus] - statusScore[b.lockStatus];
+      if (statusDiff !== 0) return statusDiff;
+      return (a.order || 0) - (b.order || 0);
     });
 
     // Manual pagination
@@ -178,6 +182,11 @@ export class EngineService {
         'scenes.choices',
         'scenes.choices.outcomes',
       ],
+      order: {
+        scenes: {
+          order: 'ASC'
+        }
+      }
     });
 
     if (!scenario) {
@@ -891,12 +900,22 @@ export class EngineService {
     await queryRunner.startTransaction();
 
     try {
+      // Determine next order for scene if not provided
+      let order = createDto.order;
+      if (order === undefined || order === null) {
+        const lastScene = await queryRunner.manager.findOne(Scene, {
+          where: { scenarioId },
+          order: { order: 'DESC' }
+        });
+        order = lastScene ? lastScene.order + 1 : 1;
+      }
+
       // Create main scene
       const scene = this.sceneRepository.create({
         scenarioId,
         title: createDto.title,
         description: createDto.description,
-        order: createDto.order,
+        order,
         sceneType: createDto.sceneType,
         contentType: createDto.contentType || 'TEXT',
         isTerminal: createDto.isTerminal || false,
@@ -1096,6 +1115,15 @@ export class EngineService {
       if (defaultLevel) {
         scenarioData.gameLevelId = defaultLevel.id;
       }
+    }
+
+    // Set default order if not provided
+    if (scenarioData.order === undefined || scenarioData.order === null) {
+      const lastScenario = await this.scenarioRepository.findOne({
+        where: {},
+        order: { order: 'DESC' }
+      });
+      scenarioData.order = lastScenario ? lastScenario.order + 10 : 10;
     }
 
     const scenario = this.scenarioRepository.create(scenarioData);
