@@ -20,6 +20,8 @@ import { GameOutcome } from '../../engine/entities/game-outcome.entity';
 import { Blog } from '../../blogs/entities/blog.entity';
 import { Resource } from '../../resources/entities/resource.entity';
 import { BlogResourceSeederService } from './blog-resource-seeder.service';
+import { AuditLog } from '../../audit-logs/entities/audit-log.entity';
+import { AuditLogSeederService } from './audit-log-seeder.service';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { BlogResourceSeederService } from './blog-resource-seeder.service';
       Blog,
 
       Resource,
+      AuditLog,
     ]),
   ],
   providers: [
@@ -48,12 +51,14 @@ import { BlogResourceSeederService } from './blog-resource-seeder.service';
     SystemSeederService,
     ReportsSeederService,
     BlogResourceSeederService,
+    AuditLogSeederService,
   ],
   exports: [
     GameSeederService,
     SystemSeederService,
     ReportsSeederService,
     BlogResourceSeederService,
+    AuditLogSeederService,
   ],
 })
 export class SeederModule { }
