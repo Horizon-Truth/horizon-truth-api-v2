@@ -87,7 +87,8 @@ export class EngineService {
     // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
     const queryBuilder = this.scenarioRepository
       .createQueryBuilder('scenario')
-      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel');
+      .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
+      .orderBy('scenario.order', 'ASC');
 
     if (difficulty) {
       queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
@@ -149,9 +150,12 @@ export class EngineService {
     });
 
     // Custom sorting: Unlocked (AVAILABLE/VERIFIED) first, then LOCKED
+    // Within the same status, sort by scenario.order
     scenariosWithRecords.sort((a, b) => {
-      const score = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
-      return score[a.lockStatus] - score[b.lockStatus];
+      const statusScore = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
+      const statusDiff = statusScore[a.lockStatus] - statusScore[b.lockStatus];
+      if (statusDiff !== 0) return statusDiff;
+      return (a.order || 0) - (b.order || 0);
     });
 
     // Manual pagination
@@ -178,6 +182,11 @@ export class EngineService {
         'scenes.choices',
         'scenes.choices.outcomes',
       ],
+      order: {
+        scenes: {
+          order: 'ASC'
+        }
+      }
     });
 
     if (!scenario) {
@@ -675,7 +684,7 @@ export class EngineService {
       outcomeType,
       score,
       completedAt: progress.completedAt,
-      feedback: this.generateFeedback(outcomeType, score),
+      feedback: this.generateFeedback(outcomeType, score, progress.accuracyRate || 0),
     });
 
     await this.gameOutcomeRepository.save(outcome);
@@ -891,12 +900,22 @@ export class EngineService {
     await queryRunner.startTransaction();
 
     try {
+      // Determine next order for scene if not provided
+      let order = createDto.order;
+      if (order === undefined || order === null) {
+        const lastScene = await queryRunner.manager.findOne(Scene, {
+          where: { scenarioId },
+          order: { order: 'DESC' }
+        });
+        order = lastScene ? lastScene.order + 1 : 1;
+      }
+
       // Create main scene
       const scene = this.sceneRepository.create({
         scenarioId,
         title: createDto.title,
         description: createDto.description,
-        order: createDto.order,
+        order,
         sceneType: createDto.sceneType,
         contentType: createDto.contentType || 'TEXT',
         isTerminal: createDto.isTerminal || false,
@@ -1098,6 +1117,15 @@ export class EngineService {
       }
     }
 
+    // Set default order if not provided
+    if (scenarioData.order === undefined || scenarioData.order === null) {
+      const lastScenario = await this.scenarioRepository.findOne({
+        where: {},
+        order: { order: 'DESC' }
+      });
+      scenarioData.order = lastScenario ? lastScenario.order + 10 : 10;
+    }
+
     const scenario = this.scenarioRepository.create(scenarioData);
     return this.scenarioRepository.save(
       Array.isArray(scenario) ? scenario[0] : scenario,
@@ -1128,21 +1156,30 @@ export class EngineService {
   }
 
   /**
-   * Generate feedback based on outcome
+   * Generate feedback based on outcome and accuracy
    */
-  private generateFeedback(outcomeType: OutcomeType, score: number): string {
+  private generateFeedback(outcomeType: OutcomeType, score: number, accuracyRate: number): string {
+    // If accuracy is very low, provide critical feedback regardless of outcome type
+    if (accuracyRate < 30) {
+      return `This didn't end well. Your accuracy was only ${accuracyRate}%. Review the scenario to understand where things went wrong.`;
+    }
+
+    if (accuracyRate < 70) {
+      return `You're on the right track! Your accuracy was ${accuracyRate}%. Some decisions were spot-on, others need refinement.`;
+    }
+
     const feedbackMap = {
-      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Score: ${score}`,
-      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Score: ${score}`,
-      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Score: ${score}`,
-      [OutcomeType.NEUTRAL]: `You're on the right track! Some decisions were spot-on, others need refinement. Score: ${score}`,
-      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but didn't follow through with action. Score: ${score}`,
-      [OutcomeType.FAIL]: `This didn't end well. Review the scenario to understand where things went wrong. Score: ${score}`,
-      [OutcomeType.FAILURE]: `Good effort! Review the scenario to understand where misinformation was present. Score: ${score}`,
-      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Learn from this experience. Score: ${score}`,
+      [OutcomeType.PERFECT_PASS]: `Outstanding! You demonstrated exceptional critical thinking and took decisive action. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.PASS]: `Well done! You successfully identified and countered misinformation. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.SUCCESS]: `Excellent work! You successfully navigated the scenario and demonstrated critical thinking skills. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.NEUTRAL]: `Good effort! Your decisions were generally sound. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.PARTIAL_FAIL]: `Close, but not enough. You recognized some warning signs but missed others. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.FAIL]: `Review the scenario to understand where things went wrong. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.FAILURE]: `Review the scenario to understand where misinformation was present. Accuracy: ${accuracyRate}%`,
+      [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Accuracy: ${accuracyRate}%`,
     };
 
-    return feedbackMap[outcomeType] || `Game completed. Score: ${score}`;
+    return feedbackMap[outcomeType] || `Game completed. Accuracy: ${accuracyRate}%`;
   }
 
   /**
