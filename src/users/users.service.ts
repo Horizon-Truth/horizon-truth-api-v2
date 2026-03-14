@@ -25,7 +25,7 @@ export class UsersService {
   async findOneByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      relations: ['playerProfile'],
+      relations: ['playerProfile', 'playerProfile.avatar'],
       select: [
         'id',
         'email',
@@ -41,7 +41,7 @@ export class UsersService {
   async findOneByUsername(username: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { username },
-      relations: ['playerProfile'],
+      relations: ['playerProfile', 'playerProfile.avatar'],
       select: [
         'id',
         'email',
@@ -85,7 +85,7 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { id },
-      relations: ['playerProfile'],
+      relations: ['playerProfile', 'playerProfile.avatar'],
     });
   }
 
