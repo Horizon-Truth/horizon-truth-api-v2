@@ -109,7 +109,8 @@ describe('Phase 8 — Integrity Testing', () => {
   let badgeRepo: ReturnType<typeof makeRepo>;
   let userBadgeRepo: ReturnType<typeof makeRepo>;
   let leaderboardRepo: ReturnType<typeof makeRepo>;
-  let dataSource: { createQueryRunner: jest.Mock };
+  let playerProfileRepo: ReturnType<typeof makeRepo>;
+  let dataSource: { createQueryRunner: jest.Mock, getRepository: jest.Mock };
 
   beforeEach(async () => {
     scenarioRepo = makeRepo();
@@ -122,12 +123,25 @@ describe('Phase 8 — Integrity Testing', () => {
     badgeRepo = makeRepo();
     userBadgeRepo = makeRepo();
     leaderboardRepo = makeRepo();
+    playerProfileRepo = makeRepo();
     const sceneContentRepo = makeRepo();
     const guestPlayRepo = makeRepo();
     const playerScenarioRecordRepo = makeRepo();
 
     const qr = makeQueryRunner();
-    dataSource = { createQueryRunner: jest.fn(() => qr) };
+    badgeRepo.findOne.mockImplementation(({ where }) => ({
+      id: 'badge-id',
+      code: where.code,
+      name: 'Test Badge',
+      isActive: true,
+    }));
+    dataSource = { 
+      createQueryRunner: jest.fn(() => qr),
+      getRepository: jest.fn((entity) => {
+        if (entity.name === 'PlayerProfile') return playerProfileRepo;
+        return makeRepo();
+      })
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
