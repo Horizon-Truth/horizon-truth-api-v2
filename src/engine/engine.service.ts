@@ -130,15 +130,19 @@ export class EngineService {
       const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
 
       let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
-      if (userRecord?.isCompleted) {
-        lockStatus = 'VERIFIED';
-      } else if (scenario.unlockScenarioId) {
-        const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
-        const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
-        const requiredScore = prereqScenario?.minimumScore ?? 70;
+      
+      // Only compute lock status if a userId is provided (intended for players)
+      if (userId) {
+        if (userRecord?.isCompleted) {
+          lockStatus = 'VERIFIED';
+        } else if (scenario.unlockScenarioId) {
+          const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
+          const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
+          const requiredScore = prereqScenario?.minimumScore ?? 70;
 
-        if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
-          lockStatus = 'LOCKED';
+          if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
+            lockStatus = 'LOCKED';
+          }
         }
       }
 
@@ -152,6 +156,11 @@ export class EngineService {
     // Custom sorting: Unlocked (AVAILABLE/VERIFIED) first, then LOCKED
     // Within the same status, sort by scenario.order
     scenariosWithRecords.sort((a, b) => {
+      // If no lock status provided (Admin view), just sort by order
+      if (!userId) {
+        return (a.order || 0) - (b.order || 0);
+      }
+      
       const statusScore = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
       const statusDiff = statusScore[a.lockStatus] - statusScore[b.lockStatus];
       if (statusDiff !== 0) return statusDiff;
@@ -215,34 +224,140 @@ export class EngineService {
   /**
    * Import scenarios from JSON data
    */
-  async importScenarios(data: any[]): Promise<{ imported: number; skipped: number }> {
+  async importScenarios(data: any[]): Promise<{ imported: number; skipped: number; total: number }> {
     let imported = 0;
     let skipped = 0;
 
+    // Get all levels to map them by levelNumber (since IDs vary between environments)
+    const levels = await this.gameLevelRepository.find();
+    const levelMap = new Map(levels.map(l => [l.levelNumber, l.id]));
+
     for (const scenarioData of data) {
-      // Check if scenario already exists
-      const existing = await this.scenarioRepository.findOne({
+      // 1. Resolve target level ID (Map Level Number to local Level ID)
+      let targetLevelId = scenarioData.gameLevelId;
+      if (scenarioData.gameLevel && typeof scenarioData.gameLevel.levelNumber === 'number') {
+        const localLevelId = levelMap.get(scenarioData.gameLevel.levelNumber);
+        if (localLevelId) {
+          targetLevelId = localLevelId;
+        }
+      }
+
+      // 2. Check if scenario already exists (Robust duplicate check)
+      // Check by ID first
+      let existing = await this.scenarioRepository.findOne({
         where: { id: scenarioData.id },
       });
+
+      // If no ID match, check by title and level (prevent "semantic" duplicates)
+      if (!existing && targetLevelId) {
+        existing = await this.scenarioRepository.findOne({
+          where: { title: scenarioData.title, gameLevelId: targetLevelId },
+        });
+      }
 
       if (existing) {
         skipped++;
         continue;
       }
 
-      // Create new scenario with relations
-      // TypeORM's save method for repositories handles deep saving if relations are set
+      // 3. Create new scenario with relations
+      // Since cascades are not enabled, we manually save child entities
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
       try {
-        const scenario = this.scenarioRepository.create(scenarioData as Scenario);
-        await this.scenarioRepository.save(scenario);
+        const { gameLevel, createdAt, scenes, type, ...payload } = scenarioData;
+        
+        // Map type to scenarioType if needed
+        const scenarioType = type || payload.scenarioType;
+
+        const scenario = queryRunner.manager.create(Scenario, {
+          ...payload,
+          scenarioType,
+          gameLevelId: targetLevelId,
+        });
+
+        const savedScenario = await queryRunner.manager.save(scenario);
+
+        // Process scenes if present
+        if (scenes && Array.isArray(scenes)) {
+          for (const sceneData of scenes) {
+            const { content, choices, ...scenePayload } = sceneData;
+            const scene = queryRunner.manager.create(Scene, {
+              ...scenePayload,
+              scenarioId: savedScenario.id,
+            });
+            const savedScene = await queryRunner.manager.save(scene);
+
+            // Process content
+            if (content) {
+              const sceneContent = queryRunner.manager.create(SceneContent, {
+                ...content,
+                sceneId: savedScene.id,
+              });
+              await queryRunner.manager.save(sceneContent);
+            }
+
+            // Process choices
+            if (choices && Array.isArray(choices)) {
+              for (const choiceData of choices) {
+                const { outcomes, ...choicePayload } = choiceData;
+                const choice = queryRunner.manager.create(PlayerChoice, {
+                  ...choicePayload,
+                  sceneId: savedScene.id,
+                });
+                const savedChoice = await queryRunner.manager.save(choice);
+
+                // Process outcomes
+                if (outcomes && Array.isArray(outcomes)) {
+                  for (const outcomeData of outcomes) {
+                    const outcome = queryRunner.manager.create(GameOutcome, {
+                      ...outcomeData,
+                      scenarioId: savedScenario.id,
+                      playerChoiceId: savedChoice.id,
+                    });
+                    await queryRunner.manager.save(outcome);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        await queryRunner.commitTransaction();
         imported++;
       } catch (error) {
-        console.error(`Error importing scenario ${scenarioData.id}:`, error);
+        await queryRunner.rollbackTransaction();
+        console.error(`Error importing scenario ${scenarioData.id || scenarioData.title}:`, error);
         skipped++;
+      } finally {
+        await queryRunner.release();
       }
     }
 
-    return { imported, skipped };
+    return { imported, skipped, total: data.length };
+  }
+
+  /**
+   * Post-import cleanup to resolve scenario links (unlockScenarioId) by title
+   * if the exported UUIDs don't exist in the target environment.
+   */
+  async resolveImportedLinks(): Promise<void> {
+    const scenarios = await this.scenarioRepository.find();
+    const titleMap = new Map(scenarios.map(s => [s.title, s.id]));
+
+    for (const scenario of scenarios) {
+      if (scenario.unlockScenarioId) {
+        // Check if current ID exists
+        const exists = scenarios.some(s => s.id === scenario.unlockScenarioId);
+        if (!exists) {
+          // Find by title in we have one (exports usually don't include title of prerequisite, 
+          // but we can look it up if we have the original data. 
+          // For now, this is a placeholder/helper if needed.)
+        }
+      }
+    }
   }
 
   /**
