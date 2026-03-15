@@ -742,6 +742,7 @@ export class EngineService {
           completedAt: outcome.completedAt,
           narrativeEnding,
           accuracyRate: progress.accuracyRate,
+          passed: progress.passed,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -764,6 +765,7 @@ export class EngineService {
           completedAt: outcome.completedAt,
           narrativeEnding,
           accuracyRate: progress.accuracyRate,
+          passed: progress.passed,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -788,16 +790,20 @@ export class EngineService {
       throw new NotFoundException('Game outcome not found');
     }
 
-    // Load scenario separately
-    const scenario = await this.scenarioRepository.findOne({
-      where: { id: outcome.scenarioId },
-    });
+    // Load scenario and progress to complete the outcome data
+    const [scenario, progress] = await Promise.all([
+      this.scenarioRepository.findOne({ where: { id: outcome.scenarioId } }),
+      this.gameProgressRepository.findOne({ where: { id: progressId } })
+    ]);
 
     return {
       outcomeType: outcome.outcomeType,
       score: outcome.score,
       feedback: outcome.feedback,
       completedAt: outcome.completedAt,
+      accuracyRate: progress?.accuracyRate ?? null,
+      passed: progress?.passed ?? false,
+      narrativeEnding: progress?.narrativeEnding ?? null,
       scenario: scenario
         ? {
           id: scenario.id,
