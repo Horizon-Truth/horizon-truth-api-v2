@@ -208,6 +208,12 @@ export class EngineService {
   /**
    * Export multiple scenarios by IDs
    */
+  async getLevels(): Promise<GameLevel[]> {
+    return this.gameLevelRepository.find({
+      order: { levelNumber: 'ASC' },
+    });
+  }
+
   async exportScenarios(ids: string[]): Promise<Scenario[]> {
     return this.scenarioRepository.find({
       where: { id: In(ids) },
@@ -1222,13 +1228,23 @@ export class EngineService {
       scenarioType: type || rest.scenarioType,
     };
 
-    // Get default game level (Level 1) if not provided
+    // Get default game level if not provided
     if (!scenarioData.gameLevelId) {
-      const defaultLevel = await this.gameLevelRepository.findOne({
+      // Try Level 1 first
+      let level = await this.gameLevelRepository.findOne({
         where: { levelNumber: 1 },
       });
-      if (defaultLevel) {
-        scenarioData.gameLevelId = defaultLevel.id;
+
+      // If Level 1 is missing (e.g. custom environment), pick the first available level
+      if (!level) {
+        level = await this.gameLevelRepository.findOne({
+          where: {},
+          order: { levelNumber: 'ASC' },
+        });
+      }
+
+      if (level) {
+        scenarioData.gameLevelId = level.id;
       }
     }
 

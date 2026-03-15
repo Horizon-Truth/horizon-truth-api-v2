@@ -32,6 +32,13 @@ import { ExportScenarioDto } from '../dto/export-scenario.dto';
 export class ScenarioAdminController {
   constructor(private readonly engineService: EngineService) {}
 
+  @Get('levels')
+  @ApiOperation({ summary: 'Get all game levels for selection' })
+  @ApiResponse({ status: 200, description: 'Levels retrieved successfully.' })
+  async getLevels() {
+    return this.engineService.getLevels();
+  }
+
   @Post('export')
   @ApiOperation({ summary: 'Export scenarios to JSON' })
   @ApiResponse({ status: 200, description: 'Scenarios exported successfully.' })
