@@ -815,15 +815,15 @@ export class EngineService {
     const minRequired = progress.scenario.minimumScore || 70;
     progress.passed = (progress.accuracyRate || 0) >= minRequired;
 
-    // Compute narrative ending based on score + influence
-    const totalScore = progress.totalScore || 0;
+    // Compute narrative ending based on accuracy percentage + influence
+    const accuracyRate = progress.accuracyRate || 0;
     const influenceScore = progress.influenceScore || 0;
     let narrativeEnding = 'COMMUNITY_CRISIS';
-    if (totalScore >= 85 && influenceScore >= 70) {
+    if (accuracyRate >= 90 && influenceScore >= 70) {
       narrativeEnding = 'TRUTH_VICTORY';
     } else if (progress.passed) {
       narrativeEnding = 'CONTAINED_EARLY';
-    } else if (influenceScore < 30) {
+    } else if (accuracyRate >= 40) {
       narrativeEnding = 'VIRAL_MISINFORMATION';
     }
     progress.narrativeEnding = narrativeEnding;
@@ -967,6 +967,7 @@ export class EngineService {
           completedAt: outcome.completedAt,
           narrativeEnding,
           accuracyRate: progress.accuracyRate,
+          passed: progress.passed,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -989,6 +990,7 @@ export class EngineService {
           completedAt: outcome.completedAt,
           narrativeEnding,
           accuracyRate: progress.accuracyRate,
+          passed: progress.passed,
           scenario: {
             id: progress.scenarioId,
             title: progress.scenario.title,
@@ -1013,16 +1015,20 @@ export class EngineService {
       throw new NotFoundException('Game outcome not found');
     }
 
-    // Load scenario separately
-    const scenario = await this.scenarioRepository.findOne({
-      where: { id: outcome.scenarioId },
-    });
+    // Load scenario and progress to complete the outcome data
+    const [scenario, progress] = await Promise.all([
+      this.scenarioRepository.findOne({ where: { id: outcome.scenarioId } }),
+      this.gameProgressRepository.findOne({ where: { id: outcome.progressId } })
+    ]);
 
     return {
       outcomeType: outcome.outcomeType,
       score: outcome.score,
       feedback: outcome.feedback,
       completedAt: outcome.completedAt,
+      accuracyRate: progress?.accuracyRate ?? null,
+      passed: progress?.passed ?? false,
+      narrativeEnding: progress?.narrativeEnding ?? null,
       scenario: scenario
         ? {
           id: scenario.id,
