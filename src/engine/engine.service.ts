@@ -19,6 +19,8 @@ import { ScenarioQueryDto } from './dto/scenario-query.dto';
 import { SubmitChoiceDto } from './dto/submit-choice.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
+import { CreateLevelDto } from './dto/create-level.dto';
+import { UpdateLevelDto } from './dto/update-level.dto';
 import { GameProgressStatus } from '../shared/enums/game-progress-status.enum';
 import { OutcomeType } from '../shared/enums/outcome-type.enum';
 import { GamificationService } from '../gamification/gamification.service';
@@ -206,12 +208,35 @@ export class EngineService {
   }
 
   /**
-   * Export multiple scenarios by IDs
+   * Get all game levels
    */
   async getLevels(): Promise<GameLevel[]> {
     return this.gameLevelRepository.find({
       order: { levelNumber: 'ASC' },
     });
+  }
+
+  async createLevel(dto: CreateLevelDto): Promise<GameLevel> {
+    const level = this.gameLevelRepository.create(dto);
+    return this.gameLevelRepository.save(level);
+  }
+
+  async updateLevel(id: string, dto: UpdateLevelDto): Promise<GameLevel | null> {
+    await this.gameLevelRepository.update(id, dto);
+    return this.gameLevelRepository.findOne({ where: { id } });
+  }
+
+  async deleteLevel(id: string): Promise<void> {
+    // Check if there are any scenarios associated with this level
+    const scenarioCount = await this.scenarioRepository.count({
+      where: { gameLevelId: id },
+    });
+
+    if (scenarioCount > 0) {
+      throw new Error('Cannot delete a level that has associated scenarios.');
+    }
+
+    await this.gameLevelRepository.delete(id);
   }
 
   async exportScenarios(ids: string[]): Promise<Scenario[]> {
@@ -239,13 +264,34 @@ export class EngineService {
     const levelMap = new Map(levels.map(l => [l.levelNumber, l.id]));
 
     for (const scenarioData of data) {
-      // 1. Resolve target level ID (Map Level Number to local Level ID)
-      let targetLevelId = scenarioData.gameLevelId;
+      // 1. Resolve target level ID (Map Level Number to local Level ID, or create if missing)
+      let targetLevelId: string | null = null;
+      
       if (scenarioData.gameLevel && typeof scenarioData.gameLevel.levelNumber === 'number') {
-        const localLevelId = levelMap.get(scenarioData.gameLevel.levelNumber);
-        if (localLevelId) {
-          targetLevelId = localLevelId;
+        const levelNumber = scenarioData.gameLevel.levelNumber;
+        let localLevel = levels.find(l => l.levelNumber === levelNumber);
+        
+        if (!localLevel) {
+          // Level doesn't exist, Create it!
+          console.log(`Level ${levelNumber} not found, creating: ${scenarioData.gameLevel.name}`);
+          localLevel = await this.gameLevelRepository.save(this.gameLevelRepository.create({
+            levelNumber: levelNumber,
+            name: scenarioData.gameLevel.name || `Level ${levelNumber}`,
+            description: scenarioData.gameLevel.description,
+            estimatedDurationMinutes: scenarioData.gameLevel.estimatedDurationMinutes,
+            isActive: scenarioData.gameLevel.isActive ?? true
+          }));
+          // Refresh levels list for subsequent scenarios in the same import batch
+          levels.push(localLevel);
         }
+        
+        targetLevelId = localLevel.id;
+      }
+
+      if (!targetLevelId) {
+        console.warn(`Could not resolve or create level for scenario: ${scenarioData.title}`);
+        skipped++;
+        continue;
       }
 
       // 2. Check if scenario already exists (Robust duplicate check)
