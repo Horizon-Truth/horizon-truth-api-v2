@@ -12,3 +12,33 @@ describe('PlayersService', () => {
   let service: PlayersService;
   let playerProfileRepository: any;
   let avatarRepository: any;
+  let regionRepository: any;
+  let algorithmProfileRepository: any;
+
+  const mockPlayerProfileRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    manager: {
+        createQueryBuilder: jest.fn(() => ({
+            select: jest.fn().mockReturnThis(),
+            addSelect: jest.fn().mockReturnThis(),
+            from: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            getRawOne: jest.fn(),
+        })),
+    },
+  };
+
+  const mockAvatarRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const mockRegionRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const mockAlgorithmProfileRepository = {

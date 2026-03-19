@@ -91,3 +91,58 @@ export class PlayersService {
     const existingProfile = await this.playerProfileRepository.findOne({
       where: { userId },
     });
+
+    if (existingProfile) {
+      throw new BadRequestException(
+        'Player profile already exists for this user',
+      );
+    }
+
+    // Verify avatar exists
+    const avatar = await this.avatarRepository.findOne({
+      where: { id: createDto.avatarId },
+    });
+
+    if (!avatar) {
+      throw new NotFoundException(
+        `Avatar with ID ${createDto.avatarId} not found`,
+      );
+    }
+
+    // Create profile
+    const profile = this.playerProfileRepository.create({
+      userId,
+      ...createDto,
+      trustScoreInitial: 0, // Initial trust score for Level 0 logic
+      currentTrustScore: 0,
+    });
+
+    return this.playerProfileRepository.save(profile);
+  }
+
+  /**
+   * Get player profile by user ID
+   */
+  async getProfile(userId: string): Promise<PlayerProfile> {
+    const profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+      relations: ['avatar', 'user'],
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Player profile not found');
+    }
+
+    return profile;
+  }
+
+  /**
+   * Update player profile
+   */
+  async updateProfile(
+    userId: string,
+    updateDto: UpdatePlayerProfileDto,
+  ): Promise<PlayerProfile> {
+    const profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+    });

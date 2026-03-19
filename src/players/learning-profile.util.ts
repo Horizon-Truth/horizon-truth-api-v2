@@ -10,3 +10,10 @@
 
 export interface SkillCounters {
   xp: number;
+  correct: number;
+  total: number;
+}
+
+export interface CalibrationCounters {
+  correct: number;
+  total: number;
