@@ -9,3 +9,16 @@ describe('ReportsService', () => {
   let reportVerificationRepository: any;
   let reportEvidenceRepository: any;
   let auditLogsService: any;
+
+  beforeEach(() => {
+    reportRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+      findOne: jest.fn(),
+      find: jest.fn(),
+      remove: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
+    reportTagRepository = {
+      findBy: jest.fn(),
+    };

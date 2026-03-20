@@ -10,3 +10,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 class NotificationPreferencesDto {
   @ApiPropertyOptional({ example: true })
   @IsOptional()
+  @IsBoolean()
+  email?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  push?: boolean;

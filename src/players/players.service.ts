@@ -45,3 +45,104 @@ export class PlayersService {
   ): Promise<Pick<PlayerLearningProfile, 'skillBook' | 'calibration'>> {
     const profile = await this.learningProfileRepository.findOne({
       where: { userId },
+    });
+    return {
+      skillBook: profile?.skillBook ?? {},
+      calibration: profile?.calibration ?? {},
+    };
+  }
+
+  /**
+   * Upsert the player's learning ledgers. Counters are monotonic, so incoming
+   * data is merged element-wise-max with what's stored: a stale device can
+   * never erase progress made elsewhere.
+   */
+  async upsertLearningProfile(
+    userId: string,
+    dto: UpdateLearningProfileDto,
+  ): Promise<Pick<PlayerLearningProfile, 'skillBook' | 'calibration'>> {
+    let profile = await this.learningProfileRepository.findOne({
+      where: { userId },
+    });
+    if (!profile) {
+      profile = this.learningProfileRepository.create({
+        userId,
+        skillBook: {},
+        calibration: {},
+      });
+    }
+    profile.skillBook = mergeSkillBooks(profile.skillBook, dto.skillBook);
+    profile.calibration = mergeCalibrations(
+      profile.calibration,
+      dto.calibration,
+    );
+    const saved = await this.learningProfileRepository.save(profile);
+    return { skillBook: saved.skillBook, calibration: saved.calibration };
+  }
+
+  /**
+   * Create a new player profile
+   */
+  async createProfile(
+    userId: string,
+    createDto: CreatePlayerProfileDto,
+  ): Promise<PlayerProfile> {
+    // Check if user already has a profile
+    const existingProfile = await this.playerProfileRepository.findOne({
+      where: { userId },
+    });
+
+    if (existingProfile) {
+      throw new BadRequestException(
+        'Player profile already exists for this user',
+      );
+    }
+
+    // Verify avatar exists
+    const avatar = await this.avatarRepository.findOne({
+      where: { id: createDto.avatarId },
+    });
+
+    if (!avatar) {
+      throw new NotFoundException(
+        `Avatar with ID ${createDto.avatarId} not found`,
+      );
+    }
+
+    // Create profile
+    const profile = this.playerProfileRepository.create({
+      userId,
+      ...createDto,
+      trustScoreInitial: 0, // Initial trust score for Level 0 logic
+      currentTrustScore: 0,
+    });
+
+    return this.playerProfileRepository.save(profile);
+  }
+
+  /**
+   * Get player profile by user ID
+   */
+  async getProfile(userId: string): Promise<PlayerProfile> {
+    const profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+      relations: ['avatar', 'user'],
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Player profile not found');
+    }
+
+    return profile;
+  }
+
+  /**
+   * Update player profile
+   */
+  async updateProfile(
+    userId: string,
+    updateDto: UpdatePlayerProfileDto,
+  ): Promise<PlayerProfile> {
+    const profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+    });

@@ -30,3 +30,35 @@ export class AuthService {
     if (
       user &&
       user.passwordHash &&
+      (await bcrypt.compare(pass, user.passwordHash))
+    ) {
+      const { passwordHash, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async login(user: any, ipAddress?: string, userAgent?: string) {
+    const payload = {
+      email: user.email,
+      username: user.username,
+      sub: user.id,
+      role: user.role,
+    };
+    const tokens = await this.getTokens(user);
+    await this.updateRefreshToken(user.id, tokens.refresh_token);
+
+    // Create session
+    await this.createSession(
+      user.id,
+      tokens.refresh_token,
+      ipAddress,
+      userAgent,
+    );
+
+    return tokens;
+  }
+
+  async logout(userId: string, refreshToken?: string) {
+    // If refresh token provided, delete specific session
+    if (refreshToken) {
