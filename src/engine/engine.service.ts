@@ -115,12 +115,19 @@ export class EngineService {
 
     const scenarios = await queryBuilder.getMany();
 
-    // If userId provided, fetch ALL user records
+    // If userId provided, fetch ALL user records AND active progress
     let userRecords: PlayerScenarioRecord[] = [];
+    let activeProgress: GameProgress[] = [];
     if (userId) {
-      userRecords = await this.playerScenarioRecordRepository.find({
-        where: { userId },
-      });
+      [userRecords, activeProgress] = await Promise.all([
+        this.playerScenarioRecordRepository.find({
+          where: { userId },
+        }),
+        this.gameProgressRepository.find({
+          where: { userId, status: GameProgressStatus.IN_PROGRESS },
+          select: ['id', 'scenarioId']
+        })
+      ]);
     }
 
     // Build a map for prerequisite lookups
@@ -130,6 +137,7 @@ export class EngineService {
     // Map records and compute lockStatus
     const scenariosWithRecords = scenarios.map((scenario) => {
       const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
+      const progress = activeProgress.find((p) => p.scenarioId === scenario.id);
 
       let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
       
@@ -152,6 +160,7 @@ export class EngineService {
         ...scenario,
         userRecord,
         lockStatus,
+        activeProgressId: progress?.id || null,
       };
     });
 
