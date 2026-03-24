@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -25,14 +25,15 @@ import { ResourcesModule } from './resources/resources.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
+import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     ThrottlerModule.forRoot([
       {
-        ttl: 300000, // Time window in milliseconds (5 minutes = 300000ms)
-        limit: 200, // Max requests per time window (global default)
+        ttl: 60000, // 1 minute window
+        limit: 100, // 100 requests per minute per IP (much more reasonable)
       },
     ]),
     TypeOrmModule.forRootAsync({
@@ -74,6 +75,10 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
     },
     {
       provide: APP_INTERCEPTOR,
