@@ -15,3 +15,13 @@ import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../shared/enums/user-role.enum';
+
+@ApiTags('Reports')
+@Controller('reports')
+export class ReportsController {
+  constructor(private readonly reportsService: ReportsService) { }
+
+  @Post()

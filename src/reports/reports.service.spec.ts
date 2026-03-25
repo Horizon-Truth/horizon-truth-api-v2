@@ -22,3 +22,18 @@ describe('ReportsService', () => {
     reportTagRepository = {
       findBy: jest.fn(),
     };
+    reportVerificationRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+      findBy: jest.fn(),
+    };
+    reportEvidenceRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+    auditLogsService = {
+      createLog: jest.fn(),
+    };
+
+    service = new ReportsService(
+      reportRepository,
