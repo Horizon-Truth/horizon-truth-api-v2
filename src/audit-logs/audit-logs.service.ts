@@ -60,4 +60,29 @@ export class AuditLogsService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  async exportLogs(options: {
+    userId?: string;
+    action?: string;
+    entityType?: string;
+  }) {
+    const { userId, action, entityType } = options;
+    const query = this.auditLogRepository.createQueryBuilder('log')
+      .leftJoinAndSelect('log.user', 'user')
+      .orderBy('log.createdAt', 'DESC');
+
+    if (userId) {
+      query.andWhere('log.userId = :userId', { userId });
+    }
+
+    if (action) {
+      query.andWhere('log.action ILIKE :action', { action: `%${action}%` });
+    }
+
+    if (entityType) {
+      query.andWhere('log.entityType ILIKE :entityType', { entityType: `%${entityType}%` });
+    }
+
+    return query.getMany();
+  }
 }
