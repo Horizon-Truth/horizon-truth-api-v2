@@ -15,3 +15,24 @@ import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../shared/enums/user-role.enum';
+
+@ApiTags('Reports')
+@Controller('reports')
+export class ReportsController {
+  constructor(private readonly reportsService: ReportsService) { }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit a new report' })
+  create(@Body() createReportDto: CreateReportDto, @Request() req: any) {
+    return this.reportsService.create(createReportDto, req.user.userId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all reports' })
+  findAll(@Query() query: any) {
+    return this.reportsService.findAll(query);
