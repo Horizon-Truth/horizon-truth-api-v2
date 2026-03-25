@@ -14,6 +14,8 @@ import { User } from '../users/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { Scenario } from '../engine/entities/scenario.entity';
+import { GameOutcome } from '../engine/entities/game-outcome.entity';
+import { PlayerScenarioRecord } from '../engine/entities/player-scenario-record.entity';
 import { Feedback } from '../feedback/entities/feedback.entity';
 import { Blog } from '../blogs/entities/blog.entity';
 import { Resource } from '../resources/entities/resource.entity';
@@ -44,6 +46,8 @@ import { Report } from '../reports/entities/report.entity';
       GuestPlay,
       OrganizationUser,
       Report,
+      GameOutcome,
+      PlayerScenarioRecord,
     ]),
   ],
   controllers: [AnalyticsController],
