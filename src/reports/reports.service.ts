@@ -20,3 +20,25 @@ export class ReportsService {
     @InjectRepository(ReportVerification)
     private readonly reportVerificationRepository: Repository<ReportVerification>,
     @InjectRepository(ReportEvidence)
+    private readonly reportEvidenceRepository: Repository<ReportEvidence>,
+    private readonly auditLogsService: AuditLogsService,
+  ) { }
+
+  async create(
+    createDto: CreateReportDto,
+    reporterId: string,
+  ): Promise<Report> {
+    const { tagIds, ...reportData } = createDto;
+    const report = this.reportRepository.create({
+      ...reportData,
+      reporterId,
+      reason: reportData.reason || reportData.category || 'Other',
+    });
+
+    const duplicates = await this.findPotentialDuplicates(reportData);
+    if (duplicates.length > 0) {
+      const primaryDuplicate = duplicates[0];
+      report.isDuplicate = true;
+      report.duplicateOfId = primaryDuplicate.id;
+      report.status = ReportStatus.NEEDS_COMMUNITY_REVIEW;
+    }
