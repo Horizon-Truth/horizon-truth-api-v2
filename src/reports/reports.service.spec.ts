@@ -37,3 +37,17 @@ describe('ReportsService', () => {
 
     service = new ReportsService(
       reportRepository,
+      reportTagRepository,
+      reportVerificationRepository,
+      reportEvidenceRepository,
+      auditLogsService,
+    );
+  });
+
+  it('flags a new report as a duplicate when a similar report already exists', async () => {
+    const existing = {
+      id: 'existing-report',
+      title: 'False claim about vaccines',
+      description: 'This article repeats a false vaccine claim.',
+      sourceUrl: 'https://example.com/fake-news',
+    };

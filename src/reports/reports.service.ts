@@ -42,3 +42,31 @@ export class ReportsService {
       report.duplicateOfId = primaryDuplicate.id;
       report.status = ReportStatus.NEEDS_COMMUNITY_REVIEW;
     }
+
+    if (tagIds && tagIds.length > 0) {
+      const tags = await this.reportTagRepository.findBy({
+        id: In(tagIds),
+      });
+      report.tags = tags;
+    }
+
+    const savedReport = await this.reportRepository.save(report);
+    await this.auditLogsService.createLog({
+      userId: reporterId,
+      action: 'created',
+      entityType: 'Report',
+      entityId: savedReport.id,
+      metadata: { status: savedReport.status, duplicateOfId: savedReport.duplicateOfId },
+    });
+
+    return savedReport;
+  }
+
+  async findAll(query: any): Promise<any> {
+    const { status, tagId, page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.reportRepository
+      .createQueryBuilder('report')
+      .leftJoinAndSelect('report.reporter', 'reporter')
+      .leftJoinAndSelect('report.tags', 'tags')

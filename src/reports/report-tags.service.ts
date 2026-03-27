@@ -19,3 +19,15 @@ export class ReportTagsService {
   async findAll(query: any): Promise<any> {
     const { isActive, page = 1, limit = 10, search } = query;
     const skip = (page - 1) * limit;
+
+    const queryBuilder = this.reportTagRepository.createQueryBuilder('tag');
+
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('tag.isActive = :isActive', {
+        isActive: isActive === 'true',
+      });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        'tag.name ILIKE :search OR tag.slug ILIKE :search',

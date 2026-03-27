@@ -24,3 +24,15 @@ export class CreateReportDto {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @ApiProperty({ enum: ReportContentType })
+  @IsEnum(ReportContentType)
+  contentType: ReportContentType;
+
+  @ApiPropertyOptional({ example: 'https://example.com/fake-news' })
+  @IsUrl()
+  @IsOptional()
+  sourceUrl?: string;
+
+  @ApiProperty({ example: 'en' })
+  @IsString()
