@@ -14,3 +14,10 @@ import { OrganizationUserStatus } from '../../shared/enums/organization-user-sta
 @Entity('organization_users')
 export class OrganizationUser {
   @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ name: 'user_id' })
+  userId: string;
+
+  @Column({ name: 'organization_id' })
+  organizationId: string;
