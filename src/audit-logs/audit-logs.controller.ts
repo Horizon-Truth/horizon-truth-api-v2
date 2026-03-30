@@ -16,3 +16,14 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { AuditLogsService } from './audit-logs.service';
+
+@ApiTags('Audit Logs')
+@ApiBearerAuth()
+@Controller('audit-logs')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class AuditLogsController {
+  constructor(private readonly auditLogsService: AuditLogsService) {}
+
+  @Get()
+  @Roles(UserRole.SYSTEM_ADMIN)
