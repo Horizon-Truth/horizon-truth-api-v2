@@ -17,3 +17,15 @@ export class LanguagesService {
   ) {}
 
   async findAll(query: any): Promise<any> {
+    const { isActive, page = 1, limit = 50 } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.languageRepository.createQueryBuilder('lang');
+
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('lang.isActive = :isActive', {
+        isActive: isActive === 'true',
+      });
+    }
+
+    const [data, total] = await queryBuilder

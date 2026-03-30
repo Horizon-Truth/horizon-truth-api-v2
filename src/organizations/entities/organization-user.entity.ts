@@ -14,3 +14,36 @@ import { OrganizationUserStatus } from '../../shared/enums/organization-user-sta
 @Entity('organization_users')
 export class OrganizationUser {
   @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ name: 'user_id' })
+  userId: string;
+
+  @Column({ name: 'organization_id' })
+  organizationId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @ManyToOne(() => Organization, (organization) => organization.users)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
+
+  @Column({
+    type: 'enum',
+    enum: OrganizationUserRole,
+    default: OrganizationUserRole.MEMBER,
+  })
+  role: OrganizationUserRole;
+
+  @Column({
+    type: 'enum',
+    enum: OrganizationUserStatus,
+    default: OrganizationUserStatus.ACTIVE,
+  })
+  status: OrganizationUserStatus;
+
+  @CreateDateColumn({ name: 'joined_at', type: 'timestamp' })
+  joinedAt: Date;
+}
