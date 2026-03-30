@@ -27,3 +27,15 @@ export class AuditLogsController {
 
   @Get()
   @Roles(UserRole.SYSTEM_ADMIN)
+  @ApiOperation({ summary: 'List all audit logs (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Return paginated audit logs.' })
+  async findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('userId') userId?: string,
+    @Query('action') action?: string,
+    @Query('entityType') entityType?: string,
+  ) {
+    return this.auditLogsService.findAll({
+      page: page ? +page : 1,
+      limit: limit ? +limit : 20,
