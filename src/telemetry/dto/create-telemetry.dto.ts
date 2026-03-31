@@ -42,3 +42,31 @@ export class DecisionOutcomeDto {
     @IsOptional()
     decision_change_count?: number;
 }
+
+export class SocialContextExposureDto {
+    @IsEnum(SocialContextExposureType)
+    @IsOptional()
+    social_context_exposed?: SocialContextExposureType;
+
+    @IsBoolean()
+    @IsOptional()
+    social_metrics_visible?: boolean;
+
+    @IsInt()
+    @IsOptional()
+    like_count_shown?: number;
+
+    @IsInt()
+    @IsOptional()
+    share_count_shown?: number;
+
+    @IsInt()
+    @IsOptional()
+    comment_count_shown?: number;
+
+    @IsString()
+    @IsOptional()
+    highlighted_comment_type?: string;
+
+    @IsBoolean()
+    @IsOptional()

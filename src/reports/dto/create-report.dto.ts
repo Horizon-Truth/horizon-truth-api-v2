@@ -15,3 +15,24 @@ import { ReportPriorityLevel } from '../../shared/enums/report-priority-level.en
 export class CreateReportDto {
   @ApiProperty({ example: 'Suspicious Article' })
   @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @ApiProperty({
+    example: 'This article contains false information about healthcare.',
+  })
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @ApiProperty({ enum: ReportContentType })
+  @IsEnum(ReportContentType)
+  contentType: ReportContentType;
+
+  @ApiPropertyOptional({ example: 'https://example.com/fake-news' })
+  @IsUrl()
+  @IsOptional()
+  sourceUrl?: string;
+
+  @ApiProperty({ example: 'en' })
+  @IsString()
