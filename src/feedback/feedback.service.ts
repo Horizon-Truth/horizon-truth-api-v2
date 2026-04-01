@@ -12,3 +12,17 @@ export class FeedbackService {
   constructor(
     @InjectRepository(Feedback)
     private feedbackRepository: Repository<Feedback>,
+  ) {}
+
+  async create(
+    userId: string | null,
+    createDto: CreateFeedbackDto,
+  ): Promise<Feedback> {
+    const feedback = this.feedbackRepository.create({
+      ...createDto,
+      userId,
+    });
+    return this.feedbackRepository.save(feedback);
+  }
+
+  async findAll(query: FeedbackQueryDto): Promise<any> {
