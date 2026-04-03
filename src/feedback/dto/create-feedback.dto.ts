@@ -9,3 +9,9 @@ export class CreateFeedbackDto {
   @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @IsOptional()
   @IsUUID()
+  scenarioId?: string;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsOptional()
+  @IsUUID()
+  assignedTo?: string;

@@ -26,3 +26,20 @@ export class FeedbackService {
   }
 
   async findAll(query: FeedbackQueryDto): Promise<any> {
+    const {
+      scenarioId,
+      status,
+      priority,
+      type,
+      assignedTo,
+      page = 1,
+      limit = 10,
+    } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.feedbackRepository
+      .createQueryBuilder('feedback')
+      .leftJoinAndSelect('feedback.scenario', 'scenario')
+      .leftJoinAndSelect('feedback.user', 'user')
+      .leftJoinAndSelect('feedback.assignee', 'assignee')
+      .skip(skip)

@@ -17,3 +17,13 @@ import { FeedbackType } from '../../shared/enums/feedback-type.enum';
 @Entity('feedbacks')
 export class Feedback {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @Column({ name: 'scenario_id', nullable: true })
+  scenarioId: string;
+
+  @ManyToOne(() => Scenario, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'scenario_id' })
+  scenario: Scenario;
