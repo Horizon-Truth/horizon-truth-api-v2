@@ -14,3 +14,18 @@ import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class ContactsService {
+    constructor(
+        @InjectRepository(Contact)
+        private contactsRepository: Repository<Contact>,
+        @InjectRepository(ContactReply)
+        private repliesRepository: Repository<ContactReply>,
+        private mailService: MailService,
+    ) { }
+
+    async create(createContactDto: CreateContactDto): Promise<Contact> {
+        const contact = this.contactsRepository.create(createContactDto);
+        return await this.contactsRepository.save(contact);
+    }
+
+    async findAll(): Promise<Contact[]> {
+        return await this.contactsRepository.find({
