@@ -17,3 +17,14 @@ import { Contact } from './entities/contact.entity';
 import { ContactReply } from './entities/contact-reply.entity';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../shared/enums/user-role.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+
+@ApiTags('contacts')
+@Controller('contacts')
+export class ContactsController {
+    constructor(private readonly contactsService: ContactsService) { }
+
+    @Public()
+    @Post()

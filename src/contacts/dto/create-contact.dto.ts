@@ -9,3 +9,7 @@ export class CreateContactDto {
     firstName: string;
 
     @ApiProperty({ example: 'Doe' })
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(50)
+    lastName: string;

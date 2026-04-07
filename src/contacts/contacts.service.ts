@@ -29,3 +29,22 @@ export class ContactsService {
 
     async findAll(): Promise<Contact[]> {
         return await this.contactsRepository.find({
+            relations: ['replies'],
+            order: { createdAt: 'DESC', replies: { createdAt: 'ASC' } },
+        });
+    }
+
+    async findOne(id: string): Promise<Contact | null> {
+        return await this.contactsRepository.findOne({
+            where: { id },
+            relations: ['replies'],
+            order: { replies: { createdAt: 'ASC' } },
+        });
+    }
+
+    async markAsRead(id: string): Promise<Contact> {
+        const contact = await this.findOneOrFail(id);
+
+        // Never downgrade a submission that has already been answered.
+        if (contact.status === ContactStatus.NEW) {
+            // A targeted update, so the loaded `replies` relation is untouched.
