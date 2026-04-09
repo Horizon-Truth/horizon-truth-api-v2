@@ -4,3 +4,5 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class AddEvidenceDto {
   @ApiProperty({ example: 'LINK' })
   @IsString()
+  @IsNotEmpty()
+  evidenceType: string;
