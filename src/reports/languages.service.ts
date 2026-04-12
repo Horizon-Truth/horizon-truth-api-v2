@@ -29,3 +29,15 @@ export class LanguagesService {
     }
 
     const [data, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('lang.name', 'ASC')
+      .getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
