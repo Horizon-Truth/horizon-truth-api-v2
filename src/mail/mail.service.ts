@@ -29,3 +29,21 @@ export class MailService {
             this.logger.log('Outgoing email enabled via Resend.');
             return;
         }
+
+        // SMTP stays available as a fallback, mainly for local development
+        // against a catcher like Mailhog.
+        const host = this.configService.get<string>('SMTP_HOST');
+        const user = this.configService.get<string>('SMTP_USER');
+        const pass = this.configService.get<string>('SMTP_PASSWORD');
+
+        if (host && user && pass) {
+            const port = Number(this.configService.get<string>('SMTP_PORT') ?? 587);
+            this.transporter = nodemailer.createTransport({
+                host,
+                port,
+                // Port 465 is implicit TLS, everything else upgrades via STARTTLS.
+                secure: port === 465,
+                auth: { user, pass },
+            });
+            this.provider = 'smtp';
+            this.logger.log(`Outgoing email enabled via SMTP (${host}:${port}).`);
