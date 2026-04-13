@@ -23,3 +23,18 @@ export class User {
 
   @ApiPropertyOptional({ example: 'johndoe' })
   @Column({ type: 'varchar', unique: true, nullable: true })
+  username?: string | null;
+
+  @ApiPropertyOptional({ example: '+22' })
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  phone?: string | null;
+
+  @ApiPropertyOptional()
+  @Column({ type: 'varchar', name: 'api_key', unique: true, nullable: true })
+  apiKey?: string | null;
+
+  @Column({
+    name: 'password_hash',
+    select: false,
+    type: 'text',
+    nullable: true,
