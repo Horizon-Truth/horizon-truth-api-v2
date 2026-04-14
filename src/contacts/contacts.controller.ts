@@ -28,3 +28,15 @@ export class ContactsController {
 
     @Public()
     @Post()
+    @ApiOperation({ summary: 'Submit a contact form' })
+    @ApiResponse({ status: 201, description: 'The contact form has been successfully submitted.', type: Contact })
+    create(@Body() createContactDto: CreateContactDto) {
+        return this.contactsService.create(createContactDto);
+    }
+
+    @ApiBearerAuth()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Get()
+    @ApiOperation({ summary: 'Get all contact submissions (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Return all contact submissions.', type: [Contact] })
