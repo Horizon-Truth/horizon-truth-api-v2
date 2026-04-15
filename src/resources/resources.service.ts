@@ -14,3 +14,12 @@ export interface ResourceQueryOptions {
 
 @Injectable()
 export class ResourcesService {
+    private readonly logger = new Logger(ResourcesService.name);
+
+    constructor(
+        @InjectRepository(Resource)
+        private readonly resourceRepository: Repository<Resource>,
+    ) { }
+
+    async findAll(options: ResourceQueryOptions = {}): Promise<Resource[]> {
+        const { language, search } = options;
