@@ -4,3 +4,10 @@ import { ResourceType } from '../entities/resource.entity';
 import { ContentLanguage } from '../../shared/enums/content-language.enum';
 
 export class CreateResourceDto {
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    title: string;
+
+    @ApiProperty()
+    @IsString()

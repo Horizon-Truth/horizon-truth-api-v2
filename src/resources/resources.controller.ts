@@ -24,3 +24,13 @@ import { UserRole } from '../shared/enums/user-role.enum';
 import { ContentLanguage } from '../shared/enums/content-language.enum';
 
 @ApiTags('resources')
+@Controller('resources')
+export class ResourcesController {
+    constructor(private readonly resourcesService: ResourcesService) { }
+
+    @Get()
+    @ApiOperation({ summary: 'Get all resources (optionally filtered by language)' })
+    @ApiQuery({ name: 'language', enum: ContentLanguage, required: false })
+    @ApiQuery({ name: 'search', required: false })
+    findAll(
+        @Query('language') language?: ContentLanguage,
