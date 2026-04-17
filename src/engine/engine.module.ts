@@ -13,3 +13,33 @@ import { GameProgress } from './entities/game-progress.entity';
 import { GuestPlay } from './entities/guest-play.entity';
 import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
 import { EngineService } from './engine.service';
+import { EngineController } from './engine.controller';
+import { GamificationModule } from '../gamification/gamification.module';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
+import { ScenarioAdminController } from './admin/scenario-admin.controller';
+import { SceneAdminController } from './admin/scene-admin.controller';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      GameLevel,
+      Scenario,
+      Scene,
+      SceneContent,
+      SceneChatMessage,
+      SceneFeedItem,
+      PlayerChoice,
+      PlayerAction,
+      GameOutcome,
+      GameProgress,
+      PlayerProfile,
+      GuestPlay,
+      PlayerScenarioRecord,
+    ]),
+    forwardRef(() => GamificationModule),
+  ],
+  controllers: [EngineController, ScenarioAdminController, SceneAdminController],
+  providers: [EngineService],
+  exports: [EngineService, TypeOrmModule],
+})
+export class EngineModule { }

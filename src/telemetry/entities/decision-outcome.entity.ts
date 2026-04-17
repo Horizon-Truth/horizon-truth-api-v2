@@ -7,3 +7,8 @@ export enum DecisionType {
     IGNORE = 'ignore',
     VERIFY = 'verify',
 }
+
+@Entity('telemetry_decision_outcome')
+export class DecisionOutcome {
+    @PrimaryColumn()
+    session_id: string;

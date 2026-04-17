@@ -43,3 +43,12 @@ export class IncidentReport {
     type: 'enum',
     enum: IncidentReportReason,
   })
+  reportReason: IncidentReportReason;
+
+  @ApiPropertyOptional({
+    example: 'This post is spreading false information about local elections.',
+  })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiProperty({ enum: IncidentSeverity })
