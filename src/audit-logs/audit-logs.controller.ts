@@ -39,3 +39,15 @@ export class AuditLogsController {
     return this.auditLogsService.findAll({
       page: page ? +page : 1,
       limit: limit ? +limit : 20,
+      userId,
+      action,
+      entityType,
+    });
+  }
+
+  @Get('export')
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @ApiOperation({ summary: 'Export audit logs as CSV (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Return audit logs as CSV file.' })
+  async export(
+    @Query('userId') userId: string,
