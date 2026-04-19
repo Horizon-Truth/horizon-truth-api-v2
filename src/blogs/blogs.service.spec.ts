@@ -6,3 +6,10 @@ import { ContentLanguage } from '../shared/enums/content-language.enum';
 
 describe('BlogsService (language filtering)', () => {
   let service: BlogsService;
+  let qb: any;
+  let repo: any;
+
+  beforeEach(async () => {
+    qb = {
+      orderBy: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
