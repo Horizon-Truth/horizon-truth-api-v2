@@ -73,3 +73,48 @@ export class GamificationService {
     });
 
     if (!badge) {
+      throw new NotFoundException(`Badge with code ${badgeCode} not found`);
+    }
+
+    // Check if user already has this badge
+    const existingBadge = await this.userBadgeRepository.findOne({
+      where: { userId, badgeId: badge.id },
+    });
+
+    if (existingBadge) {
+      throw new BadRequestException('User already has this badge');
+    }
+
+    // Award the badge
+    const userBadge = this.userBadgeRepository.create({
+      userId,
+      badgeId: badge.id,
+      metadata,
+    });
+
+    return this.userBadgeRepository.save(userBadge);
+  }
+
+  /**
+   * Check badge eligibility for a user after game completion
+   */
+  /**
+   * Check badge eligibility based on a specific outcome (mid-scenario or final)
+   */
+  async checkOutcomeBadgeEligibility(
+    userId: string,
+    outcome: GameOutcome,
+  ): Promise<any[]> {
+    const awardedBadges: any[] = [];
+
+    if (outcome.outcomeType !== OutcomeType.PASS) {
+      return awardedBadges;
+    }
+
+    // Fetch scenario to check which one it is
+    const scenario = await this.userBadgeRepository.manager.findOne(
+      Scenario,
+      {
+        where: { id: outcome.scenarioId },
+      },
+    );
