@@ -146,3 +146,65 @@ export class PlayersService {
     const profile = await this.playerProfileRepository.findOne({
       where: { userId },
     });
+
+    if (!profile) {
+      throw new NotFoundException('Player profile not found');
+    }
+
+    // If avatar is being updated, verify it exists
+    if (updateDto.avatarId) {
+      const avatar = await this.avatarRepository.findOne({
+        where: { id: updateDto.avatarId },
+      });
+
+      if (!avatar) {
+        throw new NotFoundException(
+          `Avatar with ID ${updateDto.avatarId} not found`,
+        );
+      }
+    }
+
+    // Update profile
+    Object.assign(profile, updateDto);
+    return this.playerProfileRepository.save(profile);
+  }
+
+  /**
+   * Complete onboarding
+   */
+  async completeOnboarding(userId: string): Promise<void> {
+    const profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Player profile not found');
+    }
+
+    profile.onboardingCompleted = true;
+    profile.onboardingCompletedAt = new Date();
+    await this.playerProfileRepository.save(profile);
+  }
+
+  /**
+   * Initialize player profile during onboarding (Level 0)
+   */
+  async initializeProfile(
+    userId: string,
+    initializeDto: InitializeProfileDto,
+  ): Promise<PlayerProfile> {
+    let profile = await this.playerProfileRepository.findOne({
+      where: { userId },
+    });
+
+    if (!profile) {
+      // If No profile exists (shouldn't happen with auto-creation, but safe-guard)
+      profile = this.playerProfileRepository.create({ userId });
+    }
+
+    // 1. Verify avatar exists
+    const avatar = await this.avatarRepository.findOne({
+      where: { id: initializeDto.avatarId },
+    });
+
+    if (!avatar) {
