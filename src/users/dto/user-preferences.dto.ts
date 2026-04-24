@@ -17,3 +17,11 @@ class NotificationPreferencesDto {
   @IsOptional()
   @IsBoolean()
   push?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  sms?: boolean;
+}
+
+class PrivacyPreferencesDto {

@@ -38,3 +38,20 @@ export class User {
     select: false,
     type: 'text',
     nullable: true,
+  })
+  passwordHash: string | null;
+
+  @ApiProperty({ example: 'John Doe' })
+  @Column({ name: 'full_name' })
+  fullName: string;
+
+  @ApiProperty({ enum: UserRole, default: UserRole.PLAYER })
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.PLAYER,
+  })
+  role: UserRole;
+
+  @ApiProperty({ enum: UserStatus, default: UserStatus.ACTIVE })
+  @Column({

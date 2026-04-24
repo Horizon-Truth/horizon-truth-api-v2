@@ -45,3 +45,22 @@ To build and maintain a secure, decentralized, and high-performance backend ecos
 This project follows a **Maintainer-Led Consensus Model**.
 
 *   Day-to-day decisions are made by Maintainers.
+*   Major changes require consensus or majority approval.
+*   The Project Lead has tie-breaking authority.
+
+### Decision Categories
+
+| Type                           | Approval Required           |
+| :----------------------------- | :-------------------------- |
+| Bug fixes                      | Any Maintainer              |
+| Minor features                 | Maintainer consensus        |
+| Major architecture changes     | Maintainer vote             |
+| Governance changes             | Supermajority (⅔)           |
+
+## 4. Roles & Responsibilities
+
+### Project Lead
+
+*   Sets technical direction
+*   Resolves disputes
+*   Oversees releases

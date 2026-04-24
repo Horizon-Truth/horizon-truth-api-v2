@@ -8,3 +8,9 @@ const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'admin',
     database: process.env.DB_NAME || 'horizon_truth',
+});
+
+async function run() {
+    await AppDataSource.initialize();
+
+    try {
