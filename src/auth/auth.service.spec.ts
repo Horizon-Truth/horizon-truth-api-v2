@@ -25,3 +25,21 @@ describe('AuthService', () => {
   const mockJwtService = {
     signAsync: jest.fn(),
   };
+
+  const mockConfigService = {
+    get: jest.fn(),
+  };
+
+  const mockSessionRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    findOne: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,

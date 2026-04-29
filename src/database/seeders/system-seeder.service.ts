@@ -17,3 +17,45 @@ export class SystemSeederService {
 
   async seed() {
     this.logger.log('Starting system data seeding...');
+
+    await this.seedSuperAdmin();
+
+    this.logger.log('System data seeding completed!');
+  }
+
+  private async seedSuperAdmin() {
+    this.logger.log('Seeding super admin...');
+
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@horizon.ai';
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
+
+    const existing = await this.userRepository.findOne({
+      where: [{ email: superAdminEmail }, { username: superAdminUsername }],
+    });
+
+    if (existing) {
+      this.logger.log('Super admin already exists, skipping.');
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(superAdminPassword, 10);
+
+    const superAdmin = this.userRepository.create({
+      email: superAdminEmail,
+      username: superAdminUsername,
+      fullName: 'System Administrator',
+      passwordHash: passwordHash,
+      role: UserRole.SYSTEM_ADMIN,
+      status: UserStatus.ACTIVE,
+      isVerified: true,
+      apiKey:
+        'horizon_admin_master_key_' +
+        Math.random().toString(36).substring(2, 10),
+    });
+
+    await this.userRepository.save(superAdmin);
+    this.logger.log('Super admin created successfully!');
+    this.logger.log(`Credentials: ${superAdminEmail} / ${superAdminPassword}`);
+  }
+}

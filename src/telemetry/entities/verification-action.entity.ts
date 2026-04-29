@@ -15,3 +15,7 @@ export class VerificationAction {
     fact_panel_views: number;
 
     @Column({ default: false })
+    external_link_clicked: boolean;
+
+    @Column({ default: false })
+    profile_checked: boolean;
