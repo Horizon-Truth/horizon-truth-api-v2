@@ -51,3 +51,20 @@ describe('ReportsService', () => {
       description: 'This article repeats a false vaccine claim.',
       sourceUrl: 'https://example.com/fake-news',
     };
+
+    reportRepository.find.mockResolvedValue([existing]);
+    reportRepository.create.mockReturnValue({
+      title: 'False claim about vaccines',
+      description: 'This article repeats a false vaccine claim.',
+      sourceUrl: 'https://example.com/fake-news',
+      status: ReportStatus.NEW,
+      priority: ReportPriorityLevel.MEDIUM,
+    });
+    reportRepository.save.mockResolvedValue({
+      id: 'new-report',
+      isDuplicate: true,
+      duplicateOfId: existing.id,
+    });
+
+    const result = await service.create(
+      {
