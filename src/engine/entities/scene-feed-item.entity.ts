@@ -14,3 +14,7 @@ export class SceneFeedItem {
 
   @Column({ name: 'scene_content_id' })
   sceneContentId: string;
+
+  @ManyToOne(() => SceneContent, (content) => content.feedItems)
+  @JoinColumn({ name: 'scene_content_id' })
+  sceneContent: SceneContent;
