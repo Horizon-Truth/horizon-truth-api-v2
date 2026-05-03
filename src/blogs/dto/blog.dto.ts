@@ -5,3 +5,10 @@ import { ContentLanguage } from '../../shared/enums/content-language.enum';
 export class CreateBlogDto {
     @ApiProperty()
     @IsString()
+    @IsNotEmpty()
+    title: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    slug: string;

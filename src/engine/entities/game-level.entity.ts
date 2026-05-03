@@ -19,3 +19,28 @@ export class GameLevel {
   levelNumber: number;
 
   @ApiProperty({ example: 'The Basics of Misinformation' })
+  @Column()
+  name: string;
+
+  @ApiPropertyOptional({
+    example: 'Introduction to identifying fake news and bias.',
+  })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiPropertyOptional({ example: 15 })
+  @Column({ name: 'estimated_duration_minutes', type: 'int', nullable: true })
+  estimatedDurationMinutes: number;
+
+  @ApiProperty({ default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+
+  @OneToMany(() => Scenario, (scenario) => scenario.gameLevel)
+  @ApiProperty({ type: () => Scenario, isArray: true })
+  scenarios: Scenario[];
+}

@@ -47,3 +47,13 @@ export class ReportsController {
   @Post(':id/evidence')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add supporting evidence to a report' })
+  addEvidence(@Param('id') id: string, @Body() evidenceDto: AddEvidenceDto, @Request() req: any) {
+    return this.reportsService.addEvidence(id, req.user.userId, evidenceDto);
+  }
+
+  @Post(':id/verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add community verification to a report' })
+  addVerification(

@@ -10,3 +10,12 @@ export class VerificationAction {
 
     @Column({ default: false })
     learn_more_opened: boolean;
+
+    @Column({ type: 'int', default: 0 })
+    fact_panel_views: number;
+
+    @Column({ default: false })
+    external_link_clicked: boolean;
+
+    @Column({ default: false })
+    profile_checked: boolean;

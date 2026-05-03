@@ -17,3 +17,11 @@ export interface SkillCounters {
 export interface CalibrationCounters {
   correct: number;
   total: number;
+}
+
+export type SkillBook = Record<string, SkillCounters>;
+export type CalibrationLedger = Record<string, CalibrationCounters>;
+
+const num = (value: unknown): number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
