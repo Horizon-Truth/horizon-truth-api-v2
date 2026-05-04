@@ -24,3 +24,58 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @ApiTags('Feedback')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('feedback')
+export class FeedbackController {
+  constructor(private readonly feedbackService: FeedbackService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create new feedback' })
+  create(@Request() req, @Body() createFeedbackDto: CreateFeedbackDto) {
+    return this.feedbackService.create(req.user.userId, createFeedbackDto);
+  }
+
+  @Public()
+  @Post('guest')
+  @ApiOperation({ summary: 'Create new feedback as a guest' })
+  createGuest(@Body() createFeedbackDto: CreateFeedbackDto) {
+    return this.feedbackService.create(null, createFeedbackDto);
+  }
+
+  @Get()
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get all feedback with filters' })
+  findAll(@Query() query: FeedbackQueryDto) {
+    return this.feedbackService.findAll(query);
+  }
+
+  @Get('stats')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get feedback statistics' })
+  getStats() {
+    return this.feedbackService.getStats();
+  }
+
+  @Get(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Get feedback by ID' })
+  findOne(@Param('id') id: string) {
+    return this.feedbackService.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Update feedback status or details' })
+  update(
+    @Param('id') id: string,
+    @Body() updateFeedbackDto: UpdateFeedbackDto,
+  ) {
+    return this.feedbackService.update(id, updateFeedbackDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.ORG_ADMIN)
+  @ApiOperation({ summary: 'Delete feedback' })
+  remove(@Param('id') id: string) {
+    return this.feedbackService.remove(id);
+  }
+}

@@ -70,3 +70,32 @@ export class SocialContextExposureDto {
 
     @IsBoolean()
     @IsOptional()
+    authority_badge_visible?: boolean;
+}
+
+export class DisseminationDto {
+    @IsBoolean()
+    @IsOptional()
+    share_clicked?: boolean;
+
+    @IsEnum(ShareChannelType)
+    @IsOptional()
+    share_channel_type?: ShareChannelType;
+
+    @IsInt()
+    @IsOptional()
+    share_count?: number;
+
+    @IsInt()
+    @IsOptional()
+    forward_count?: number;
+
+    @IsBoolean()
+    @IsOptional()
+    share_with_context?: boolean;
+
+    @IsInt()
+    @IsOptional()
+    estimated_audience_size?: number;
+
+    @IsBoolean()

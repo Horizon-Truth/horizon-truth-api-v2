@@ -41,3 +41,21 @@ export class Scenario {
     example: 'Investigate a suspicious post spreading on social media.',
   })
   @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiProperty({ enum: ScenarioType })
+  @Column({
+    name: 'scenario_type',
+    type: 'enum',
+    enum: ScenarioType,
+  })
+  scenarioType: ScenarioType;
+
+  @ApiProperty({ enum: ScenarioDifficulty })
+  @Column({
+    type: 'enum',
+    enum: ScenarioDifficulty,
+  })
+  difficulty: ScenarioDifficulty;
+
+  /**
