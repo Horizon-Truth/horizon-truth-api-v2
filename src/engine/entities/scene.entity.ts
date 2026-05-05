@@ -25,3 +25,13 @@ export class Scene {
   scenarioId: string;
 
   @ManyToOne(() => Scenario, (scenario) => scenario.scenes, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'scenario_id' })
+  scenario: Scenario;
+
+  @ApiProperty({ example: 'Social Media Investigation' })
+  @Column({ nullable: true })
+  title: string;
+
+  @ApiProperty({ example: 'You see a viral post on social media...' })
+  @Column({ type: 'text', nullable: true })
+  description: string;
