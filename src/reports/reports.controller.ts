@@ -57,3 +57,12 @@ export class ReportsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add community verification to a report' })
   addVerification(
+    @Param('id') id: string,
+    @Body() verificationData: { comment: string; status: string; rating?: number },
+    @Request() req: any,
+  ) {
+    return this.reportsService.addVerification(id, req.user.userId, verificationData);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
