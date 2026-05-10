@@ -1,0 +1,3 @@
+services:
+  backend:
+    # IMAGE and IMAGE_TAG are supplied at deploy time via `--env-file image.env`
