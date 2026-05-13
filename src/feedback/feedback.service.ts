@@ -43,3 +43,21 @@ export class FeedbackService {
       .leftJoinAndSelect('feedback.user', 'user')
       .leftJoinAndSelect('feedback.assignee', 'assignee')
       .skip(skip)
+      .take(limit)
+      .orderBy('feedback.createdAt', 'DESC');
+
+    if (scenarioId) {
+      queryBuilder.andWhere('feedback.scenarioId = :scenarioId', {
+        scenarioId,
+      });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('feedback.status = :status', { status });
+    }
+
+    if (priority) {
+      queryBuilder.andWhere('feedback.priority = :priority', { priority });
+    }
+
+    if (type) {
