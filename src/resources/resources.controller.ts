@@ -34,3 +34,47 @@ export class ResourcesController {
     @ApiQuery({ name: 'search', required: false })
     findAll(
         @Query('language') language?: ContentLanguage,
+        @Query('search') search?: string,
+    ) {
+        return this.resourcesService.findAll({ language, search });
+    }
+
+    @Get(':id')
+    @ApiOperation({ summary: 'Get resource by ID' })
+    findOne(@Param('id') id: string) {
+        return this.resourcesService.findOne(id);
+    }
+
+    @Get('slug/:slug')
+    @ApiOperation({ summary: 'Get resource by slug' })
+    findBySlug(@Param('slug') slug: string) {
+        return this.resourcesService.findBySlug(slug);
+    }
+
+    @Post()
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Create a new resource (Admin/Moderator only)' })
+    create(@Body() createResourceDto: CreateResourceDto) {
+        return this.resourcesService.create(createResourceDto);
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update a resource (Admin/Moderator only)' })
+    update(@Param('id') id: string, @Body() updateResourceDto: UpdateResourceDto) {
+        return this.resourcesService.update(id, updateResourceDto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a resource (Admin/Moderator only)' })
+    remove(@Param('id') id: string) {
+        return this.resourcesService.remove(id);
+    }
+}
