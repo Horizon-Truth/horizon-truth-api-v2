@@ -35,3 +35,15 @@ export class Scene {
   @ApiProperty({ example: 'You see a viral post on social media...' })
   @Column({ type: 'text', nullable: true })
   description: string;
+
+  @ApiProperty({ example: 1 })
+  @Column({ name: 'order', type: 'int', default: 1 })
+  order: number;
+
+  @ApiProperty({ example: 'INVESTIGATION' })
+  @Column({ name: 'scene_type', type: 'varchar', nullable: true })
+  sceneType: string;
+
+  @ApiProperty({ enum: SceneContentType })
+  @Column({
+    name: 'content_type',
