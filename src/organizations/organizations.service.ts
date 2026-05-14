@@ -29,3 +29,22 @@ export class OrganizationsService {
     }
 
     if (type) {
+      queryBuilder.andWhere('organization.type = :type', { type });
+    }
+
+    if (country) {
+      queryBuilder.andWhere('organization.country = :country', { country });
+    }
+
+    const [data, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('organization.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
