@@ -25,3 +25,12 @@ export class ReportTagsController {
   findAll(@Query() query: any) {
     return this.reportTagsService.findAll(query);
   }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a report tag by ID' })
+  findOne(@Param('id') id: string) {
+    return this.reportTagsService.findById(id);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
