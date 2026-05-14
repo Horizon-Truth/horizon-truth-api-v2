@@ -66,3 +66,19 @@ export class ReportsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a report (Admin)' })
+  update(@Param('id') id: string, @Body() updateDto: any, @Request() req: any) {
+    return this.reportsService.update(id, updateDto, req.user.userId);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a report (Admin)' })
+  remove(@Param('id') id: string) {
+    return this.reportsService.remove(id);
+  }
+}
