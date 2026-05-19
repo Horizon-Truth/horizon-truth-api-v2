@@ -40,3 +40,16 @@ export class ContactsController {
     @Get()
     @ApiOperation({ summary: 'Get all contact submissions (Admin only)' })
     @ApiResponse({ status: 200, description: 'Return all contact submissions.', type: [Contact] })
+    findAll() {
+        return this.contactsService.findAll();
+    }
+
+    @ApiBearerAuth()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Get(':id')
+    @ApiOperation({ summary: 'Get a single contact submission (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Return a single contact submission.', type: Contact })
+    findOne(@Param('id') id: string) {
+        return this.contactsService.findOne(id);
+    }

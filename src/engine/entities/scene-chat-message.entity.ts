@@ -18,3 +18,8 @@ export class SceneChatMessage {
 
   @ManyToOne(() => SceneContent, (content) => content.chatMessages)
   @JoinColumn({ name: 'scene_content_id' })
+  sceneContent: SceneContent;
+
+  @Column({
+    type: 'enum',
+    enum: ChatSender,
