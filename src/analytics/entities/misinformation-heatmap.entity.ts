@@ -14,3 +14,10 @@ import { HeatmapRiskLevel } from '../../shared/enums/heatmap-risk-level.enum';
 export class MisinformationHeatmap {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ name: 'organization_id' })
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
