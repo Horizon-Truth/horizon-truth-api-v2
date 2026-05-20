@@ -14,3 +14,12 @@ export class SceneChatMessage {
   id: string;
 
   @Column({ name: 'scene_content_id' })
+  sceneContentId: string;
+
+  @ManyToOne(() => SceneContent, (content) => content.chatMessages)
+  @JoinColumn({ name: 'scene_content_id' })
+  sceneContent: SceneContent;
+
+  @Column({
+    type: 'enum',
+    enum: ChatSender,

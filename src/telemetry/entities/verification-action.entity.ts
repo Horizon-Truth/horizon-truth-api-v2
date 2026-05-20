@@ -19,3 +19,19 @@ export class VerificationAction {
 
     @Column({ default: false })
     profile_checked: boolean;
+
+    @Column({ type: 'timestamp', nullable: true })
+    verification_start_timestamp: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    verification_end_timestamp: Date;
+
+    @Column({ type: 'int', default: 0 })
+    verification_time_ms: number;
+
+    @Column({ type: 'int', default: 0 })
+    verification_sequence_length: number;
+
+    @CreateDateColumn()
+    recorded_at: Date;
+}

@@ -15,3 +15,10 @@ export class AddReportModerationFields1753000000000 implements MigrationInterfac
       ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN NOT NULL DEFAULT false,
       ADD COLUMN IF NOT EXISTS duplicate_of_id UUID,
       ADD COLUMN IF NOT EXISTS reviewer_id UUID
+    `);
+
+    await queryRunner.query(`
+      CREATE TABLE IF NOT EXISTS report_evidence (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        report_id UUID NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+        author_id UUID REFERENCES users(id) ON DELETE SET NULL,

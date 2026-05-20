@@ -36,3 +36,14 @@ export class CreateReportDto {
 
   @ApiProperty({ example: 'en' })
   @IsString()
+  @IsNotEmpty()
+  language: string;
+
+  @ApiPropertyOptional({ example: 'False Information' })
+  @IsString()
+  @IsOptional()
+  reason?: string;
+
+  @ApiPropertyOptional({ example: 'False Information' })
+  @IsString()
+  @IsOptional()

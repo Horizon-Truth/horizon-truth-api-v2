@@ -15,3 +15,16 @@ export class DecisionOutcome {
 
     @Column({ type: 'enum', enum: DecisionType })
     player_decision_type: DecisionType;
+
+    @Column({ type: 'int', default: 0 })
+    decision_confidence_level: number; // 1 (very low) – 5 (very high)
+
+    @Column({ default: false })
+    decision_changed: boolean; // True if player changed decision before final submit
+
+    @Column({ type: 'int', default: 0 })
+    decision_change_count: number; // Number of times decision was modified
+
+    @CreateDateColumn()
+    recorded_at: Date;
+}

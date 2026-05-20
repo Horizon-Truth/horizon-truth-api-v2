@@ -18,3 +18,19 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Report Tags')
 @Controller('report-tags')
 export class ReportTagsController {
+  constructor(private readonly reportTagsService: ReportTagsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all report tags' })
+  findAll(@Query() query: any) {
+    return this.reportTagsService.findAll(query);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a report tag by ID' })
+  findOne(@Param('id') id: string) {
+    return this.reportTagsService.findById(id);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)

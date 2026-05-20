@@ -11,3 +11,10 @@ import {
  * flags any rows whose language is NULL or outside the supported set (which
  * would indicate content that could bypass language filtering).
  *
+ * Run with: `npm run lang:diagnostics`
+ */
+const CONTENT_TABLES = ['scenarios', 'blogs', 'resources'];
+
+async function run(): Promise<void> {
+  await AppDataSource.initialize();
+  console.log('🌐 Content language diagnostics\n');

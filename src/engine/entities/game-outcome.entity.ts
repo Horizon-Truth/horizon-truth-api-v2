@@ -44,3 +44,12 @@ export class GameOutcome {
 
   @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @Column({ name: 'player_choice_id', nullable: true })
+  playerChoiceId: string;
+
+  @ManyToOne(() => PlayerChoice, (choice) => choice.outcomes, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'player_choice_id' })
+  playerChoice: PlayerChoice;
+
+  @ApiProperty({ enum: OutcomeType })
+  @Column({
+    name: 'outcome_type',
