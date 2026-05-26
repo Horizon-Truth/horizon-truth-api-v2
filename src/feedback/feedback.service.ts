@@ -61,3 +61,79 @@ export class FeedbackService {
     }
 
     if (type) {
+      queryBuilder.andWhere('feedback.type = :type', { type });
+    }
+
+    if (assignedTo) {
+      queryBuilder.andWhere('feedback.assignedTo = :assignedTo', {
+        assignedTo,
+      });
+    }
+
+    const [feedbacks, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data: feedbacks,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findOne(id: string): Promise<Feedback> {
+    const feedback = await this.feedbackRepository.findOne({
+      where: { id },
+      relations: ['scenario', 'user', 'assignee'],
+    });
+
+    if (!feedback) {
+      throw new NotFoundException(`Feedback with ID ${id} not found`);
+    }
+
+    return feedback;
+  }
+
+  async update(id: string, updateDto: UpdateFeedbackDto): Promise<Feedback> {
+    await this.feedbackRepository.update(id, updateDto);
+    return this.findOne(id);
+  }
+
+  async remove(id: string): Promise<void> {
+    const result = await this.feedbackRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Feedback with ID ${id} not found`);
+    }
+  }
+
+  async getStats(): Promise<any> {
+    const totalOpen = await this.feedbackRepository.count({
+      where: { status: FeedbackStatus.OPEN },
+    });
+
+    const byPriority = await this.feedbackRepository
+      .createQueryBuilder('feedback')
+      .select('feedback.priority', 'priority')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('feedback.priority')
+      .getRawMany();
+
+    const overdueItems = await this.feedbackRepository.count({
+      where: {
+        status: FeedbackStatus.OPEN,
+        deadline: LessThan(new Date()),
+      },
+    });
+
+    return {
+      totalOpen,
+      byPriority: byPriority.reduce((acc, curr) => {
+        acc[curr.priority] = parseInt(curr.count);
+        return acc;
+      }, {}),
+      overdueItems,
+    };
+  }
+}
