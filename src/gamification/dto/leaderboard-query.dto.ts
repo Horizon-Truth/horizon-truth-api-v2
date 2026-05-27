@@ -10,3 +10,9 @@ export class LeaderboardQueryDto {
     enum: LeaderboardType,
     default: LeaderboardType.GAME_SCORE,
   })
+  @IsOptional()
+  @IsEnum(LeaderboardType)
+  type: LeaderboardType = LeaderboardType.GAME_SCORE;
+
+  @ApiProperty({
+    description: 'Time period for leaderboard',
