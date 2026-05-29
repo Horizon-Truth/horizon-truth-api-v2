@@ -68,3 +68,53 @@ describe('ReportsService', () => {
 
     const result = await service.create(
       {
+        title: 'False claim about vaccines',
+        description: 'This article repeats a false vaccine claim.',
+        contentType: 'ARTICLE' as any,
+        sourceUrl: 'https://example.com/fake-news',
+        language: 'en',
+      },
+      'user-1',
+    );
+
+    expect(result.isDuplicate).toBe(true);
+    expect(result.duplicateOfId).toBe(existing.id);
+    expect(auditLogsService.createLog).toHaveBeenCalled();
+  });
+
+  it('records an audit entry when a moderator updates report status', async () => {
+    const existingReport = {
+      id: 'report-1',
+      status: ReportStatus.NEW,
+      priority: ReportPriorityLevel.MEDIUM,
+      title: 'Test report',
+      description: 'Details',
+      reporterId: 'user-1',
+    };
+
+    reportRepository.findOne.mockResolvedValue(existingReport);
+    reportRepository.save.mockResolvedValue({
+      ...existingReport,
+      status: ReportStatus.UNDER_REVIEW,
+      moderatorNotes: 'Needs more evidence',
+    });
+
+    const result = await service.update(
+      'report-1',
+      {
+        status: ReportStatus.UNDER_REVIEW,
+        moderatorNotes: 'Needs more evidence',
+      },
+      'moderator-1',
+    );
+
+    expect(result.status).toBe(ReportStatus.UNDER_REVIEW);
+    expect(auditLogsService.createLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: expect.stringContaining('updated'),
+        entityType: 'Report',
+        entityId: 'report-1',
+      }),
+    );
+  });
+});

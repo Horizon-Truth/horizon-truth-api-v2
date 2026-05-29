@@ -28,3 +28,11 @@ export class PlayerScenarioRecord {
     user: User;
 
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+    @Column({ name: 'scenario_id' })
+    scenarioId: string;
+
+    @ManyToOne(() => Scenario)
+    @JoinColumn({ name: 'scenario_id' })
+    scenario: Scenario;
+
+    @ApiProperty({ example: 100 })

@@ -10,3 +10,7 @@ export class AwardBadgeDto {
   userId: string;
 
   @ApiProperty({
+    description: 'Badge code to award',
+    example: 'FIRST_GAME',
+  })
+  @IsString()

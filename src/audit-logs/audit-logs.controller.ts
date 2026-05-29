@@ -51,3 +51,40 @@ export class AuditLogsController {
   @ApiResponse({ status: 200, description: 'Return audit logs as CSV file.' })
   async export(
     @Query('userId') userId: string,
+    @Query('action') action: string,
+    @Query('entityType') entityType: string,
+    @Res() res: Response,
+  ) {
+    const logs = await this.auditLogsService.exportLogs({
+      userId,
+      action,
+      entityType,
+    });
+
+    const csvHeader = 'ID,Timestamp,User,Email,Action,Entity Type,Entity ID,IP Address,User Agent,Metadata\n';
+    const csvRows = logs.map(log => {
+      const row = [
+        log.id,
+        log.createdAt.toISOString(),
+        log.user?.username || 'System',
+        log.user?.email || 'automated@horizon',
+        `"${log.action.replace(/"/g, '""')}"`,
+        log.entityType,
+        log.entityId,
+        log.ipAddress || 'unknown',
+        `"${(log.userAgent || '').replace(/"/g, '""')}"`,
+        `"${JSON.stringify(log.metadata || {}).replace(/"/g, '""')}"`
+      ];
+      return row.join(',');
+    }).join('\n');
+
+    const csvContent = csvHeader + csvRows;
+
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename=audit-logs-${new Date().toISOString().split('T')[0]}.csv`,
+    });
+
+    return res.status(200).send(csvContent);
+  }
+}
