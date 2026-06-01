@@ -99,3 +99,125 @@ export class DisseminationDto {
     estimated_audience_size?: number;
 
     @IsBoolean()
+    @IsOptional()
+    re_share_enabled?: boolean;
+}
+
+export class ContentConsumptionDto {
+    @IsInt()
+    @IsOptional()
+    scroll_depth_percent?: number;
+
+    @IsInt()
+    @IsOptional()
+    text_dwell_time_ms?: number;
+
+    @IsInt()
+    @IsOptional()
+    paragraphs_viewed?: number;
+
+    @IsInt()
+    @IsOptional()
+    back_scroll_count?: number;
+}
+
+export class VerificationDto {
+    @IsInt()
+    @IsOptional()
+    source_button_clicked_count?: number;
+
+    @IsBoolean()
+    @IsOptional()
+    learn_more_opened?: boolean;
+
+    @IsInt()
+    @IsOptional()
+    fact_panel_views?: number;
+
+    @IsBoolean()
+    @IsOptional()
+    external_link_clicked?: boolean;
+
+    @IsBoolean()
+    @IsOptional()
+    profile_checked?: boolean;
+
+    @IsDateString()
+    @IsOptional()
+    verification_start_timestamp?: string;
+
+    @IsDateString()
+    @IsOptional()
+    verification_end_timestamp?: string;
+
+    @IsInt()
+    @IsOptional()
+    verification_time_ms?: number;
+
+    @IsInt()
+    @IsOptional()
+    verification_sequence_length?: number;
+}
+
+export class ResponseTimingDto {
+    @IsDateString()
+    @IsOptional()
+    content_shown_timestamp?: string;
+
+    @IsDateString()
+    @IsOptional()
+    first_action_timestamp?: string;
+
+    @IsDateString()
+    @IsOptional()
+    final_decision_timestamp?: string;
+
+    @IsInt()
+    @IsOptional()
+    time_to_first_action_ms?: number;
+
+    @IsInt()
+    @IsOptional()
+    time_to_final_decision_ms?: number;
+}
+
+export class CreateTelemetryPayloadDto {
+    @IsString()
+    @IsNotEmpty()
+    session_id: string;
+
+    @ValidateNested()
+    @Type(() => SessionContextDto)
+    @IsOptional()
+    session_context?: SessionContextDto;
+
+    @ValidateNested()
+    @Type(() => DecisionOutcomeDto)
+    @IsOptional()
+    decision_outcome?: DecisionOutcomeDto;
+
+    @ValidateNested()
+    @Type(() => SocialContextExposureDto)
+    @IsOptional()
+    social_context?: SocialContextExposureDto;
+
+    @ValidateNested()
+    @Type(() => DisseminationDto)
+    @IsOptional()
+    dissemination?: DisseminationDto;
+
+    @ValidateNested()
+    @Type(() => ContentConsumptionDto)
+    @IsOptional()
+    content_consumption?: ContentConsumptionDto;
+
+    @ValidateNested()
+    @Type(() => VerificationDto)
+    @IsOptional()
+    verification?: VerificationDto;
+
+    @ValidateNested()
+    @Type(() => ResponseTimingDto)
+    @IsOptional()
+    response_timing?: ResponseTimingDto;
+}
