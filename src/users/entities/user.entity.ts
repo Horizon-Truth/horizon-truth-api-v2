@@ -18,19 +18,19 @@ export class User {
   id: string;
 
   @ApiPropertyOptional({ example: 'user@example.com' })
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   email?: string | null;
 
   @ApiPropertyOptional({ example: 'johndoe' })
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   username?: string | null;
 
   @ApiPropertyOptional({ example: '+22' })
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   phone?: string | null;
 
   @ApiPropertyOptional()
-  @Column({ name: 'api_key', unique: true, nullable: true })
+  @Column({ type: 'varchar', name: 'api_key', unique: true, nullable: true })
   apiKey?: string | null;
 
   @Column({
