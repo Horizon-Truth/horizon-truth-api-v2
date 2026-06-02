@@ -145,6 +145,25 @@ export class UsersController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('me/anonymize')
+  @ApiOperation({ summary: 'Anonymize own account & PII' })
+  @ApiResponse({ status: 200, description: 'Account anonymized successfully.' })
+  async anonymizeMe(@Request() req) {
+    await this.usersService.anonymizeAccount(req.user.userId);
+    await this.usersService.logActivity(
+      req.user.userId,
+      'ACCOUNT_ANONYMIZED',
+      {},
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return {
+      message: 'Account anonymized successfully. You are now logged out.',
+    };
+  }
+
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SYSTEM_ADMIN)
   @Delete(':id')

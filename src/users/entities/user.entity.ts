@@ -18,20 +18,20 @@ export class User {
   id: string;
 
   @ApiPropertyOptional({ example: 'user@example.com' })
-  @Column({ unique: true, nullable: true })
-  email?: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  email?: string | null;
 
   @ApiPropertyOptional({ example: 'johndoe' })
-  @Column({ unique: true, nullable: true })
-  username?: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  username?: string | null;
 
   @ApiPropertyOptional({ example: '+22' })
-  @Column({ unique: true, nullable: true })
-  phone?: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  phone?: string | null;
 
   @ApiPropertyOptional()
-  @Column({ name: 'api_key', unique: true, nullable: true })
-  apiKey?: string;
+  @Column({ type: 'varchar', name: 'api_key', unique: true, nullable: true })
+  apiKey?: string | null;
 
   @Column({
     name: 'password_hash',
@@ -39,7 +39,7 @@ export class User {
     type: 'text',
     nullable: true,
   })
-  passwordHash: string;
+  passwordHash: string | null;
 
   @ApiProperty({ example: 'John Doe' })
   @Column({ name: 'full_name' })
@@ -90,7 +90,7 @@ export class User {
     privacy?: { profileVisible?: boolean; activityVisible?: boolean };
     theme?: 'light' | 'dark';
     language?: string;
-  };
+  } | null;
 
   @ApiPropertyOptional({ description: 'Soft delete timestamp' })
   @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })

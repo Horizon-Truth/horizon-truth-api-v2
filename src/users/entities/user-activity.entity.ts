@@ -31,7 +31,7 @@ export class UserActivity {
     description: 'Additional metadata about the activity',
   })
   @Column({ type: 'jsonb', nullable: true })
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any> | null;
 
   @ApiPropertyOptional({
     example: 'a3f5b2c9...',
