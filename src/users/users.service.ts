@@ -12,6 +12,8 @@ import { UserActivity } from './entities/user-activity.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { IpPrivacyUtil } from '../shared/utils/ip-privacy.util';
+import { PlayerProfile } from '../players/entities/player-profile.entity';
+import { UserStatus } from '../shared/enums/user-status.enum';
 
 @Injectable()
 export class UsersService {
@@ -20,6 +22,8 @@ export class UsersService {
     private usersRepository: Repository<User>,
     @InjectRepository(UserActivity)
     private activityRepository: Repository<UserActivity>,
+    @InjectRepository(PlayerProfile)
+    private playerProfileRepository: Repository<PlayerProfile>,
   ) { }
 
   async findOneByEmail(email: string): Promise<User | null> {
@@ -60,7 +64,7 @@ export class UsersService {
 
   async create(userData: Partial<User> & { password?: string }): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
-      where: [{ email: userData.email }, { username: userData.username }],
+      where: [{ email: userData.email ?? undefined }, { username: userData.username ?? undefined }],
     });
 
     if (existingUser) {
@@ -276,5 +280,38 @@ export class UsersService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async anonymizeAccount(userId: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // 1. Anonymize User record
+    await this.usersRepository.update(userId, {
+      email: null,
+      phone: null,
+      username: null,
+      passwordHash: null,
+      fullName: 'Anonymized User',
+      apiKey: null,
+      hashedRefreshToken: null,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+      isVerified: false,
+      status: UserStatus.ANONYMIZED,
+      preferences: null,
+    });
+
+    // 2. Anonymize PlayerProfile if exists
+    if (user.playerProfile) {
+      await this.playerProfileRepository.update(user.playerProfile.id, {
+        nickname: 'Former Player',
+      });
+    }
+
+    // 3. Clear activity metadata (Optional but safer)
+    await this.activityRepository.update({ userId }, { metadata: null });
   }
 }
