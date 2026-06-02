@@ -64,7 +64,7 @@ export class UsersService {
 
   async create(userData: Partial<User> & { password?: string }): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
-      where: [{ email: userData.email }, { username: userData.username }],
+      where: [{ email: userData.email ?? undefined }, { username: userData.username ?? undefined }],
     });
 
     if (existingUser) {
