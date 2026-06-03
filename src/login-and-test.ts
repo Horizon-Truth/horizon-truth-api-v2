@@ -21,3 +21,30 @@ async function run() {
 
         // Create a forged valid token for this user
         const payload = { sub: userId };
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '1h' });
+        console.log('Forged token for userId', userId);
+
+        console.log(`Calling GET /engine/game/progress/${progressId}/summary`);
+        const summaryRes = await fetch(`http://localhost:3000/engine/game/progress/${progressId}/summary`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        console.log(`Status code: ${summaryRes.status}`);
+        const summaryData = await summaryRes.json().catch(() => null);
+        if (!summaryRes.ok) {
+            console.log('Error data:', summaryData);
+        } else {
+            console.log('Success!', summaryData);
+        }
+
+    } catch (err: any) {
+        console.error('Error:', err.message);
+    } finally {
+        await AppDataSource.destroy();
+    }
+}
+
+run().catch(console.error);
