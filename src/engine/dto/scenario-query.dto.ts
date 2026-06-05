@@ -15,3 +15,72 @@ import { ContentLanguage } from '../../shared/enums/content-language.enum';
 export class ScenarioQueryDto {
   @ApiPropertyOptional({
     description:
+      'Filter scenarios by content language. When omitted on player-facing endpoints the default language is used so content is never mixed across languages.',
+    enum: ContentLanguage,
+  })
+  @IsOptional()
+  @IsEnum(ContentLanguage)
+  language?: ContentLanguage;
+
+  @ApiPropertyOptional({
+    description: 'Free-text search within the selected language',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+  @ApiPropertyOptional({
+    description: 'Filter by scenario difficulty',
+    enum: ScenarioDifficulty,
+  })
+  @IsOptional()
+  @IsEnum(ScenarioDifficulty)
+  difficulty?: ScenarioDifficulty;
+
+  @ApiPropertyOptional({
+    description: 'Filter by scenario type',
+    enum: ScenarioType,
+  })
+  @IsOptional()
+  @IsEnum(ScenarioType)
+  scenarioType?: ScenarioType;
+
+  @ApiPropertyOptional({
+    description: 'Filter active scenarios only',
+    default: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isActive?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'Filter archived scenarios',
+    default: false,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isArchived?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Page number for pagination',
+    default: 1,
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    default: 10,
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 10;
+}

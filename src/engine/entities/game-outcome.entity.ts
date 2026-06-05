@@ -53,3 +53,26 @@ export class GameOutcome {
   @ApiProperty({ enum: OutcomeType })
   @Column({
     name: 'outcome_type',
+    type: 'enum',
+    enum: OutcomeType,
+  })
+  outcomeType: OutcomeType;
+
+  @ApiProperty({ example: 10 })
+  @Column({ name: 'trust_score_delta', type: 'int', default: 0 })
+  trustScoreDelta: number;
+
+  @ApiPropertyOptional({
+    example: 'Great job! You identified a potential fake news source.',
+  })
+  @Column({ type: 'text', nullable: true })
+  message: string;
+
+  @ApiPropertyOptional({ default: false })
+  @Column({ name: 'end_scenario', type: 'boolean', default: false })
+  endScenario: boolean;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+}
