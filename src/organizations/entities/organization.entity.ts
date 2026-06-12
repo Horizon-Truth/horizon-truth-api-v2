@@ -19,3 +19,46 @@ export class Organization {
 
   @ApiProperty({ example: 'Truth Watch' })
   @Column()
+  name: string;
+
+  @ApiProperty({ enum: OrganizationType })
+  @Column({
+    type: 'enum',
+    enum: OrganizationType,
+  })
+  type: OrganizationType;
+
+  @ApiPropertyOptional({ example: 'Independent fact-checking organization' })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiProperty({ example: 'Ethiopia' })
+  @Column({ default: 'Ethiopia' })
+  country: string;
+
+  @ApiPropertyOptional({ example: 'Addis Ababa' })
+  @Column({ nullable: true })
+  region: string;
+
+  @ApiProperty({ enum: OrganizationStatus, default: OrganizationStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: OrganizationStatus,
+    default: OrganizationStatus.ACTIVE,
+  })
+  status: OrganizationStatus;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+
+  @ApiProperty()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  updatedAt: Date;
+
+  @OneToMany(
+    () => OrganizationUser,
+    (organizationUser) => organizationUser.organization,
+  )
+  users: OrganizationUser[];
+}
