@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../shared/enums/user-role.enum';
+import { normalizeLanguage } from '../shared/enums/content-language.enum';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @ApiTags('Game Engine')
@@ -57,6 +58,9 @@ export class EngineController {
   async getScenarios(@Request() req, @Query() query: ScenarioQueryDto) {
     // Players should never see archived scenarios
     query.isArchived = false;
+    // Players must always view a single language. Resolve to the requested
+    // language, falling back to the default so content is never mixed.
+    query.language = normalizeLanguage(query.language);
     return this.engineService.getScenarios(query, req.user?.userId);
   }
 

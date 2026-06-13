@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, In } from 'typeorm';
@@ -23,15 +24,22 @@ import { CreateLevelDto } from './dto/create-level.dto';
 import { UpdateLevelDto } from './dto/update-level.dto';
 import { GameProgressStatus } from '../shared/enums/game-progress-status.enum';
 import { OutcomeType } from '../shared/enums/outcome-type.enum';
+import { SceneContentType } from '../shared/enums/scene-content-type.enum';
 import { GamificationService } from '../gamification/gamification.service';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 
 import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
 import { GuestPlay } from './entities/guest-play.entity';
 import { SaveGuestPlayDto } from './dto/save-guest-play.dto';
+import {
+  ContentLanguage,
+  normalizeLanguage,
+} from '../shared/enums/content-language.enum';
 
 @Injectable()
 export class EngineService {
+  private readonly logger = new Logger(EngineService.name);
+
   constructor(
     @InjectRepository(Scenario)
     private scenarioRepository: Repository<Scenario>,
@@ -83,7 +91,7 @@ export class EngineService {
    * Get list of scenarios with optional filtering and user records
    */
   async getScenarios(query: ScenarioQueryDto, userId?: string): Promise<any> {
-    const { difficulty, scenarioType, isActive, isArchived, page = 1, limit = 10 } = query;
+    const { difficulty, scenarioType, isActive, isArchived, language, search, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
@@ -91,6 +99,21 @@ export class EngineService {
       .createQueryBuilder('scenario')
       .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
       .orderBy('scenario.order', 'ASC');
+
+    // Language filtering. Player-facing requests always carry a resolved
+    // language (the controller injects the player's selected language) so
+    // content is never mixed across languages. Admin requests may omit it to
+    // browse every language.
+    if (language) {
+      queryBuilder.andWhere('scenario.language = :language', { language });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(scenario.title ILIKE :search OR scenario.description ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
 
     if (difficulty) {
       queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
@@ -114,6 +137,14 @@ export class EngineService {
     }
 
     const scenarios = await queryBuilder.getMany();
+
+    // Diagnostics: verify language filtering is actually constraining results.
+    this.logger.debug(
+      `getScenarios language=${language ?? 'ALL'} search=${search ?? '-'} -> ${scenarios.length} scenario(s)` +
+        (language && scenarios.some((s) => s.language !== language)
+          ? ' [WARNING: language leak detected]'
+          : ''),
+    );
 
     // If userId provided, fetch ALL user records AND active progress
     let userRecords: PlayerScenarioRecord[] = [];
@@ -304,15 +335,28 @@ export class EngineService {
       }
 
       // 2. Check if scenario already exists (Robust duplicate check)
-      // Check by ID first
-      let existing = await this.scenarioRepository.findOne({
-        where: { id: scenarioData.id },
-      });
+      // Language is part of identity: the same title in a different language is
+      // a distinct scenario, so it must NOT be treated as a duplicate.
+      const importLanguage = normalizeLanguage(scenarioData.language);
 
-      // If no ID match, check by title and level (prevent "semantic" duplicates)
+      // Check by ID first — but only when the payload actually carries an id.
+      // (A bare `where: { id: undefined }` makes TypeORM drop the condition and
+      // return the first row, which would wrongly flag every import as a dup.)
+      let existing = scenarioData.id
+        ? await this.scenarioRepository.findOne({
+            where: { id: scenarioData.id },
+          })
+        : null;
+
+      // If no ID match, check by title + level + language (prevent "semantic"
+      // duplicates within the same language only).
       if (!existing && targetLevelId) {
         existing = await this.scenarioRepository.findOne({
-          where: { title: scenarioData.title, gameLevelId: targetLevelId },
+          where: {
+            title: scenarioData.title,
+            gameLevelId: targetLevelId,
+            language: importLanguage,
+          },
         });
       }
 
@@ -336,6 +380,8 @@ export class EngineService {
         const scenario = queryRunner.manager.create(Scenario, {
           ...payload,
           scenarioType,
+          // Imported scenarios may predate the language system; default safely.
+          language: normalizeLanguage(payload.language),
           gameLevelId: targetLevelId,
         });
 
@@ -344,7 +390,7 @@ export class EngineService {
         // Process scenes if present
         if (scenes && Array.isArray(scenes)) {
           for (const sceneData of scenes) {
-            const { content, choices, ...scenePayload } = sceneData;
+            const { content, choices, id: _sceneId, ...scenePayload } = sceneData;
             const scene = queryRunner.manager.create(Scene, {
               ...scenePayload,
               scenarioId: savedScenario.id,
@@ -353,8 +399,16 @@ export class EngineService {
 
             // Process content
             if (content) {
+              const { id: _contentId, ...contentRest } = content;
               const sceneContent = queryRunner.manager.create(SceneContent, {
-                ...content,
+                ...contentRest,
+                // contentType is NOT NULL. Exported/generated JSON may omit it
+                // (e.g. on some scenes), so fall back to the scene's content
+                // type, then to TEXT, so the import never crashes.
+                contentType:
+                  contentRest.contentType ||
+                  savedScene.contentType ||
+                  SceneContentType.TEXT,
                 sceneId: savedScene.id,
               });
               await queryRunner.manager.save(sceneContent);
@@ -363,18 +417,31 @@ export class EngineService {
             // Process choices
             if (choices && Array.isArray(choices)) {
               for (const choiceData of choices) {
-                const { outcomes, ...choicePayload } = choiceData;
+                const { outcomes, id: _choiceId, ...choicePayload } = choiceData;
                 const choice = queryRunner.manager.create(PlayerChoice, {
                   ...choicePayload,
                   sceneId: savedScene.id,
                 });
                 const savedChoice = await queryRunner.manager.save(choice);
 
-                // Process outcomes
+                // Process outcomes. Only import the scenario's *template*
+                // outcomes (no userId/progressId). Per-player play history that
+                // rides along in an export must not be imported as scenario
+                // definition data.
                 if (outcomes && Array.isArray(outcomes)) {
-                  for (const outcomeData of outcomes) {
+                  const templateOutcomes = outcomes.filter(
+                    (o) => !o.userId && !o.progressId,
+                  );
+                  for (const outcomeData of templateOutcomes) {
+                    const {
+                      id: _outcomeId,
+                      userId: _userId,
+                      progressId: _progressId,
+                      completedAt: _completedAt,
+                      ...outcomePayload
+                    } = outcomeData;
                     const outcome = queryRunner.manager.create(GameOutcome, {
-                      ...outcomeData,
+                      ...outcomePayload,
                       scenarioId: savedScenario.id,
                       playerChoiceId: savedChoice.id,
                     });
@@ -1287,6 +1354,9 @@ export class EngineService {
     const scenarioData = {
       ...rest,
       scenarioType: type || rest.scenarioType,
+      // Guarantee a valid language is always persisted (defends against any
+      // path that reaches here without DTO validation, e.g. seeders).
+      language: normalizeLanguage(rest.language),
     };
 
     // Get default game level if not provided

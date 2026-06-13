@@ -2,12 +2,18 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    Index,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+    ContentLanguage,
+    DEFAULT_CONTENT_LANGUAGE,
+} from '../../shared/enums/content-language.enum';
 
 @Entity('blogs')
+@Index('idx_blogs_language', ['language'])
 export class Blog {
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
     @PrimaryGeneratedColumn('uuid')
@@ -48,6 +54,15 @@ export class Blog {
     @ApiProperty({ example: 'Technology' })
     @Column()
     category: string;
+
+    @ApiProperty({ enum: ContentLanguage, default: DEFAULT_CONTENT_LANGUAGE })
+    @Column({
+        name: 'language',
+        type: 'enum',
+        enum: ContentLanguage,
+        default: DEFAULT_CONTENT_LANGUAGE,
+    })
+    language: ContentLanguage;
 
     @ApiProperty({ example: '6 min read' })
     @Column({ name: 'read_time' })
