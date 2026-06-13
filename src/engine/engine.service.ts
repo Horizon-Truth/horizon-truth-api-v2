@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, In } from 'typeorm';
@@ -29,9 +30,15 @@ import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { PlayerScenarioRecord } from './entities/player-scenario-record.entity';
 import { GuestPlay } from './entities/guest-play.entity';
 import { SaveGuestPlayDto } from './dto/save-guest-play.dto';
+import {
+  ContentLanguage,
+  normalizeLanguage,
+} from '../shared/enums/content-language.enum';
 
 @Injectable()
 export class EngineService {
+  private readonly logger = new Logger(EngineService.name);
+
   constructor(
     @InjectRepository(Scenario)
     private scenarioRepository: Repository<Scenario>,
@@ -83,7 +90,7 @@ export class EngineService {
    * Get list of scenarios with optional filtering and user records
    */
   async getScenarios(query: ScenarioQueryDto, userId?: string): Promise<any> {
-    const { difficulty, scenarioType, isActive, isArchived, page = 1, limit = 10 } = query;
+    const { difficulty, scenarioType, isActive, isArchived, language, search, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
@@ -91,6 +98,21 @@ export class EngineService {
       .createQueryBuilder('scenario')
       .leftJoinAndSelect('scenario.gameLevel', 'gameLevel')
       .orderBy('scenario.order', 'ASC');
+
+    // Language filtering. Player-facing requests always carry a resolved
+    // language (the controller injects the player's selected language) so
+    // content is never mixed across languages. Admin requests may omit it to
+    // browse every language.
+    if (language) {
+      queryBuilder.andWhere('scenario.language = :language', { language });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(scenario.title ILIKE :search OR scenario.description ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
 
     if (difficulty) {
       queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
@@ -114,6 +136,14 @@ export class EngineService {
     }
 
     const scenarios = await queryBuilder.getMany();
+
+    // Diagnostics: verify language filtering is actually constraining results.
+    this.logger.debug(
+      `getScenarios language=${language ?? 'ALL'} search=${search ?? '-'} -> ${scenarios.length} scenario(s)` +
+        (language && scenarios.some((s) => s.language !== language)
+          ? ' [WARNING: language leak detected]'
+          : ''),
+    );
 
     // If userId provided, fetch ALL user records AND active progress
     let userRecords: PlayerScenarioRecord[] = [];
@@ -336,6 +366,8 @@ export class EngineService {
         const scenario = queryRunner.manager.create(Scenario, {
           ...payload,
           scenarioType,
+          // Imported scenarios may predate the language system; default safely.
+          language: normalizeLanguage(payload.language),
           gameLevelId: targetLevelId,
         });
 
@@ -1287,6 +1319,9 @@ export class EngineService {
     const scenarioData = {
       ...rest,
       scenarioType: type || rest.scenarioType,
+      // Guarantee a valid language is always persisted (defends against any
+      // path that reaches here without DTO validation, e.g. seeders).
+      language: normalizeLanguage(rest.language),
     };
 
     // Get default game level if not provided

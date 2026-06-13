@@ -5,16 +5,23 @@ import {
     Body,
     Patch,
     Param,
+    Query,
     Delete,
     UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+    ApiTags,
+    ApiOperation,
+    ApiBearerAuth,
+    ApiQuery,
+} from '@nestjs/swagger';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto, UpdateResourceDto } from './dto/resource.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../shared/enums/user-role.enum';
+import { ContentLanguage } from '../shared/enums/content-language.enum';
 
 @ApiTags('resources')
 @Controller('resources')
@@ -22,9 +29,14 @@ export class ResourcesController {
     constructor(private readonly resourcesService: ResourcesService) { }
 
     @Get()
-    @ApiOperation({ summary: 'Get all resources' })
-    findAll() {
-        return this.resourcesService.findAll();
+    @ApiOperation({ summary: 'Get all resources (optionally filtered by language)' })
+    @ApiQuery({ name: 'language', enum: ContentLanguage, required: false })
+    @ApiQuery({ name: 'search', required: false })
+    findAll(
+        @Query('language') language?: ContentLanguage,
+        @Query('search') search?: string,
+    ) {
+        return this.resourcesService.findAll({ language, search });
     }
 
     @Get(':id')

@@ -2,10 +2,15 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    Index,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+    ContentLanguage,
+    DEFAULT_CONTENT_LANGUAGE,
+} from '../../shared/enums/content-language.enum';
 
 export enum ResourceType {
     GUIDE = 'guide',
@@ -14,6 +19,7 @@ export enum ResourceType {
 }
 
 @Entity('resources')
+@Index('idx_resources_language', ['language'])
 export class Resource {
     @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
     @PrimaryGeneratedColumn('uuid')
@@ -38,6 +44,15 @@ export class Resource {
     @ApiProperty({ example: 'Learn essential steps to verify social media posts...' })
     @Column({ type: 'text' })
     description: string;
+
+    @ApiProperty({ enum: ContentLanguage, default: DEFAULT_CONTENT_LANGUAGE })
+    @Column({
+        name: 'language',
+        type: 'enum',
+        enum: ContentLanguage,
+        default: DEFAULT_CONTENT_LANGUAGE,
+    })
+    language: ContentLanguage;
 
     @ApiProperty({ example: '15 min read' })
     @Column()

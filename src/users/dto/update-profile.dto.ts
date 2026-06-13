@@ -1,11 +1,13 @@
 import {
   IsString,
   IsOptional,
+  IsEnum,
   MinLength,
   MaxLength,
   Matches,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ContentLanguage } from '../../shared/enums/content-language.enum';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({
@@ -38,13 +40,13 @@ export class UpdateProfileDto {
   phone?: string;
 
   @ApiPropertyOptional({
-    example: 'en',
-    description: 'Preferred language (en, fr, ar, etc.)',
+    enum: ContentLanguage,
+    example: ContentLanguage.ENGLISH,
+    description: 'Preferred display/content language (en, am, om)',
   })
   @IsOptional()
-  @IsString()
-  @Matches(/^[a-z]{2}$/, {
-    message: 'Language must be a 2-letter ISO 639-1 code',
+  @IsEnum(ContentLanguage, {
+    message: 'Preferred language must be a supported language (en, am, om)',
   })
-  preferredLanguage?: string;
+  preferredLanguage?: ContentLanguage;
 }

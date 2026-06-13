@@ -1,18 +1,47 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resource } from './entities/resource.entity';
 import { CreateResourceDto, UpdateResourceDto } from './dto/resource.dto';
+import { ContentLanguage } from '../shared/enums/content-language.enum';
+
+export interface ResourceQueryOptions {
+    /** Restrict results to a single content language. */
+    language?: ContentLanguage;
+    /** Free-text search within title/description. */
+    search?: string;
+}
 
 @Injectable()
 export class ResourcesService {
+    private readonly logger = new Logger(ResourcesService.name);
+
     constructor(
         @InjectRepository(Resource)
         private readonly resourceRepository: Repository<Resource>,
     ) { }
 
-    async findAll(): Promise<Resource[]> {
-        return this.resourceRepository.find();
+    async findAll(options: ResourceQueryOptions = {}): Promise<Resource[]> {
+        const { language, search } = options;
+
+        const qb = this.resourceRepository.createQueryBuilder('resource');
+
+        if (language) {
+            qb.andWhere('resource.language = :language', { language });
+        }
+
+        if (search) {
+            qb.andWhere(
+                '(resource.title ILIKE :search OR resource.description ILIKE :search)',
+                { search: `%${search}%` },
+            );
+        }
+
+        const resources = await qb.getMany();
+        this.logger.debug(
+            `findAll language=${language ?? 'ALL'} search=${search ?? '-'} -> ${resources.length} resource(s)`,
+        );
+        return resources;
     }
 
     async findOne(id: string): Promise<Resource> {

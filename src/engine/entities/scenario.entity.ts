@@ -6,14 +6,20 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GameLevel } from './game-level.entity';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';
+import {
+  ContentLanguage,
+  DEFAULT_CONTENT_LANGUAGE,
+} from '../../shared/enums/content-language.enum';
 import { Scene } from './scene.entity';
 
 @Entity('scenarios')
+@Index('idx_scenarios_language', ['language'])
 export class Scenario {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @PrimaryGeneratedColumn('uuid')
@@ -51,6 +57,20 @@ export class Scenario {
     enum: ScenarioDifficulty,
   })
   difficulty: ScenarioDifficulty;
+
+  /**
+   * Language of this scenario and all of its scenes/content. This is the
+   * primary anchor for game-content language filtering: a player viewing the
+   * game in a given language only ever sees scenarios tagged with that language.
+   */
+  @ApiProperty({ enum: ContentLanguage, default: DEFAULT_CONTENT_LANGUAGE })
+  @Column({
+    name: 'language',
+    type: 'enum',
+    enum: ContentLanguage,
+    default: DEFAULT_CONTENT_LANGUAGE,
+  })
+  language: ContentLanguage;
 
   @ApiProperty({ default: true })
   @Column({ name: 'is_active', type: 'boolean', default: true })
