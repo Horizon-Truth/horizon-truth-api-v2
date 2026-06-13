@@ -1,10 +1,33 @@
-import { IsOptional, IsEnum, IsBoolean, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsInt,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
+import { ContentLanguage } from '../../shared/enums/content-language.enum';
 
 export class ScenarioQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Filter scenarios by content language. When omitted on player-facing endpoints the default language is used so content is never mixed across languages.',
+    enum: ContentLanguage,
+  })
+  @IsOptional()
+  @IsEnum(ContentLanguage)
+  language?: ContentLanguage;
+
+  @ApiPropertyOptional({
+    description: 'Free-text search within the selected language',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
   @ApiPropertyOptional({
     description: 'Filter by scenario difficulty',
     enum: ScenarioDifficulty,

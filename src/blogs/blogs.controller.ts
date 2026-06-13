@@ -5,16 +5,23 @@ import {
     Body,
     Patch,
     Param,
+    Query,
     Delete,
     UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+    ApiTags,
+    ApiOperation,
+    ApiBearerAuth,
+    ApiQuery,
+} from '@nestjs/swagger';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto, UpdateBlogDto } from './dto/blog.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../shared/enums/user-role.enum';
+import { ContentLanguage } from '../shared/enums/content-language.enum';
 
 @ApiTags('blogs')
 @Controller('blogs')
@@ -22,9 +29,14 @@ export class BlogsController {
     constructor(private readonly blogsService: BlogsService) { }
 
     @Get()
-    @ApiOperation({ summary: 'Get all blogs' })
-    findAll() {
-        return this.blogsService.findAll();
+    @ApiOperation({ summary: 'Get all blogs (optionally filtered by language)' })
+    @ApiQuery({ name: 'language', enum: ContentLanguage, required: false })
+    @ApiQuery({ name: 'search', required: false })
+    findAll(
+        @Query('language') language?: ContentLanguage,
+        @Query('search') search?: string,
+    ) {
+        return this.blogsService.findAll({ language, search });
     }
 
     @Get(':id')

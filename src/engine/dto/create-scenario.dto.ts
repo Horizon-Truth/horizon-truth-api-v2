@@ -9,11 +9,23 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScenarioType } from '../../shared/enums/scenario-type.enum';
 import { ScenarioDifficulty } from '../../shared/enums/scenario-difficulty.enum';
+import { ContentLanguage } from '../../shared/enums/content-language.enum';
 
 export class CreateScenarioDto {
   @ApiProperty({ example: 'The Viral Hoax' })
   @IsString()
   title: string;
+
+  @ApiProperty({
+    enum: ContentLanguage,
+    description:
+      'Language of the scenario and all of its content. Required: content cannot be saved without a valid language.',
+    example: ContentLanguage.ENGLISH,
+  })
+  @IsEnum(ContentLanguage, {
+    message: 'language must be a supported language (en, am, om)',
+  })
+  language: ContentLanguage;
 
   @ApiProperty({
     example: 'A scenario about identifying fake news on social media.',
