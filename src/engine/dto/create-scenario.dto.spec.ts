@@ -8,7 +8,7 @@ import { ContentLanguage } from '../../shared/enums/content-language.enum';
 const base = {
   title: 'The Viral Hoax',
   description: 'A scenario about identifying fake news.',
-  type: ScenarioType.STORY,
+  type: ScenarioType.SOCIAL_POST,
   difficulty: ScenarioDifficulty.EASY,
 };
 
