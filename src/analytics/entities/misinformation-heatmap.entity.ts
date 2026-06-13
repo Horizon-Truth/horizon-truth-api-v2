@@ -21,3 +21,10 @@ export class MisinformationHeatmap {
   @ManyToOne(() => Organization)
   @JoinColumn({ name: 'organization_id' })
   organization: Organization;
+
+  @Column({
+    name: 'region_type',
+    type: 'enum',
+    enum: HeatmapRegionType,
+  })
+  regionType: HeatmapRegionType;

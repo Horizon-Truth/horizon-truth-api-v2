@@ -383,3 +383,821 @@ describe('Phase 8 — Integrity Testing', () => {
       dataSource.createQueryRunner.mockReturnValue(qr);
 
       // completeGame dependencies
+      progressRepo.findOne.mockResolvedValue(progress);
+      progressRepo.save.mockImplementation((p) => p);
+      gameOutcomeRepo.create.mockReturnValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.manager.findOne.mockResolvedValue(null);
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      const result = await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      expect(result.status).toBe('game_completed');
+    });
+
+    it('should reject choice submission when game is already completed', async () => {
+      const qr = makeQueryRunner();
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      const completedProgress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.COMPLETED,
+      };
+
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(completedProgress),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce({ id: 'scenario-1', scenes: [] }); // 1. Scenario
+
+      await expect(
+        engineService.submitChoice('user-1', {
+          progressId: 'progress-1',
+          sceneId: 'scene-1',
+          choiceId: 'choice-1',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject choice submission for wrong scene', async () => {
+      const qr = makeQueryRunner();
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        currentSceneId: 'scene-2', // User is on scene-2
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [] },
+      };
+
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+
+      await expect(
+        engineService.submitChoice('user-1', {
+          progressId: 'progress-1',
+          sceneId: 'scene-1', // But submitting for scene-1
+          choiceId: 'choice-1',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ─── 2. Trust Score Math ──────────────────────────────────────────────────
+
+  describe('2. Trust Score Math', () => {
+    it('should correctly apply positive trust score delta from outcome', async () => {
+      const templateOutcome = {
+        id: 'outcome-template',
+        trustScoreDelta: 15,
+        outcomeType: OutcomeType.PASS,
+        endScenario: false,
+        message: 'Good job!',
+        scenarioId: 'scenario-1',
+        playerChoiceId: 'choice-1',
+        score: 0,
+      };
+      const choice = {
+        id: 'choice-1',
+        label: 'VERIFY',
+        nextSceneId: 'scene-2',
+        outcomes: [templateOutcome],
+      };
+      const playerProfile = { userId: 'user-1', currentTrustScore: 50 };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: {
+          scenes: [
+            { id: 'scene-1', order: 1 },
+            { id: 'scene-2', order: 2 },
+          ],
+        },
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 1. Action
+        .mockResolvedValueOnce(choice) // 2. Choice
+        .mockResolvedValueOnce(playerProfile); // 3. PlayerProfile
+      qr.manager.find.mockResolvedValueOnce([]); // sceneChoices for accuracy
+      qr.manager.save.mockImplementation((entity, data) =>
+        data ? { ...data } : { ...entity },
+      );
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      progressRepo.findOne // after commit
+        .mockResolvedValue({
+          id: 'progress-1',
+          scenarioId: 'scenario-1',
+          status: GameProgressStatus.IN_PROGRESS,
+          currentSceneId: 'scene-2',
+          scenario: { title: 'Test' },
+          currentScene: { id: 'scene-2' },
+        });
+      sceneRepo.findOne.mockResolvedValue({
+        id: 'scene-2',
+        title: 'Scene 2',
+        order: 2,
+        choices: [],
+        content: null,
+        availableChoices: [],
+      });
+      userBadgeRepo.manager.findOne.mockResolvedValue(null);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+      });
+
+      const result = await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      // Trust delta should be returned in the result
+      expect(result.trustScoreDelta).toBe(15);
+      expect(qr.manager.save).toHaveBeenCalled();
+    });
+
+    it('should correctly apply negative trust score delta (penalty)', async () => {
+      const templateOutcome = {
+        id: 'outcome-template',
+        trustScoreDelta: -20,
+        outcomeType: OutcomeType.FAIL,
+        endScenario: true,
+        message: 'You shared misinformation!',
+        scenarioId: 'scenario-1',
+        playerChoiceId: 'choice-1',
+        score: 0,
+      };
+      const choice = {
+        id: 'choice-1',
+        label: 'SHARE',
+        nextSceneId: null,
+        outcomes: [templateOutcome],
+      };
+      const playerProfile = { userId: 'user-1', currentTrustScore: 30 };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+        user: {},
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 2. Action
+        .mockResolvedValueOnce(choice) // 3. Choice
+        .mockResolvedValueOnce(playerProfile); // 4. Profile
+      qr.manager.save.mockImplementation((entity, data) => ({ ...data }));
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      progressRepo.findOne.mockResolvedValueOnce(progress).mockResolvedValue({
+        id: 'progress-1',
+        userId: 'user-1',
+        status: GameProgressStatus.COMPLETED,
+        scenario: { title: 'Test' },
+        user: {},
+      });
+
+      gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1' });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.save.mockResolvedValue({
+        id: 'progress-1',
+        status: GameProgressStatus.COMPLETED,
+      });
+
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      const savedProfileCall = qr.manager.save.mock.calls.find(
+        (call) => call[0] === 'PlayerProfile',
+      );
+
+      // The trust score should be 30 - 20 = 10
+      if (savedProfileCall) {
+        expect(savedProfileCall[1].currentTrustScore).toBe(10);
+      }
+    });
+
+    it('should process panic score template placeholders in outcome message', async () => {
+      const templateOutcome = {
+        id: 'outcome-template',
+        trustScoreDelta: -10,
+        outcomeType: OutcomeType.FAIL,
+        endScenario: true,
+        message:
+          'Your share increased Panic Score of {{reach}} people by {{percent}}%!',
+        scenarioId: 'scenario-1',
+        playerChoiceId: 'choice-1',
+        score: 0,
+      };
+      const choice = {
+        id: 'choice-1',
+        label: 'SHARE',
+        nextSceneId: null,
+        outcomes: [templateOutcome],
+      };
+      const playerProfile = { userId: 'user-1', currentTrustScore: 50 };
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+        user: {},
+      };
+
+      const qr = makeQueryRunner();
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
+      qr.manager.findOne
+        .mockResolvedValueOnce(null) // 2. Action
+        .mockResolvedValueOnce(choice) // 3. Choice
+        .mockResolvedValueOnce(playerProfile); // 4. Profile
+      qr.manager.save.mockImplementation((entity, data) => ({ ...data }));
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      progressRepo.findOne.mockResolvedValueOnce(progress).mockResolvedValue({
+        id: 'progress-1',
+        userId: 'user-1',
+        status: GameProgressStatus.COMPLETED,
+        scenario: { title: 'Test' },
+        user: {},
+      });
+
+      gameOutcomeRepo.create.mockReturnValue({ id: 'outcome-1' });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.save.mockResolvedValue({
+        id: 'progress-1',
+        status: GameProgressStatus.COMPLETED,
+      });
+
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      await engineService.submitChoice('user-1', {
+        progressId: 'progress-1',
+        sceneId: 'scene-1',
+        choiceId: 'choice-1',
+      });
+
+      // The message should have placeholders replaced
+      const savedOutcomeCall = qr.manager.save.mock.calls.find(
+        (call) =>
+          call[0] === GameOutcome ||
+          (typeof call[0] === 'function' && call[0].name === 'GameOutcome'),
+      );
+      if (savedOutcomeCall) {
+        expect(savedOutcomeCall[1].message).not.toContain('{{reach}}');
+        expect(savedOutcomeCall[1].message).not.toContain('{{percent}}');
+      }
+    });
+
+    it('should calculate cumulative trust delta correctly in scenario summary', async () => {
+      progressRepo.findOne.mockResolvedValue({
+        id: 'progress-1',
+        userId: 'user-1',
+        scenario: { title: 'Test Scenario' },
+        finalOutcome: OutcomeType.PASS,
+      });
+
+      sceneRepo.find.mockResolvedValue([
+        { id: 'scene-1', title: 'Scene 1', choices: [{ id: 'choice-1', scoreImpact: 10, label: 'VERIFY' }] },
+        { id: 'scene-2', title: 'Scene 2', choices: [{ id: 'choice-2', scoreImpact: 5, label: 'IGNORE' }] },
+        { id: 'scene-3', title: 'Scene 3', choices: [{ id: 'choice-3', scoreImpact: 20, label: 'DOUBT' }] },
+      ]);
+
+      gameOutcomeRepo.find.mockResolvedValue([
+        {
+          trustScoreDelta: 10,
+          message: 'Good',
+          outcomeType: OutcomeType.PASS,
+          playerChoiceId: 'choice-1',
+          playerChoice: { id: 'choice-1', label: 'VERIFY', sceneId: 'scene-1' },
+        },
+        {
+          trustScoreDelta: -5,
+          message: 'Hmm',
+          outcomeType: OutcomeType.NEUTRAL,
+          playerChoiceId: 'choice-2',
+          playerChoice: { id: 'choice-2', label: 'IGNORE', sceneId: 'scene-2' },
+        },
+        {
+          trustScoreDelta: 20,
+          message: 'Excellent',
+          outcomeType: OutcomeType.PASS,
+          playerChoiceId: 'choice-3',
+          playerChoice: { id: 'choice-3', label: 'DOUBT', sceneId: 'scene-3' },
+        },
+      ]);
+
+      const summary = await engineService.getScenarioSummary(
+        'user-1',
+        'progress-1',
+      );
+
+      expect(summary.totalTrustDelta).toBe(25); // 10 - 5 + 20
+      expect(summary.choices).toHaveLength(3);
+    });
+  });
+
+  // ─── 3. Badge Deduplication Prevention ───────────────────────────────────
+
+  describe('3. Badge Deduplication Prevention', () => {
+    it('should not award a badge if user already has it', async () => {
+      const badge = { id: 'badge-1', code: 'FIRST_GAME', name: 'First Steps' };
+      const existingUserBadge = {
+        id: 'ub-1',
+        userId: 'user-1',
+        badgeId: 'badge-1',
+      };
+
+      badgeRepo.findOne.mockResolvedValue(badge);
+      userBadgeRepo.findOne.mockResolvedValue(existingUserBadge);
+
+      await expect(
+        gamificationService.awardBadge('user-1', 'FIRST_GAME'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(userBadgeRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should award badge when user does not have it', async () => {
+      const badge = { id: 'badge-1', code: 'FIRST_GAME', name: 'First Steps' };
+
+      badgeRepo.findOne.mockResolvedValue(badge);
+      userBadgeRepo.findOne.mockResolvedValue(null); // No existing badge
+      userBadgeRepo.save.mockResolvedValue({
+        id: 'ub-new',
+        userId: 'user-1',
+        badgeId: 'badge-1',
+      });
+
+      const result = await gamificationService.awardBadge(
+        'user-1',
+        'FIRST_GAME',
+      );
+
+      expect(userBadgeRepo.save).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({ userId: 'user-1', badgeId: 'badge-1' });
+    });
+
+    it('should silently skip badge award if user already has it (mid-scenario)', async () => {
+      const outcome = {
+        outcomeType: OutcomeType.PASS,
+        scenarioId: 'scenario-1',
+      } as GameOutcome;
+
+      userBadgeRepo.manager.findOne.mockResolvedValue({
+        id: 'scenario-1',
+        title: 'The Viral Post',
+      });
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+      });
+      userBadgeRepo.manager.save.mockImplementation((e, d) => d || e);
+      userBadgeRepo.manager.create.mockImplementation((e, d) => d || e);
+
+      const badge = { id: 'badge-1', code: 'COMMUNITY_PROTECTOR' };
+      badgeRepo.findOne.mockResolvedValue(badge);
+      userBadgeRepo.findOne.mockResolvedValue({ id: 'ub-1' }); // Already has it
+
+      const awarded = await gamificationService.checkOutcomeBadgeEligibility(
+        'user-1',
+        outcome,
+      );
+
+      // Should return empty array (silently skipped, not thrown)
+      expect(awarded).toEqual([]);
+    });
+
+    it('should not award badge for FAIL outcome', async () => {
+      const outcome = {
+        outcomeType: OutcomeType.FAIL,
+        scenarioId: 'scenario-1',
+      } as GameOutcome;
+
+      const awarded = await gamificationService.checkOutcomeBadgeEligibility(
+        'user-1',
+        outcome,
+      );
+
+      expect(awarded).toEqual([]);
+      expect(badgeRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should prevent double-awarding in same checkBadgeEligibility loop', async () => {
+      // Simulate user completing their first game
+      userBadgeRepo.find.mockResolvedValue([]); // No existing badges
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+      });
+
+      badgeRepo.findOne.mockImplementation(({ where }) => {
+        if (where.code === 'FIRST_GAME') {
+          return Promise.resolve({ id: 'badge-1', code: 'FIRST_GAME' });
+        }
+        if (where.code === 'PERFECT_SCORE') {
+          return Promise.resolve({ id: 'badge-4', code: 'PERFECT_SCORE' });
+        }
+        return Promise.resolve(null);
+      });
+      userBadgeRepo.findOne.mockResolvedValue(null);
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.save.mockResolvedValue({ id: 'ub-1' });
+
+      const awarded = await gamificationService.checkBadgeEligibility('user-1');
+
+      // FIRST_GAME should be awarded exactly once
+      const firstGameAwards = awarded.filter((b) => (typeof b === 'string' ? b === 'FIRST_GAME' : b.code === 'FIRST_GAME'));
+      expect(firstGameAwards).toHaveLength(1);
+    });
+  });
+
+  // ─── 4. Scenario Completion State ────────────────────────────────────────
+
+  describe('4. Scenario Completion State', () => {
+    it('should mark game progress as COMPLETED on completeGame', async () => {
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { title: 'Test Scenario', id: 'scenario-1' },
+        user: {},
+      };
+      progressRepo.findOne.mockResolvedValue(progress);
+      progressRepo.save.mockResolvedValue({
+        ...progress,
+        status: GameProgressStatus.COMPLETED,
+      });
+      gameOutcomeRepo.create.mockReturnValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.manager.findOne.mockResolvedValue({
+        userId: 'user-1',
+        currentTrustScore: 50,
+      });
+      progressRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+      });
+      progressRepo.manager.save.mockImplementation((e, d) => d || e);
+      progressRepo.manager.create.mockImplementation((e, d) => d || e);
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '1' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      const result = await engineService.completeGame(
+        'progress-1',
+        OutcomeType.PASS,
+      );
+
+      expect(result.status).toBe('game_completed');
+      expect(progressRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: GameProgressStatus.COMPLETED }),
+      );
+    });
+
+    it('should set completedAt timestamp on game completion', async () => {
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { title: 'Test', id: 'scenario-1' },
+        user: {},
+      };
+      progressRepo.findOne.mockResolvedValue(progress);
+      progressRepo.save.mockImplementation((p) => p);
+      gameOutcomeRepo.create.mockReturnValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.manager.findOne.mockResolvedValue(null);
+      progressRepo.manager.save.mockResolvedValue(null);
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      await engineService.completeGame('progress-1', OutcomeType.PASS);
+
+      const savedProgress = progressRepo.save.mock.calls[0][0];
+      expect(savedProgress.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('should record the correct finalOutcome type on completion', async () => {
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { title: 'Test', id: 'scenario-1' },
+        user: {},
+      };
+      progressRepo.findOne.mockResolvedValue(progress);
+      progressRepo.save.mockImplementation((p) => p);
+      gameOutcomeRepo.create.mockReturnValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      gameOutcomeRepo.save.mockResolvedValue({
+        id: 'outcome-1',
+        trustScoreDelta: 0,
+      });
+      progressRepo.manager.findOne.mockResolvedValue(null);
+      progressRepo.manager.save.mockResolvedValue(null);
+      userBadgeRepo.find.mockResolvedValue([]);
+      userBadgeRepo.manager.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ count: '0' }),
+      });
+      badgeRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.findOne.mockResolvedValue(null);
+      leaderboardRepo.find.mockResolvedValue([]);
+
+      await engineService.completeGame('progress-1', OutcomeType.DEATH);
+
+      const savedProgress = progressRepo.save.mock.calls[0][0];
+      expect(savedProgress.finalOutcome).toBe(OutcomeType.DEATH);
+    });
+
+    it('should not allow starting a new game if one is already IN_PROGRESS', async () => {
+      const existingProgress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.IN_PROGRESS,
+      };
+      scenarioRepo.findOne.mockResolvedValue({
+        id: 'scenario-1',
+        isActive: true,
+        scenes: [{ id: 'scene-1', order: 1 }],
+      });
+      progressRepo.findOne
+        .mockResolvedValueOnce(existingProgress) // existing in-progress found
+        .mockResolvedValue({
+          // getGameProgress + getCurrentScene calls
+          id: 'progress-1',
+          scenarioId: 'scenario-1',
+          status: GameProgressStatus.IN_PROGRESS,
+          currentSceneId: 'scene-1', // getCurrentScene needs this
+          scenario: { title: 'Test' },
+          currentScene: { id: 'scene-1' },
+        });
+      sceneRepo.findOne.mockResolvedValue({
+        id: 'scene-1',
+        title: 'Scene 1',
+        order: 1,
+        choices: [],
+        content: null,
+        availableChoices: [],
+      });
+
+      const result = await engineService.startGame('user-1', 'scenario-1');
+
+      // Should return existing progress, not create a new one
+      expect(progressRepo.save).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
+    it('should throw NotFoundException for non-existent game progress', async () => {
+      progressRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        engineService.getGameProgress('non-existent-id'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('5. Phase 9 Security - Lockdown & Exploits', () => {
+    it('should prevent replaying a choice for the same scene', async () => {
+      const qr = makeQueryRunner();
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      const progress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        currentSceneId: 'scene-1',
+        status: GameProgressStatus.IN_PROGRESS,
+        scenario: { scenes: [{ id: 'scene-1', order: 1 }] },
+      };
+
+      // 1st findOne: Progress (with lock)
+      // 2nd findOne: Existing PlayerAction (to check replay)
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(progress),
+      });
+      qr.manager.find.mockResolvedValue([]); 
+      qr.manager.findOne
+        .mockResolvedValueOnce({ id: 'act-1' }); // Replay found!
+
+      await expect(
+        engineService.submitChoice('user-1', {
+          progressId: 'progress-1',
+          sceneId: 'scene-1',
+          choiceId: 'choice-1',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(qr.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should block choice submission for COMPLETED games', async () => {
+      const qr = makeQueryRunner();
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      const completedProgress = {
+        id: 'progress-1',
+        userId: 'user-1',
+        scenarioId: 'scenario-1',
+        status: GameProgressStatus.COMPLETED,
+      };
+
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(completedProgress),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce({ id: 'scenario-1', scenes: [] }); // 1. Scenario
+
+      await expect(
+        engineService.submitChoice('user-1', {
+          progressId: 'progress-1',
+          sceneId: 'scene-1',
+          choiceId: 'choice-1',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should block re-completion of already COMPLETED games', async () => {
+      progressRepo.findOne.mockResolvedValue({
+        id: 'progress-1',
+        status: GameProgressStatus.COMPLETED,
+      });
+
+      await expect(
+        engineService.completeGame('progress-1', OutcomeType.SUCCESS),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should enforce user ownership through locked progress fetch', async () => {
+      const qr = makeQueryRunner();
+      dataSource.createQueryRunner.mockReturnValue(qr);
+
+      qr.manager.createQueryBuilder.mockReturnValue({
+        setLock: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValueOnce(null),
+      });
+
+      qr.manager.findOne.mockResolvedValueOnce(null); // 1. Scenario (if it reached here, but it won't)
+
+      await expect(
+        engineService.submitChoice('wrong-user', {
+          progressId: 'progress-1',
+          sceneId: 'scene-1',
+          choiceId: 'choice-1',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+});

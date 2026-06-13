@@ -12,3 +12,9 @@ export class SubmitChoiceDto {
   @ApiProperty({
     description: 'ID of the current scene',
     example: 'a1b2c3d4-1234-5678-90ab-cdef12345678',
+  })
+  @IsUUID()
+  sceneId: string;
+
+  @ApiProperty({
+    description: 'ID of the specific choice selected',

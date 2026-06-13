@@ -25,3 +25,10 @@ export type CalibrationLedger = Record<string, CalibrationCounters>;
 const num = (value: unknown): number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? Math.floor(value)
+    : 0;
+
+export function mergeSkillBooks(a: SkillBook = {}, b: SkillBook = {}): SkillBook {
+  const merged: SkillBook = {};
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const left = a[key] ?? { xp: 0, correct: 0, total: 0 };
+    const right = b[key] ?? { xp: 0, correct: 0, total: 0 };
