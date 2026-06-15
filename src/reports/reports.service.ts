@@ -45,7 +45,8 @@ export class ReportsService {
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.reporter', 'reporter')
       .leftJoinAndSelect('report.tags', 'tags')
-      .leftJoinAndSelect('report.verifications', 'verifications');
+      .leftJoinAndSelect('report.verifications', 'verifications')
+      .leftJoinAndSelect('verifications.user', 'verificationUser');
 
     if (status) {
       queryBuilder.andWhere('report.status = :status', { status });
