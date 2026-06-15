@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, ILike, FindOptionsWhere } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserActivity } from './entities/user-activity.entity';
@@ -114,14 +114,32 @@ export class UsersService {
   }
 
   async findAll(query: any): Promise<any> {
-    const page = query.page || 1;
-    const limit = query.limit || 10;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const search = query.search?.trim();
+    const role = query.role && query.role !== 'all' ? query.role : undefined;
+
+    // Base filters applied to every result (and to each OR branch when searching).
+    const baseWhere: FindOptionsWhere<User> = { deletedAt: IsNull() };
+    if (role) baseWhere.role = role;
+
+    // When searching, match across name/email/username — each needs its own
+    // where-object so the role/deleted filters still apply to every branch.
+    const where: FindOptionsWhere<User> | FindOptionsWhere<User>[] = search
+      ? [
+          { ...baseWhere, fullName: ILike(`%${search}%`) },
+          { ...baseWhere, email: ILike(`%${search}%`) },
+          { ...baseWhere, username: ILike(`%${search}%`) },
+        ]
+      : baseWhere;
+
     const [users, total] = await this.usersRepository.findAndCount({
-      where: { deletedAt: IsNull() }, // Exclude soft-deleted users
+      where,
       skip,
       take: limit,
+      order: { createdAt: 'DESC' },
     });
 
     return {

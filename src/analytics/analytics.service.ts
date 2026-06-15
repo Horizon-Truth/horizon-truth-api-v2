@@ -13,6 +13,8 @@ import { GuestPlay } from '../engine/entities/guest-play.entity';
 
 import { OrganizationUser } from '../organizations/entities/organization-user.entity';
 import { Report } from '../reports/entities/report.entity';
+import { ReportVerification } from '../reports/entities/report-verification.entity';
+import { ReportStatus } from '../shared/enums/report-status.enum';
 import { GameOutcome } from '../engine/entities/game-outcome.entity';
 import { PlayerScenarioRecord } from '../engine/entities/player-scenario-record.entity';
 
@@ -41,11 +43,52 @@ export class AnalyticsService {
         private readonly organizationUserRepository: Repository<OrganizationUser>,
         @InjectRepository(Report)
         private readonly reportRepository: Repository<Report>,
+        @InjectRepository(ReportVerification)
+        private readonly reportVerificationRepository: Repository<ReportVerification>,
         @InjectRepository(GameOutcome)
         private readonly gameOutcomeRepository: Repository<GameOutcome>,
         @InjectRepository(PlayerScenarioRecord)
         private readonly playerScenarioRecordRepository: Repository<PlayerScenarioRecord>,
     ) { }
+
+    /**
+     * Aggregate, non-sensitive counts for the public landing page. No auth
+     * required — returns only headline totals, never per-user data.
+     */
+    async getPublicStats() {
+        const [
+            userCount,
+            guestCount,
+            reportsDebunked,
+            verifierRow,
+            credibilityRow,
+        ] = await Promise.all([
+            this.userRepository.count(),
+            this.guestPlayRepository.count(),
+            this.reportRepository.count({ where: { status: ReportStatus.VERIFIED } }),
+            this.reportVerificationRepository
+                .createQueryBuilder('rv')
+                .select('COUNT(DISTINCT rv.user_id)', 'count')
+                .getRawOne<{ count: string }>(),
+            this.reportRepository
+                .createQueryBuilder('r')
+                .select('AVG(r.credibilityScore)', 'avg')
+                .where('r.credibilityScore IS NOT NULL')
+                .getRawOne<{ avg: string }>(),
+        ]);
+
+        const verifiers = parseInt(verifierRow?.count ?? '0', 10) || 0;
+        const accuracyRate = credibilityRow?.avg
+            ? Math.round(parseFloat(credibilityRow.avg) * 10) / 10
+            : 0;
+
+        return {
+            activeUsers: userCount + guestCount,
+            reportsDebunked,
+            verifiers,
+            accuracyRate,
+        };
+    }
 
     async getSystemStats(orgId?: string) {
         let userCount, orgCount, playerCount, scenarioCount, feedbackCount, reportCount, blogCount, resourceCount, contactCount, guestCount;
