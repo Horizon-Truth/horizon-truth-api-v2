@@ -9,6 +9,7 @@ import { PlayerAlgorithmProfile } from './entities/player-algorithm-profile.enti
 
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
+import { PublicStatsController } from './public-stats.controller';
 
 import { User } from '../users/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
@@ -24,6 +25,7 @@ import { GuestPlay } from '../engine/entities/guest-play.entity';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { OrganizationUser } from '../organizations/entities/organization-user.entity';
 import { Report } from '../reports/entities/report.entity';
+import { ReportVerification } from '../reports/entities/report-verification.entity';
 
 @Module({
   imports: [
@@ -46,11 +48,12 @@ import { Report } from '../reports/entities/report.entity';
       GuestPlay,
       OrganizationUser,
       Report,
+      ReportVerification,
       GameOutcome,
       PlayerScenarioRecord,
     ]),
   ],
-  controllers: [AnalyticsController],
+  controllers: [AnalyticsController, PublicStatsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService, TypeOrmModule],
 })
