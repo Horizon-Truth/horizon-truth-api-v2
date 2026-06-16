@@ -5,3 +5,8 @@ export enum DeviceType {
     TABLET = 'tablet',
     DESKTOP = 'desktop',
 }
+
+export enum NetworkState {
+    OFFLINE = 'offline',
+    POOR = 'poor',
+    GOOD = 'good',
