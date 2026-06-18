@@ -18,3 +18,27 @@ export class SubmitChoiceDto {
 
   @ApiProperty({
     description: 'ID of the specific choice selected',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
+  @IsOptional()
+  @IsUUID()
+  choiceId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Choice key representing player decision (for backward compatibility)',
+    example: 'VERIFY',
+    enum: ['VERIFY', 'SHARE', 'IGNORE', 'REPORT', 'INVESTIGATE'],
+  })
+  @IsOptional()
+  @IsString()
+  choiceKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Additional metadata about the choice',
+    example: { timeSpent: 45, confidence: 'high' },
+  })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
+}

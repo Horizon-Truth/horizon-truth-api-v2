@@ -47,3 +47,22 @@ export class MailService {
             });
             this.provider = 'smtp';
             this.logger.log(`Outgoing email enabled via SMTP (${host}:${port}).`);
+            return;
+        }
+
+        this.provider = 'none';
+        this.logger.warn(
+            'No mail provider configured (set RESEND_API_KEY, or SMTP_HOST / SMTP_USER / SMTP_PASSWORD). Outgoing email is disabled.',
+        );
+    }
+
+    get isConfigured(): boolean {
+        return this.provider !== 'none';
+    }
+
+    async send(options: SendMailOptions): Promise<void> {
+        if (this.provider === 'none') {
+            throw new ServiceUnavailableException(
+                'Email delivery is not configured on this server. Set RESEND_API_KEY in .env, then restart the server (--watch does not reload .env).',
+            );
+        }

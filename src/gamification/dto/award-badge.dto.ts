@@ -14,3 +14,13 @@ export class AwardBadgeDto {
     example: 'FIRST_GAME',
   })
   @IsString()
+  badgeCode: string;
+
+  @ApiPropertyOptional({
+    description: 'Additional metadata about the award',
+    example: { reason: 'Completed first scenario', score: 100 },
+  })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
+}
