@@ -11,3 +11,29 @@ const base = {
   type: ScenarioType.SOCIAL_POST,
   difficulty: ScenarioDifficulty.EASY,
 };
+
+async function errorsFor(payload: Record<string, unknown>) {
+  const dto = plainToInstance(CreateScenarioDto, payload);
+  return validate(dto);
+}
+
+describe('CreateScenarioDto language validation', () => {
+  it('rejects a scenario with no language', async () => {
+    const errors = await errorsFor({ ...base });
+    expect(errors.some((e) => e.property === 'language')).toBe(true);
+  });
+
+  it('rejects an unsupported language', async () => {
+    const errors = await errorsFor({ ...base, language: 'fr' });
+    expect(errors.some((e) => e.property === 'language')).toBe(true);
+  });
+
+  it.each([
+    ContentLanguage.ENGLISH,
+    ContentLanguage.AMHARIC,
+    ContentLanguage.AFAAN_OROMO,
+  ])('accepts supported language %s', async (language) => {
+    const errors = await errorsFor({ ...base, language });
+    expect(errors.some((e) => e.property === 'language')).toBe(false);
+  });
+});
