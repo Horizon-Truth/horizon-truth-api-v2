@@ -2,3 +2,6 @@ export enum UserStatus {
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',
   DEACTIVATED = 'DEACTIVATED',
+  ANONYMIZED = 'ANONYMIZED',
+}
+

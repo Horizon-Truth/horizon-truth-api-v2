@@ -53,3 +53,41 @@ export class ContactsController {
     findOne(@Param('id') id: string) {
         return this.contactsService.findOne(id);
     }
+
+    @ApiBearerAuth()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Patch(':id/read')
+    @ApiOperation({ summary: 'Mark a contact submission as read (Admin only)' })
+    @ApiResponse({ status: 200, description: 'The submission has been marked as read.', type: Contact })
+    markAsRead(@Param('id') id: string) {
+        return this.contactsService.markAsRead(id);
+    }
+
+    @ApiBearerAuth()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Post(':id/reply')
+    @ApiOperation({ summary: 'Reply to a contact submission by email (Admin only)' })
+    @ApiResponse({ status: 201, description: 'The reply has been sent and recorded.', type: ContactReply })
+    reply(
+        @Param('id') id: string,
+        @Body() replyContactDto: ReplyContactDto,
+        @Request() req,
+    ) {
+        return this.contactsService.reply(id, replyContactDto, {
+            userId: req.user?.userId ?? null,
+            email: req.user?.email,
+        });
+    }
+
+    @ApiBearerAuth()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete a contact submission (Admin only)' })
+    @ApiResponse({ status: 200, description: 'The contact submission has been successfully deleted.' })
+    remove(@Param('id') id: string) {
+        return this.contactsService.remove(id);
+    }
+}
