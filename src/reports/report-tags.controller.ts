@@ -34,3 +34,28 @@ export class ReportTagsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new report tag' })
+  create(@Body() createReportTagDto: CreateReportTagDto) {
+    return this.reportTagsService.create(createReportTagDto);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a report tag' })
+  update(
+    @Param('id') id: string,
+    @Body() updateReportTagDto: UpdateReportTagDto,
+  ) {
+    return this.reportTagsService.update(id, updateReportTagDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a report tag' })
+  remove(@Param('id') id: string) {
+    return this.reportTagsService.delete(id);
+  }
+}
