@@ -36,3 +36,30 @@ export class PlayerScenarioRecord {
     scenario: Scenario;
 
     @ApiProperty({ example: 100 })
+    @Column({ name: 'best_score', type: 'int', default: 0 })
+    bestScore: number;
+
+    @ApiProperty({ example: 85 })
+    @Column({ name: 'best_accuracy_rate', type: 'int', default: 0 })
+    bestAccuracyRate: number;
+
+    @ApiProperty({ example: 250 })
+    @Column({ name: 'best_influence', type: 'int', default: 0 })
+    bestInfluence: number;
+
+    @ApiProperty({ example: true })
+    @Column({ name: 'is_completed', type: 'boolean', default: false })
+    isCompleted: boolean;
+
+    @ApiProperty({ example: 3 })
+    @Column({ type: 'int', default: 1 })
+    attempts: number;
+
+    @ApiProperty()
+    @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+    createdAt: Date;
+
+    @ApiProperty()
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+    updatedAt: Date;
+}
