@@ -47,3 +47,37 @@ export class CreateReportDto {
   @ApiPropertyOptional({ example: 'False Information' })
   @IsString()
   @IsOptional()
+  category?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/claim' })
+  @IsString()
+  @IsOptional()
+  reportedContentReference?: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['https://example.com/evidence'] })
+  @IsArray()
+  @IsOptional()
+  evidenceLinks?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['uuid-1'] })
+  @IsArray()
+  @IsOptional()
+  relatedReportIds?: string[];
+
+  @ApiPropertyOptional({
+    enum: ReportPriorityLevel,
+    default: ReportPriorityLevel.MEDIUM,
+  })
+  @IsEnum(ReportPriorityLevel)
+  @IsOptional()
+  priority?: ReportPriorityLevel;
+
+  @ApiProperty({
+    type: [String],
+    example: ['f47ac10b-58cc-4372-a567-0e02b2c3d479'],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  tagIds?: string[];
+}
