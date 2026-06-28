@@ -47,3 +47,37 @@ export class Scene {
   @ApiProperty({ enum: SceneContentType })
   @Column({
     name: 'content_type',
+    type: 'enum',
+    enum: SceneContentType,
+    default: SceneContentType.TEXT,
+  })
+  contentType: SceneContentType;
+
+  @ApiProperty({ example: ['VERIFY', 'SHARE', 'IGNORE'], isArray: true })
+  @Column({ name: 'available_choices', type: 'jsonb', nullable: true })
+  availableChoices: string[];
+
+  @ApiProperty({ default: false })
+  @Column({ name: 'is_terminal', type: 'boolean', default: false })
+  isTerminal: boolean;
+
+  @ApiPropertyOptional({ example: 30, description: 'Time limit in seconds for the player to make a decision. Null = no limit.' })
+  @Column({ name: 'decision_time_limit', type: 'int', nullable: true })
+  decisionTimeLimit: number;
+
+  @ApiPropertyOptional({ example: 'POST', description: 'Semantic scene type for display: POST, CHAT, NEWS, VIDEO, COMMENT_THREAD' })
+  @Column({ name: 'scene_type_label', type: 'varchar', nullable: true })
+  sceneTypeLabel: string;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+
+  @OneToOne(() => SceneContent, (content) => content.scene)
+  @ApiProperty({ type: () => SceneContent })
+  content: SceneContent;
+
+  @OneToMany(() => PlayerChoice, (choice) => choice.scene)
+  @ApiProperty({ type: () => PlayerChoice, isArray: true })
+  choices: PlayerChoice[];
+}

@@ -40,3 +40,20 @@ describe('EngineService', () => {
       commitTransaction: jest.fn(),
       rollbackTransaction: jest.fn(),
       release: jest.fn(),
+      manager: {
+        createQueryBuilder: jest.fn(() => ({
+            setLock: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            getOne: jest.fn(),
+        })),
+        findOne: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      },
+    }),
+  };
+
+  const mockGamificationService = {
+    checkBadgeEligibility: jest.fn(),
+    updateLeaderboard: jest.fn(),
+  };

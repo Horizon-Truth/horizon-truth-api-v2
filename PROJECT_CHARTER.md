@@ -64,3 +64,21 @@ This project follows a **Maintainer-Led Consensus Model**.
 *   Sets technical direction
 *   Resolves disputes
 *   Oversees releases
+
+### Maintainers
+
+*   Review and merge PRs
+*   Enforce coding standards
+*   Manage issues and releases
+
+### Contributors
+
+*   Submit issues and pull requests
+*   Follow contribution guidelines
+
+### Reviewers
+
+*   Provide code reviews
+*   Validate architecture and security decisions
+
+## 5. Contribution Model
