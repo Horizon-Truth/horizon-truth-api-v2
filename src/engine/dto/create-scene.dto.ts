@@ -62,3 +62,81 @@ export class CreatePlayerChoiceDto {
     @IsOptional()
     @IsInt()
     influenceImpact?: number;
+}
+
+export class CreateSceneContentDto {
+    @ApiProperty({ enum: SceneContentType })
+    @IsEnum(SceneContentType)
+    contentType: SceneContentType;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    textBody?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    imageUrl?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    videoUrl?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    audioUrl?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    documentUrl?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsObject()
+    metadata?: any;
+}
+
+export class CreateSceneDto {
+    @ApiProperty()
+    @IsString()
+    title: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @ApiProperty()
+    @IsInt()
+    order: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    sceneType?: string;
+
+    @ApiProperty({ enum: SceneContentType })
+    @IsEnum(SceneContentType)
+    contentType: SceneContentType;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    isTerminal?: boolean;
+
+    @ApiProperty()
+    @ValidateNested()
+    @Type(() => CreateSceneContentDto)
+    content: CreateSceneContentDto;
+
+    @ApiProperty({ type: () => CreatePlayerChoiceDto, isArray: true, required: false })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreatePlayerChoiceDto)
+    choices?: CreatePlayerChoiceDto[];
+}
