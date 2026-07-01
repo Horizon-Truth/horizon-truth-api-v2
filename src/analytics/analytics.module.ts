@@ -25,3 +25,36 @@ import { GuestPlay } from '../engine/entities/guest-play.entity';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { OrganizationUser } from '../organizations/entities/organization-user.entity';
 import { Report } from '../reports/entities/report.entity';
+import { ReportVerification } from '../reports/entities/report-verification.entity';
+
+@Module({
+  imports: [
+    OrganizationsModule,
+    TypeOrmModule.forFeature([
+      AnalyticsSnapshot,
+      MisinformationHeatmap,
+      OrganizationDashboard,
+      DashboardWidget,
+      PlayerSceneEvent,
+      PlayerAlgorithmProfile,
+      User,
+      Organization,
+      PlayerProfile,
+      Scenario,
+      Feedback,
+      Blog,
+      Resource,
+      Contact,
+      GuestPlay,
+      OrganizationUser,
+      Report,
+      ReportVerification,
+      GameOutcome,
+      PlayerScenarioRecord,
+    ]),
+  ],
+  controllers: [AnalyticsController, PublicStatsController],
+  providers: [AnalyticsService],
+  exports: [AnalyticsService, TypeOrmModule],
+})
+export class AnalyticsModule { }
