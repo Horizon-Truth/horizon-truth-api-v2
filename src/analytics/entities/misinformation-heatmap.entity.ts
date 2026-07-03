@@ -28,3 +28,26 @@ export class MisinformationHeatmap {
     enum: HeatmapRegionType,
   })
   regionType: HeatmapRegionType;
+
+  @Column({ name: 'region_name' })
+  regionName: string;
+
+  @Column()
+  theme: string;
+
+  @Column({ name: 'incident_count', type: 'int', default: 0 })
+  incidentCount: number;
+
+  @Column({
+    name: 'risk_level',
+    type: 'enum',
+    enum: HeatmapRiskLevel,
+  })
+  riskLevel: HeatmapRiskLevel;
+
+  @Column({ name: 'snapshot_period', type: 'timestamp' })
+  snapshotPeriod: Date;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+}
