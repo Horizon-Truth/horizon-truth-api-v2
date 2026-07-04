@@ -66,3 +66,24 @@ export class MailService {
                 'Email delivery is not configured on this server. Set RESEND_API_KEY in .env, then restart the server (--watch does not reload .env).',
             );
         }
+
+        const from =
+            this.configService.get<string>('MAIL_FROM') ??
+            this.configService.get<string>('SMTP_USER');
+
+        if (!from) {
+            throw new ServiceUnavailableException(
+                'No sender address is configured on this server. Set MAIL_FROM.',
+            );
+        }
+
+        switch (this.provider) {
+            case 'resend':
+                await this.sendWithResend(from, options);
+                break;
+            case 'smtp':
+                await this.sendWithSmtp(from, options);
+                break;
+        }
+
+        this.logger.log(
