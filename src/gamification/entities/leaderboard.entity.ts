@@ -23,3 +23,32 @@ export class Leaderboard {
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @ApiProperty({ enum: LeaderboardType })
+  @Column({
+    name: 'leaderboard_type',
+    type: 'enum',
+    enum: LeaderboardType,
+  })
+  leaderboardType: LeaderboardType;
+
+  @ApiProperty({ example: 1250 })
+  @Column({ type: 'int', default: 0 })
+  score: number;
+
+  @ApiPropertyOptional({ example: 5 })
+  @Column({ type: 'int', nullable: true })
+  rank: number;
+
+  @ApiProperty({ enum: LeaderboardPeriod })
+  @Column({
+    type: 'enum',
+    enum: LeaderboardPeriod,
+  })
+  period: LeaderboardPeriod;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'calculated_at', type: 'timestamp' })
+  calculatedAt: Date;
+}
