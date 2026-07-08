@@ -15,3 +15,38 @@ export class CreateFeedbackDto {
   @IsOptional()
   @IsUUID()
   assignedTo?: string;
+
+  @ApiProperty({ example: 'Reviewer' })
+  @IsString()
+  commentSource: string;
+
+  @ApiProperty({ example: 'This scenario is too easy.' })
+  @IsString()
+  commentText: string;
+
+  @ApiPropertyOptional({ example: 'Increase difficulty of scene 2.' })
+  @IsOptional()
+  @IsString()
+  requiredAction?: string;
+
+  @ApiProperty({ enum: FeedbackPriority, default: FeedbackPriority.MEDIUM })
+  @IsOptional()
+  @IsEnum(FeedbackPriority)
+  priority?: FeedbackPriority;
+
+  @ApiProperty({ enum: FeedbackStatus, default: FeedbackStatus.OPEN })
+  @IsOptional()
+  @IsEnum(FeedbackStatus)
+  status?: FeedbackStatus;
+
+  @ApiProperty({ enum: FeedbackType, default: FeedbackType.SCENARIO })
+  @IsOptional()
+  @IsEnum(FeedbackType)
+  type?: FeedbackType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  deadline?: Date;
+}

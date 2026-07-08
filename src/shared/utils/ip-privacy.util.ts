@@ -14,3 +14,12 @@ export class IpPrivacyUtil {
   static hashIpAddress(ipAddress: string, salt?: string): string {
     if (!ipAddress) {
       return '';
+    }
+
+    const ipSalt = salt || process.env.IP_HASH_SALT || this.generateSalt();
+    const hash = createHash('sha256');
+    hash.update(ipAddress + ipSalt);
+    return hash.digest('hex');
+  }
+
+  /**

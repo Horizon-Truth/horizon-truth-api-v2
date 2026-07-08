@@ -55,3 +55,71 @@ export class User {
 
   @ApiProperty({ enum: UserStatus, default: UserStatus.ACTIVE })
   @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
+  status: UserStatus;
+
+  @ApiProperty({ default: false })
+  @Column({ name: 'is_verified', type: 'boolean', default: false })
+  isVerified: boolean;
+
+  @ApiProperty({ default: 'en' })
+  @Column({ name: 'preferred_language', type: 'varchar', default: 'en' })
+  preferredLanguage: string;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+
+  @ApiProperty()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  updatedAt: Date;
+
+  @ApiPropertyOptional()
+  @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
+  lastLoginAt?: Date;
+
+  @ApiPropertyOptional({
+    description: 'User preferences for notifications, privacy, theme, etc.',
+  })
+  @Column({ type: 'jsonb', nullable: true })
+  preferences?: {
+    notifications?: { email?: boolean; push?: boolean; sms?: boolean };
+    privacy?: { profileVisible?: boolean; activityVisible?: boolean };
+    theme?: 'light' | 'dark';
+    language?: string;
+  } | null;
+
+  @ApiPropertyOptional({ description: 'Soft delete timestamp' })
+  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt?: Date;
+
+  @OneToOne(() => PlayerProfile, (profile) => profile.user)
+  playerProfile: PlayerProfile;
+
+  @Column({
+    name: 'hashed_refresh_token',
+    type: 'varchar',
+    nullable: true,
+    select: false,
+  })
+  hashedRefreshToken?: string | null;
+
+  @Column({
+    name: 'reset_password_token',
+    type: 'varchar',
+    nullable: true,
+    select: false,
+  })
+  resetPasswordToken?: string | null;
+
+  @Column({
+    name: 'reset_password_expires',
+    type: 'timestamp',
+    nullable: true,
+    select: false,
+  })
+  resetPasswordExpires?: Date | null;
+}

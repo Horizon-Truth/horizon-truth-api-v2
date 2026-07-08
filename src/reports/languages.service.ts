@@ -54,3 +54,42 @@ export class LanguagesService {
   async create(createDto: CreateLanguageDto): Promise<Language> {
     const existing = await this.languageRepository.findOne({
       where: [{ name: createDto.name }, { code: createDto.code }],
+    });
+    if (existing)
+      throw new ConflictException(
+        'Language with this name or code already exists',
+      );
+
+    const lang = this.languageRepository.create(createDto);
+    return this.languageRepository.save(lang);
+  }
+
+  async update(id: string, updateDto: UpdateLanguageDto): Promise<Language> {
+    const lang = await this.findById(id);
+
+    if (updateDto.name || updateDto.code) {
+      const existing = await this.languageRepository
+        .createQueryBuilder('lang')
+        .where('(lang.name = :name OR lang.code = :code) AND lang.id != :id', {
+          name: updateDto.name || '',
+          code: updateDto.code || '',
+          id,
+        })
+        .getOne();
+
+      if (existing)
+        throw new ConflictException(
+          'Language with this name or code already exists',
+        );
+    }
+
+    Object.assign(lang, updateDto);
+    return this.languageRepository.save(lang);
+  }
+
+  async delete(id: string): Promise<void> {
+    const result = await this.languageRepository.delete(id);
+    if (result.affected === 0)
+      throw new NotFoundException('Language not found');
+  }
+}
