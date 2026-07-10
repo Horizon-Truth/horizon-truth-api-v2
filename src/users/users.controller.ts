@@ -72,3 +72,163 @@ export class UsersController {
   async getPreferences(@Request() req) {
     return this.usersService.getPreferences(req.user.userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('me/preferences')
+  @ApiOperation({ summary: 'Update user preferences' })
+  @ApiResponse({
+    status: 200,
+    description: 'Preferences updated successfully.',
+  })
+  async updatePreferences(
+    @Request() req,
+    @Body() preferencesDto: UserPreferencesDto,
+  ) {
+    return this.usersService.updatePreferences(req.user.userId, preferencesDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/password')
+  @ApiOperation({ summary: 'Change password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully.' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect.' })
+  async changePassword(
+    @Request() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    await this.usersService.changePassword(
+      req.user.userId,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
+    await this.usersService.logActivity(
+      req.user.userId,
+      'PASSWORD_CHANGE',
+      {},
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return { message: 'Password changed successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/activity')
+  @ApiOperation({ summary: 'Get user activity history' })
+  @ApiResponse({ status: 200, description: 'Activity history retrieved.' })
+  async getActivityHistory(
+    @Request() req,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.usersService.getActivityHistory(
+      req.user.userId,
+      page || 1,
+      limit || 20,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  @ApiOperation({ summary: 'Delete own account (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Account deleted successfully.' })
+  async deleteOwnAccount(@Request() req) {
+    await this.usersService.softDelete(req.user.userId);
+    await this.usersService.logActivity(
+      req.user.userId,
+      'ACCOUNT_DELETED',
+      {},
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return {
+      message: 'Account deleted successfully. Contact admin to restore.',
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/anonymize')
+  @ApiOperation({ summary: 'Anonymize own account & PII' })
+  @ApiResponse({ status: 200, description: 'Account anonymized successfully.' })
+  async anonymizeMe(@Request() req) {
+    await this.usersService.anonymizeAccount(req.user.userId);
+    await this.usersService.logActivity(
+      req.user.userId,
+      'ACCOUNT_ANONYMIZED',
+      {},
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return {
+      message: 'Account anonymized successfully. You are now logged out.',
+    };
+  }
+
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Delete(':id')
+  @ApiOperation({ summary: 'Hard delete user (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'User permanently deleted.' })
+  async hardDeleteUser(@Param('id') id: string) {
+    await this.usersService.hardDelete(id);
+    return { message: 'User permanently deleted' };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Put(':id/restore')
+  @ApiOperation({ summary: 'Restore soft-deleted user (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'User restored successfully.' })
+  async restoreUser(@Param('id') id: string) {
+    await this.usersService.restoreUser(id);
+    return { message: 'User restored successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.SYSTEM_ADMIN)
+  @Get(':id/activity')
+  @ApiOperation({
+    summary: 'Get any user activity history (MODERATOR/ADMIN only)',
+  })
+  @ApiResponse({ status: 200, description: 'Activity history retrieved.' })
+  async getUserActivity(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.usersService.getActivityHistory(id, page || 1, limit || 20);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Post()
+  @ApiOperation({ summary: 'Create a new user (SYSTEM_ADMIN only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully.' })
+  async create(@Body() createUserDto: CreateUserDto) {
+    const password = createUserDto.password || Math.random().toString(36).slice(-8);
+    return this.usersService.create({ ...createUserDto, password });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Get()
+  @ApiOperation({ summary: 'List users (SYSTEM_ADMIN only)' })
+  async findAll(@Query() query: any) {
+    return this.usersService.findAll(query);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user details' })
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findById(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Put(':id/status')
+  @ApiOperation({ summary: 'Update user status (SYSTEM_ADMIN only)' })
+  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.usersService.update(id, { status: status as any });
+  }
+}
