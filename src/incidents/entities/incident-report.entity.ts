@@ -52,3 +52,25 @@ export class IncidentReport {
   description: string;
 
   @ApiProperty({ enum: IncidentSeverity })
+  @Column({
+    type: 'enum',
+    enum: IncidentSeverity,
+  })
+  severity: IncidentSeverity;
+
+  @ApiProperty({ default: false })
+  @Column({ name: 'is_anonymous', type: 'boolean', default: false })
+  isAnonymous: boolean;
+
+  @ApiProperty()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt: Date;
+
+  @OneToMany(() => IncidentStatus, (status) => status.incidentReport)
+  @ApiProperty({ type: () => IncidentStatus, isArray: true })
+  statusHistory: IncidentStatus[];
+
+  @OneToMany(() => ModerationAction, (action) => action.incidentReport)
+  @ApiProperty({ type: () => ModerationAction, isArray: true })
+  moderationActions: ModerationAction[];
+}

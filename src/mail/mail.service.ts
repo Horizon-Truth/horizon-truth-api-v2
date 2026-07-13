@@ -87,3 +87,66 @@ export class MailService {
         }
 
         this.logger.log(
+            `Email sent to ${options.to} via ${this.provider} — "${options.subject}"`,
+        );
+    }
+
+    private async sendWithResend(
+        from: string,
+        options: SendMailOptions,
+    ): Promise<void> {
+        // The SDK reports failures in the response body rather than throwing,
+        // so both paths have to be handled.
+        let error: { name?: string; message: string } | null;
+
+        try {
+            ({ error } = await this.resend!.emails.send({
+                from,
+                to: options.to,
+                subject: options.subject,
+                text: options.text,
+                html: options.html ?? options.text,
+                replyTo: options.replyTo,
+            }));
+        } catch (thrown) {
+            this.logger.error(
+                `Resend request to ${options.to} failed: ${(thrown as Error).message}`,
+            );
+            throw new ServiceUnavailableException(
+                'The email could not be delivered. Please try again later.',
+            );
+        }
+
+        if (error) {
+            this.logger.error(
+                `Resend rejected the email to ${options.to}: ${error.name ?? 'error'} — ${error.message}`,
+            );
+            throw new ServiceUnavailableException(
+                `The email could not be delivered: ${error.message}`,
+            );
+        }
+    }
+
+    private async sendWithSmtp(
+        from: string,
+        options: SendMailOptions,
+    ): Promise<void> {
+        try {
+            await this.transporter!.sendMail({
+                from,
+                to: options.to,
+                subject: options.subject,
+                text: options.text,
+                html: options.html,
+                replyTo: options.replyTo,
+            });
+        } catch (error) {
+            this.logger.error(
+                `Failed to send email to ${options.to}: ${(error as Error).message}`,
+            );
+            throw new ServiceUnavailableException(
+                'The email could not be delivered. Please try again later.',
+            );
+        }
+    }
+}
