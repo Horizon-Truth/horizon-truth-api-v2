@@ -32,3 +32,10 @@ export function mergeSkillBooks(a: SkillBook = {}, b: SkillBook = {}): SkillBook
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
     const left = a[key] ?? { xp: 0, correct: 0, total: 0 };
     const right = b[key] ?? { xp: 0, correct: 0, total: 0 };
+    merged[key] = {
+      xp: Math.max(num(left.xp), num(right.xp)),
+      correct: Math.max(num(left.correct), num(right.correct)),
+      total: Math.max(num(left.total), num(right.total)),
+    };
+  }
+  return merged;
