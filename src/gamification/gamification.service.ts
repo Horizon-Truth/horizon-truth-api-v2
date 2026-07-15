@@ -118,3 +118,256 @@ export class GamificationService {
         where: { id: outcome.scenarioId },
       },
     );
+
+    if (!scenario) return awardedBadges;
+
+    let badgeToAward: string | null = null;
+
+    // Logic based on wireframe requirements
+    if (scenario.title === 'The Viral Post') {
+      badgeToAward = 'COMMUNITY_PROTECTOR';
+    } else if (scenario.title === 'The Deepfake Dilemma') {
+      badgeToAward = 'CRISIS_VERIFIER';
+    }
+
+    if (badgeToAward) {
+      try {
+        // awardBadge handles duplication check
+        await this.awardBadge(userId, badgeToAward);
+        const fullBadge = await this.badgeRepository.findOne({ where: { code: badgeToAward } });
+        if (fullBadge) {
+          awardedBadges.push(fullBadge);
+        }
+      } catch (error) {
+        // If it's just "User already has this badge", we ignore it
+        if (
+          !(
+            error instanceof BadRequestException &&
+            error.message.includes('already has')
+          )
+        ) {
+          console.error(
+            `Failed to award mid-scenario badge ${badgeToAward}:`,
+            error.message,
+          );
+        }
+      }
+    }
+
+    return awardedBadges;
+  }
+
+  /**
+   * Check badge eligibility for a user after game completion
+   */
+  async checkBadgeEligibility(userId: string): Promise<any[]> {
+    const awardedBadges: any[] = [];
+    const manager = this.userBadgeRepository.manager;
+
+    // Get user's existing badges
+    const existingUserBadges = await this.userBadgeRepository.find({
+      where: { userId },
+      relations: ['badge'],
+    });
+    const existingBadgeCodes = new Set(
+      existingUserBadges.map((ub) => ub.badge.code),
+    );
+
+    // 1. Get Game Stats
+    // Count completed games
+    const completedGamesCount = await manager
+      .createQueryBuilder()
+      .select('COUNT(id)', 'count')
+      .from('game_progress', 'gp')
+      .where('gp.userId = :userId', { userId })
+      .andWhere('gp.status = :status', { status: 'COMPLETED' })
+      .getRawOne();
+
+    const gamesCount = parseInt(completedGamesCount.count, 10) || 0;
+
+    // Check for perfect scores
+    const perfectScoresCount = await manager
+      .createQueryBuilder()
+      .select('COUNT(id)', 'count')
+      .from('game_outcome', 'go')
+      .where('go.userId = :userId', { userId })
+      .andWhere('go.score >= :score', { score: 100 })
+      .getRawOne();
+
+    const perfectCount = parseInt(perfectScoresCount.count, 10) || 0;
+
+    // 2. Define Badge Criteria
+    const criteria = [
+      { code: 'FIRST_GAME', Met: gamesCount >= 1 },
+      { code: 'FACT_FINDER', Met: gamesCount >= 5 },
+      { code: 'SCENARIO_MASTER', Met: gamesCount >= 10 },
+      { code: 'PERFECT_SCORE', Met: perfectCount >= 1 },
+    ];
+
+    // 3. Process Awards
+    for (const criterion of criteria) {
+      if (criterion.Met && !existingBadgeCodes.has(criterion.code)) {
+        try {
+          await this.awardBadge(userId, criterion.code);
+          const fullBadge = await this.badgeRepository.findOne({ where: { code: criterion.code } });
+          if (fullBadge) {
+            awardedBadges.push(fullBadge);
+          }
+          existingBadgeCodes.add(criterion.code); // Prevent double awarding in same loop
+        } catch (error) {
+          console.error(
+            `Failed to award badge ${criterion.code}:`,
+            error.message,
+          );
+        }
+      }
+    }
+
+    return awardedBadges;
+  }
+
+  /**
+   * Get leaderboard with filters
+   */
+  async getLeaderboard(query: LeaderboardQueryDto): Promise<any> {
+    const { type, period, limit = 100 } = query;
+
+    const leaderboard = await this.leaderboardRepository.find({
+      where: { leaderboardType: type, period },
+      relations: ['user'],
+      order: { rank: 'ASC' },
+      take: limit,
+    });
+
+    return leaderboard.map((entry, index) => ({
+      rank: entry.rank || index + 1,
+      userId: entry.userId,
+      username: entry.user?.username || 'Unknown',
+      score: entry.score,
+      calculatedAt: entry.calculatedAt,
+    }));
+  }
+
+  /**
+   * Get user's rank on leaderboard
+   */
+  async getUserRank(
+    userId: string,
+    type: LeaderboardType,
+    period: LeaderboardPeriod,
+  ): Promise<any> {
+    const entry = await this.leaderboardRepository.findOne({
+      where: { userId, leaderboardType: type, period },
+    });
+
+    if (!entry) {
+      return {
+        userId,
+        type,
+        period,
+        rank: null,
+        score: 0,
+        message: 'Not ranked yet',
+      };
+    }
+
+    return {
+      userId,
+      type,
+      period,
+      rank: entry.rank,
+      score: entry.score,
+    };
+  }
+
+  /**
+   * Update leaderboard for a user (called after game completion)
+   */
+  async updateLeaderboard(userId: string): Promise<void> {
+    // Calculate actual score from completed games
+    const score = await this.calculateScore(userId);
+
+    // Update or create leaderboard entry for ALL_TIME
+    let entry = await this.leaderboardRepository.findOne({
+      where: {
+        userId,
+        leaderboardType: LeaderboardType.GAME_SCORE,
+        period: LeaderboardPeriod.ALL_TIME,
+      },
+    });
+
+    if (entry) {
+      entry.score += score;
+      await this.leaderboardRepository.save(entry);
+    } else {
+      entry = this.leaderboardRepository.create({
+        userId,
+        leaderboardType: LeaderboardType.GAME_SCORE,
+        period: LeaderboardPeriod.ALL_TIME,
+        score,
+      });
+      await this.leaderboardRepository.save(entry);
+    }
+
+    // Recalculate ranks (simple approach - in production, use a cron job)
+    await this.recalculateRanks(
+      LeaderboardType.GAME_SCORE,
+      LeaderboardPeriod.ALL_TIME,
+    );
+  }
+
+  /**
+   * Recalculate ranks for a leaderboard
+   */
+  private async recalculateRanks(
+    type: LeaderboardType,
+    period: LeaderboardPeriod,
+  ): Promise<void> {
+    const entries = await this.leaderboardRepository.find({
+      where: { leaderboardType: type, period },
+      order: { score: 'DESC' },
+    });
+
+    for (let i = 0; i < entries.length; i++) {
+      entries[i].rank = i + 1;
+    }
+
+    await this.leaderboardRepository.save(entries);
+  }
+
+  /**
+   * Calculate total score for a user
+   */
+  /**
+   * Calculate total score for a user
+   */
+  async calculateScore(userId: string): Promise<number> {
+    const result = await this.leaderboardRepository.manager
+      .createQueryBuilder()
+      .select('SUM(go.score)', 'totalScore')
+      .from('game_outcome', 'go')
+      .where('go.userId = :userId', { userId })
+      .getRawOne();
+
+    return parseInt(result.totalScore, 10) || 0;
+  }
+
+  // Admin Methods
+
+  async createBadge(createDto: CreateBadgeDto): Promise<Badge> {
+    const badge = this.badgeRepository.create(createDto);
+    return this.badgeRepository.save(badge);
+  }
+
+  async updateBadge(id: string, updateDto: UpdateBadgeDto): Promise<Badge> {
+    await this.badgeRepository.update(id, updateDto);
+    const updated = await this.badgeRepository.findOne({ where: { id } });
+    if (!updated) throw new NotFoundException('Badge not found');
+    return updated;
+  }
+
+  async deleteBadge(id: string): Promise<void> {
+    const result = await this.badgeRepository.delete(id);
+    if (result.affected === 0) throw new NotFoundException('Badge not found');
+  }
+}
