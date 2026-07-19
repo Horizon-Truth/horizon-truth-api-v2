@@ -106,14 +106,14 @@ jobs:
             echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
 
             echo 'Pulling latest image...'
-            docker compose --env-file image.env pull
+            docker compose --env-file image.env --env-file .env pull
 
             echo 'Starting containers...'
-            docker compose --env-file image.env up -d
+            docker compose --env-file image.env --env-file .env up -d
 
             echo 'Removing unused Docker resources...'
             docker image prune -f
 
             echo 'Current running containers:'
-            docker compose --env-file image.env ps
+            docker compose --env-file image.env --env-file .env ps
           "

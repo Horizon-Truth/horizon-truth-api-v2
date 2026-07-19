@@ -19,8 +19,13 @@ services:
     environment:
       - DB_HOST=host.docker.internal
 
+    # Host and container port both come from PORT in .env, so the published
+    # port always matches the port the app binds to (app listens on
+    # process.env.PORT). Interpolation here reads .env because the deploy
+    # passes `--env-file .env` (see the workflow); env_file above only injects
+    # PORT into the container, not into this compose interpolation.
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
