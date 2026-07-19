@@ -1,44 +1,22 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: horizon-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: horizon
-      POSTGRES_USER: horizon
-      POSTGRES_PASSWORD: horizon123
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U horizon -d horizon']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     image: node:22-alpine
     container_name: horizon-backend
     working_dir: /app
-    command: sh -c "npm install && npm run start:dev"
-    environment:
-      NODE_ENV: development
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USERNAME: horizon
-      DB_PASSWORD: horizon123
-      DB_NAME: horizon
-      PORT: 3000
+    command: sh -c "npm install && npm run build && node dist/main.js"
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
     ports:
-      - '3000:3000'
+      - "${PORT:-3000}:3000"
+
     volumes:
       - .:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - /app/node_modules
 
-volumes:
-  postgres_data:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
