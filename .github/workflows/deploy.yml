@@ -1,4 +1,4 @@
-name: Deploy NestJS API (Caddy)
+name: Deploy Horizon Truth API (Docker Compose)
 
 on:
   push:
@@ -7,90 +7,113 @@ on:
       - dev
       - stage
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+env:
+  REGISTRY: ghcr.io
 
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.name }}
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          node-version: 20
-          cache: npm
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Compute lowercase image name
+        id: image
+        run: echo "name=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Build NestJS
-        run: npm run build
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Setup SSH agent
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+
+    steps:
+      - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-      - name: Determine deployment directory
-        id: set-dir
+      - name: Determine Deployment Directory
         run: |
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "DEPLOY_SUBDIR=current" >> $GITHUB_ENV
-            echo "PM2_NAME=horizontruth-api" >> $GITHUB_ENV
           elif [[ "${{ github.ref_name }}" == "dev" ]]; then
             echo "DEPLOY_SUBDIR=dev" >> $GITHUB_ENV
-            echo "PM2_NAME=horizontruth-api-dev" >> $GITHUB_ENV
           elif [[ "${{ github.ref_name }}" == "stage" ]]; then
             echo "DEPLOY_SUBDIR=stage" >> $GITHUB_ENV
-            echo "PM2_NAME=horizontruth-api-stage" >> $GITHUB_ENV
           fi
-          echo "Selected directory: $DEPLOY_SUBDIR"
-          echo "PM2 name: $PM2_NAME"
 
-      - name: Deploy backend to server
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Write image.env
+        run: |
+          echo "IMAGE=${{ needs.build-and-push.outputs.image }}" > image.env
+          echo "IMAGE_TAG=${{ github.ref_name }}" >> image.env
+
+      - name: Deploy to Server
         env:
           HOST: ${{ secrets.SERVER_HOST }}
           USER: ${{ secrets.SERVER_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           set -e
 
-          # Get the deployment directory from environment
           DEPLOY_DIR="$DEPLOY_SUBDIR"
-          PM2_NAME="$PM2_NAME"
 
-          echo "Deploying to directory: $DEPLOY_DIR"
-          echo "PM2 process name: $PM2_NAME"
+          echo "Deploying to $DEPLOY_PATH/$DEPLOY_DIR"
 
-          # Create directories
-          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
-            mkdir -p $DEPLOY_PATH/$DEPLOY_DIR
-            mkdir -p $DEPLOY_PATH/$DEPLOY_DIR/dist
-          EOF
+          # Ensure deployment directory exists
+          ssh -o StrictHostKeyChecking=no $USER@$HOST "mkdir -p $DEPLOY_PATH/$DEPLOY_DIR"
 
-          # Sync dist folder
-          rsync -avz --delete dist/ $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/dist/
+          # Only ship the compose file + image reference. The app itself is
+          # a prebuilt image pulled from GHCR — no source lives on the server,
+          # so nothing gets rebuilt here and deploys take seconds, not minutes.
+          rsync -az \
+            docker-compose.yml image.env \
+            $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/
 
-          # Sync package.json & lock file
-          rsync -avz package.json package-lock.json $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/
-
-          # Deploy commands (NVM + PM2)
-          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          ssh -o StrictHostKeyChecking=no $USER@$HOST "
             set -e
-
-            # Load NVM so node, npm, pm2 are available
-            export NVM_DIR="\$HOME/.nvm"
-            [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
-
             cd $DEPLOY_PATH/$DEPLOY_DIR
 
-            # Install production dependencies
-            npm ci --omit=dev
+            echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
 
-            # Start or restart API using PM2 with different names for each environment
-            pm2 start dist/main.js --name "$PM2_NAME" --update-env || pm2 restart "$PM2_NAME"
+            echo 'Pulling latest image...'
+            docker compose --env-file image.env --env-file .env pull
 
-            # Save PM2 process list for reboot
-            pm2 save
-          EOF
+            echo 'Starting containers...'
+            docker compose --env-file image.env --env-file .env up -d
+
+            echo 'Removing unused Docker resources...'
+            docker image prune -f
+
+            echo 'Current running containers:'
+            docker compose --env-file image.env --env-file .env ps
+          "

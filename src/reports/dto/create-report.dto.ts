@@ -6,6 +6,7 @@ import {
   IsUrl,
   IsUUID,
   IsArray,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReportContentType } from '../../shared/enums/report-content-type.enum';
@@ -37,6 +38,31 @@ export class CreateReportDto {
   @IsString()
   @IsNotEmpty()
   language: string;
+
+  @ApiPropertyOptional({ example: 'False Information' })
+  @IsString()
+  @IsOptional()
+  reason?: string;
+
+  @ApiPropertyOptional({ example: 'False Information' })
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/claim' })
+  @IsString()
+  @IsOptional()
+  reportedContentReference?: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['https://example.com/evidence'] })
+  @IsArray()
+  @IsOptional()
+  evidenceLinks?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['uuid-1'] })
+  @IsArray()
+  @IsOptional()
+  relatedReportIds?: string[];
 
   @ApiPropertyOptional({
     enum: ReportPriorityLevel,

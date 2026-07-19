@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  backend:
+    # IMAGE and IMAGE_TAG are supplied at deploy time via `--env-file image.env`
+    # (written by the CI workflow) so no source is built on this server.
+    image: ${IMAGE}:${IMAGE_TAG:-latest}
+    container_name: horizon-backend
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    # Overrides whatever is set in .env for the DB host, so the container
+    # always reaches Postgres on the host machine instead of trying
+    # localhost/127.0.0.1 (which inside the container means itself).
+    # Rename DB_HOST below if your TypeORM config reads a different key
+    # (e.g. DATABASE_HOST, POSTGRES_HOST, TYPEORM_HOST).
+    environment:
+      - DB_HOST=host.docker.internal
+
+    # Host and container port both come from PORT in .env, so the published
+    # port always matches the port the app binds to (app listens on
+    # process.env.PORT). Interpolation here reads .env because the deploy
+    # passes `--env-file .env` (see the workflow); env_file above only injects
+    # PORT into the container, not into this compose interpolation.
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
