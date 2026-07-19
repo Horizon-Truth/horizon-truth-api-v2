@@ -7,14 +7,48 @@ on:
       - dev
       - stage
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+env:
+  REGISTRY: ghcr.io
 
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.name }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase image name
+        id: image
+        run: echo "name=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+
+    steps:
       - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -30,11 +64,21 @@ jobs:
             echo "DEPLOY_SUBDIR=stage" >> $GITHUB_ENV
           fi
 
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Write image.env
+        run: |
+          echo "IMAGE=${{ needs.build-and-push.outputs.image }}" > image.env
+          echo "IMAGE_TAG=${{ github.ref_name }}" >> image.env
+
       - name: Deploy to Server
         env:
           HOST: ${{ secrets.SERVER_HOST }}
           USER: ${{ secrets.SERVER_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           set -e
 
@@ -45,33 +89,28 @@ jobs:
           # Ensure deployment directory exists
           ssh -o StrictHostKeyChecking=no $USER@$HOST "mkdir -p $DEPLOY_PATH/$DEPLOY_DIR"
 
-          # Sync project files
-          rsync -az --delete \
-            --exclude ".git" \
-            --exclude ".github" \
-            --exclude "node_modules" \
-            --exclude ".env" \
-            ./ \
+          # Only ship the compose file + image reference. The app itself is
+          # a prebuilt image pulled from GHCR — no source lives on the server,
+          # so nothing gets rebuilt here and deploys take seconds, not minutes.
+          rsync -az \
+            docker-compose.yml image.env \
             $USER@$HOST:$DEPLOY_PATH/$DEPLOY_DIR/
 
-          # Build and restart containers
-          ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          ssh -o StrictHostKeyChecking=no $USER@$HOST "
             set -e
-
             cd $DEPLOY_PATH/$DEPLOY_DIR
 
-            echo "Stopping old containers..."
-            docker compose down
+            echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
 
-            echo "Building latest image..."
-            docker compose build --no-cache
+            echo 'Pulling latest image...'
+            docker compose --env-file image.env pull
 
-            echo "Starting containers..."
-            docker compose up -d
+            echo 'Starting containers...'
+            docker compose --env-file image.env up -d
 
-            echo "Removing unused Docker resources..."
+            echo 'Removing unused Docker resources...'
             docker image prune -f
 
-            echo "Current running containers:"
-            docker compose ps
-          EOF
+            echo 'Current running containers:'
+            docker compose --env-file image.env ps
+          "

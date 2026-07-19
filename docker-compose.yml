@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
   backend:
-    image: node:22-alpine
+    # IMAGE and IMAGE_TAG are supplied at deploy time via `--env-file image.env`
+    # (written by the CI workflow) so no source is built on this server.
+    image: ${IMAGE}:${IMAGE_TAG:-latest}
     container_name: horizon-backend
-    working_dir: /app
-    command: sh -c "npm install && npm run build && node dist/main.js"
     restart: unless-stopped
 
     env_file:
@@ -21,10 +21,6 @@ services:
 
     ports:
       - "${PORT:-3000}:3000"
-
-    volumes:
-      - .:/app
-      - /app/node_modules
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
