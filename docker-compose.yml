@@ -1,11 +1,11 @@
-version: "3.9"
-
 services:
   backend:
     # IMAGE and IMAGE_TAG are supplied at deploy time via `--env-file image.env`
     # (written by the CI workflow) so no source is built on this server.
     image: ${IMAGE}:${IMAGE_TAG:-latest}
-    container_name: horizon-backend
+    # Branch-specific name (IMAGE_TAG is the branch, e.g. dev/stage/main) so the
+    # three deployments don't collide on a single "horizon-backend" name.
+    container_name: horizon-backend-${IMAGE_TAG:-latest}
     restart: unless-stopped
 
     env_file:
