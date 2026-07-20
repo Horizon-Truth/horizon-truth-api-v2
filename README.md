@@ -220,3 +220,4 @@ This project is proprietary and **UNLICENSED**. All rights reserved. See the [LI
 - **Documentation:** [horizon-truth-docs](https://github.com/Horizon-Truth/horizon-truth-docs)
 - **Live Documentation:** [docs.horizontruth.org](https://docs.horizontruth.org)
 - **API Reference (Swagger):** [horizontruth.org/api/v1/docs](https://horizontruth.org/api/v1/docs)
+- [![Backend CI](https://github.com/Horizon-Truth/horizon-truth-api-v2/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Horizon-Truth/horizon-truth-api-v2/actions/workflows/ci.yml)
