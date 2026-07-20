@@ -129,8 +129,8 @@ export class ReportsService {
     });
 
     const saved = await this.reportEvidenceRepository.save(evidence);
-    report.credibilityScore = Math.max(report.credibilityScore, evidenceData.credibilityScore ?? 0);
-    await this.reportRepository.save(report);
+    const credibilityScore = Math.max(report.credibilityScore, evidenceData.credibilityScore ?? 0);
+    await this.reportRepository.update(reportId, { credibilityScore });
 
     await this.auditLogsService.createLog({
       userId,
@@ -163,8 +163,8 @@ export class ReportsService {
     const negativeCount = verifications.filter((v) => v.status === 'FALSE' || v.status === 'FAKE').length;
 
     if (verifications.length > 0) {
-      report.credibilityScore = Math.round((positiveCount / (positiveCount + negativeCount || 1)) * 100);
-      await this.reportRepository.save(report);
+      const credibilityScore = Math.round((positiveCount / (positiveCount + negativeCount || 1)) * 100);
+      await this.reportRepository.update(reportId, { credibilityScore });
     }
 
     await this.auditLogsService.createLog({
