@@ -1,5 +1,7 @@
 # Horizon Truth API (v2)
 
+[![CI](https://github.com/Horizon-Truth/horizon-truth-api-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/Horizon-Truth/horizon-truth-api-v2/actions/workflows/ci.yml)
+
 ## 📌 Project Governance
 
 - 📜 [Project Charter](./PROJECT_CHARTER.md)
