@@ -23,3 +23,55 @@ export class IpPrivacyUtil {
   }
 
   /**
+   * Create a partial IP address for geolocation without full privacy violation
+   * @param ipAddress - Full IP address
+   * @returns Partial IP (e.g., "192.168.*.*" for IPv4, "2001:0db8:*" for IPv6)
+   */
+  static getPartialIp(ipAddress: string): string {
+    if (!ipAddress) {
+      return '';
+    }
+
+    // IPv4 handling
+    if (ipAddress.includes('.')) {
+      const parts = ipAddress.split('.');
+      if (parts.length === 4) {
+        return `${parts[0]}.${parts[1]}.*.*`;
+      }
+    }
+
+    // IPv6 handling
+    if (ipAddress.includes(':')) {
+      const parts = ipAddress.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}:*`;
+      }
+    }
+
+    return '*.*.*.*';
+  }
+
+  /**
+   * Generate a random salt for IP hashing
+   * Note: In production, store this in environment variables
+   * @returns Random salt string
+   */
+  private static generateSalt(): string {
+    return randomBytes(16).toString('hex');
+  }
+
+  /**
+   * Process IP for privacy-preserving storage
+   * @param ipAddress - Full IP address
+   * @returns Object with hashed and partial IP
+   */
+  static processIp(ipAddress: string): {
+    ipAddressHash: string;
+    ipAddressPartial: string;
+  } {
+    return {
+      ipAddressHash: this.hashIpAddress(ipAddress),
+      ipAddressPartial: this.getPartialIp(ipAddress),
+    };
+  }
+}
