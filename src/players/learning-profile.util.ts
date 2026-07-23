@@ -39,3 +39,20 @@ export function mergeSkillBooks(a: SkillBook = {}, b: SkillBook = {}): SkillBook
     };
   }
   return merged;
+}
+
+export function mergeCalibrations(
+  a: CalibrationLedger = {},
+  b: CalibrationLedger = {},
+): CalibrationLedger {
+  const merged: CalibrationLedger = {};
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const left = a[key] ?? { correct: 0, total: 0 };
+    const right = b[key] ?? { correct: 0, total: 0 };
+    merged[key] = {
+      correct: Math.max(num(left.correct), num(right.correct)),
+      total: Math.max(num(left.total), num(right.total)),
+    };
+  }
+  return merged;
+}
