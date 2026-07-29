@@ -7,3 +7,13 @@ import { ModerationAction } from './entities/moderation-action.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([
+      Content,
+      IncidentReport,
+      IncidentStatus,
+      ModerationAction,
+    ]),
+  ],
+  exports: [TypeOrmModule],
+})
+export class IncidentsModule {}
