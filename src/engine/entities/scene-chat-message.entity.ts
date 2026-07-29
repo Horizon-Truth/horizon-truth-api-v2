@@ -23,3 +23,12 @@ export class SceneChatMessage {
   @Column({
     type: 'enum',
     enum: ChatSender,
+  })
+  sender: ChatSender;
+
+  @Column({ type: 'text' })
+  message: string;
+
+  @Column({ name: 'message_order', type: 'int' })
+  messageOrder: number;
+}
