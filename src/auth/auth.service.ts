@@ -100,3 +100,222 @@ export class AuthService {
 
     return tokens;
   }
+
+  async getTokens(user: any) {
+    const { id: userId, username, role, fullName, playerProfile } = user;
+    const avatarUrl = playerProfile?.avatar?.imageUrl;
+    const nickname = playerProfile?.nickname;
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          username,
+          role,
+          avatarUrl,
+          nickname,
+          fullName,
+        },
+        {
+          secret: this.configService.get<string>('JWT_SECRET') || 'secretKey',
+          expiresIn: '7d',
+        },
+      ),
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          username,
+          role,
+        },
+        {
+          secret:
+            this.configService.get<string>('JWT_REFRESH_SECRET') ||
+            'refreshSecretKey',
+          expiresIn: '7d',
+        },
+      ),
+    ]);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        userId,
+        username,
+        role,
+        fullName,
+        avatarUrl,
+        nickname,
+        onboardingCompleted: (user as any)?.playerProfile?.onboardingCompleted,
+      },
+    };
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hash = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.update(userId, { hashedRefreshToken: hash });
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findOneByEmail(email);
+    if (!user) return; // Don't reveal user existence
+
+    const token =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1);
+
+    await this.usersService.update(user.id, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+
+    // Mock email sending
+    console.log(`[Email Service] Password reset token for ${email}: ${token}`);
+    return { message: 'If user exists, reset email sent' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.usersService.findOneByResetToken(token);
+    if (
+      !user ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires < new Date()
+    ) {
+      // Check expires exists
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersService.update(user.id, {
+      passwordHash,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    return { message: 'Password reset successful' };
+  }
+
+  async validateApiKey(apiKey: string): Promise<any> {
+    const user = await this.usersService.findOneByApiKey(apiKey);
+    if (user) {
+      return user;
+    }
+    return null;
+  }
+
+  // Session Management Methods
+
+  async createSession(
+    userId: string,
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<Session> {
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    const session = this.sessionRepository.create({
+      userId,
+      refreshTokenHash,
+      ipAddress,
+      userAgent,
+      expiresAt,
+      isActive: true,
+    });
+
+    return this.sessionRepository.save(session);
+  }
+
+  async validateSession(
+    userId: string,
+    refreshToken: string,
+  ): Promise<Session | null> {
+    const sessions = await this.sessionRepository.find({
+      where: {
+        userId,
+        isActive: true,
+        expiresAt: MoreThan(new Date()),
+      },
+      select: [
+        'id',
+        'userId',
+        'refreshTokenHash',
+        'ipAddress',
+        'userAgent',
+        'expiresAt',
+        'createdAt',
+        'isActive',
+      ],
+    });
+
+    for (const session of sessions) {
+      // Add null check before comparing
+      if (session.refreshTokenHash && refreshToken) {
+        const matches = await bcrypt.compare(
+          refreshToken,
+          session.refreshTokenHash,
+        );
+        if (matches) {
+          return session;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  async updateSession(
+    sessionId: string,
+    newRefreshToken: string,
+  ): Promise<void> {
+    const refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
+    await this.sessionRepository.update(sessionId, { refreshTokenHash });
+  }
+
+  async getUserSessions(userId: string): Promise<Session[]> {
+    return this.sessionRepository.find({
+      where: {
+        userId,
+        isActive: true,
+        expiresAt: MoreThan(new Date()),
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<void> {
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    await this.sessionRepository.update(sessionId, { isActive: false });
+  }
+
+  async revokeAllSessions(userId: string): Promise<void> {
+    await this.sessionRepository.update(
+      { userId, isActive: true },
+      { isActive: false },
+    );
+  }
+
+  async deleteSessionByToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<void> {
+    const session = await this.validateSession(userId, refreshToken);
+    if (session) {
+      await this.sessionRepository.update(session.id, { isActive: false });
+    }
+  }
+
+  async deleteAllUserSessions(userId: string): Promise<void> {
+    await this.sessionRepository.delete({ userId });
+  }
+}
