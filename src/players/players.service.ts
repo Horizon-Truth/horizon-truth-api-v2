@@ -14,6 +14,12 @@ import { InitializeProfileDto } from './dto/initialize-profile.dto';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
+import { PlayerLearningProfile } from './entities/player-learning-profile.entity';
+import { UpdateLearningProfileDto } from './dto/update-learning-profile.dto';
+import {
+  mergeSkillBooks,
+  mergeCalibrations,
+} from './learning-profile.util';
 
 @Injectable()
 export class PlayersService {
@@ -26,7 +32,53 @@ export class PlayersService {
     private regionRepository: Repository<Region>,
     @InjectRepository(PlayerAlgorithmProfile)
     private algorithmProfileRepository: Repository<PlayerAlgorithmProfile>,
+    @InjectRepository(PlayerLearningProfile)
+    private learningProfileRepository: Repository<PlayerLearningProfile>,
   ) { }
+
+  /**
+   * Get the player's learning ledgers (skill book + confidence calibration).
+   * Returns empty ledgers if the player has never synced.
+   */
+  async getLearningProfile(
+    userId: string,
+  ): Promise<Pick<PlayerLearningProfile, 'skillBook' | 'calibration'>> {
+    const profile = await this.learningProfileRepository.findOne({
+      where: { userId },
+    });
+    return {
+      skillBook: profile?.skillBook ?? {},
+      calibration: profile?.calibration ?? {},
+    };
+  }
+
+  /**
+   * Upsert the player's learning ledgers. Counters are monotonic, so incoming
+   * data is merged element-wise-max with what's stored: a stale device can
+   * never erase progress made elsewhere.
+   */
+  async upsertLearningProfile(
+    userId: string,
+    dto: UpdateLearningProfileDto,
+  ): Promise<Pick<PlayerLearningProfile, 'skillBook' | 'calibration'>> {
+    let profile = await this.learningProfileRepository.findOne({
+      where: { userId },
+    });
+    if (!profile) {
+      profile = this.learningProfileRepository.create({
+        userId,
+        skillBook: {},
+        calibration: {},
+      });
+    }
+    profile.skillBook = mergeSkillBooks(profile.skillBook, dto.skillBook);
+    profile.calibration = mergeCalibrations(
+      profile.calibration,
+      dto.calibration,
+    );
+    const saved = await this.learningProfileRepository.save(profile);
+    return { skillBook: saved.skillBook, calibration: saved.calibration };
+  }
 
   /**
    * Create a new player profile

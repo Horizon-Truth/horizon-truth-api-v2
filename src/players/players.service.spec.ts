@@ -5,6 +5,7 @@ import { PlayerProfile } from './entities/player-profile.entity';
 import { Avatar } from './entities/avatar.entity';
 import { Region } from './entities/region.entity';
 import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
+import { PlayerLearningProfile } from './entities/player-learning-profile.entity';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('PlayersService', () => {
@@ -65,6 +66,14 @@ describe('PlayersService', () => {
         {
           provide: getRepositoryToken(PlayerAlgorithmProfile),
           useValue: mockAlgorithmProfileRepository,
+        },
+        {
+          provide: getRepositoryToken(PlayerLearningProfile),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
         },
       ],
     }).compile();

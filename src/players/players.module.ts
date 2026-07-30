@@ -7,6 +7,7 @@ import { PlayersService } from './players.service';
 import { PlayersController } from './players.controller';
 import { AdminPlayersController } from './admin-players.controller';
 import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
+import { PlayerLearningProfile } from './entities/player-learning-profile.entity';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-p
       Region,
       PlayerProfile,
       PlayerAlgorithmProfile,
+      PlayerLearningProfile,
     ]),
   ],
   controllers: [PlayersController, AdminPlayersController],

@@ -23,6 +23,7 @@ import { UpdatePlayerProfileDto } from './dto/update-player-profile.dto';
 import { InitializeProfileDto } from './dto/initialize-profile.dto';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
+import { UpdateLearningProfileDto } from './dto/update-learning-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -122,6 +123,32 @@ export class PlayersController {
   @ApiResponse({ status: 200, description: 'Stats retrieved successfully.' })
   async getMyStats(@Request() req) {
     return this.playersService.getPlayerStats(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('learning-profile/me')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get own learning ledgers (skill book + confidence calibration)',
+  })
+  @ApiResponse({ status: 200, description: 'Ledgers retrieved successfully.' })
+  async getMyLearningProfile(@Request() req) {
+    return this.playersService.getLearningProfile(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('learning-profile/me')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Sync own learning ledgers (element-wise max merge; progress is never lost)',
+  })
+  @ApiResponse({ status: 200, description: 'Ledgers merged successfully.' })
+  async updateMyLearningProfile(
+    @Request() req,
+    @Body() dto: UpdateLearningProfileDto,
+  ) {
+    return this.playersService.upsertLearningProfile(req.user.userId, dto);
   }
 
   @Get(':userId')
