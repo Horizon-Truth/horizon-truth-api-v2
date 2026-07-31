@@ -18,3 +18,7 @@ export class CreateContactDto {
     @IsNotEmpty()
     @IsEmail()
     email: string;
+
+    @ApiProperty({ example: 'General Inquiry' })
+    @IsNotEmpty()
+    @IsString()
