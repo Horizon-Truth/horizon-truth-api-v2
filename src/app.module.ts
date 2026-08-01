@@ -25,11 +25,13 @@ import { ResourcesModule } from './resources/resources.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
+import { MailModule } from './mail/mail.module';
 import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    MailModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 minute window
