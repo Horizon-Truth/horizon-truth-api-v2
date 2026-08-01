@@ -29,3 +29,24 @@ export class AddReportModerationFields1753000000000 implements MigrationInterfac
         credibility_score INT NOT NULL DEFAULT 0,
         verification_status VARCHAR(255) NOT NULL DEFAULT 'PENDING',
         created_at TIMESTAMP NOT NULL DEFAULT now(),
+        updated_at TIMESTAMP NOT NULL DEFAULT now()
+      )
+    `);
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE IF EXISTS report_evidence`);
+    await queryRunner.query(`
+      ALTER TABLE reports
+      DROP COLUMN IF EXISTS reason,
+      DROP COLUMN IF EXISTS category,
+      DROP COLUMN IF EXISTS reported_content_reference,
+      DROP COLUMN IF EXISTS evidence_links,
+      DROP COLUMN IF EXISTS related_report_ids,
+      DROP COLUMN IF EXISTS moderator_notes,
+      DROP COLUMN IF EXISTS is_duplicate,
+      DROP COLUMN IF EXISTS duplicate_of_id,
+      DROP COLUMN IF EXISTS reviewer_id
+    `);
+  }
+}
