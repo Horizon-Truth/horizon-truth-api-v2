@@ -208,7 +208,7 @@ We welcome contributions! Please start by reading our:
 
 ## 📄 License
 
-This project is proprietary and **UNLICENSED**. All rights reserved. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
 
 ---
 
