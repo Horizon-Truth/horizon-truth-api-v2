@@ -120,10 +120,10 @@ Horizon-Truth is built on the belief that truth is a collective pursuit. We are 
 ## 9. Licensing Strategy
 
 Our licensing strategy is designed to maximize public benefit while protecting the integrity of the platform:
-*   **Primary License**: The core backend is licensed under the **Apache License 2.0**, ensuring it remains free to use, modify, and distribute, while providing a clear patent grant to users.
+*   **Primary License**: The core backend is licensed under the **MIT License** (see [LICENSE](./LICENSE)), ensuring it remains free to use, modify, and distribute with minimal friction. The same license applies to the Horizon-Truth client, so the platform is MIT end to end.
 *   **Documentation & Media**: All non-code assets and documentation are licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
 *   **Contribution Integrity**: By contributing to this project, contributors agree that their contributions are made under the same license terms as the project itself (Inbound=Outbound).
-*   **Commercial Use**: We encourage commercial adoption and integration provided the terms of the Apache 2.0 license are respected, ensuring the ecosystem remains healthy and collaborative.
+*   **Commercial Use**: We encourage commercial adoption and integration provided the terms of the MIT license are respected (attribution and inclusion of the copyright notice), ensuring the ecosystem remains healthy and collaborative.
 
 ## 10. Communication Channels
 
