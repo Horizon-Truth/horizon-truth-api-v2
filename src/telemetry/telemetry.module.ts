@@ -12,3 +12,18 @@ import { ResponseTiming } from './entities/response-timing.entity';
 
 @Module({
     imports: [
+        TypeOrmModule.forFeature([
+            SessionContext,
+            DecisionOutcome,
+            SocialContextExposure,
+            Dissemination,
+            ContentConsumption,
+            VerificationAction,
+            ResponseTiming,
+        ])
+    ],
+    controllers: [TelemetryController],
+    providers: [TelemetryService],
+    exports: [TelemetryService]
+})
+export class TelemetryModule { }

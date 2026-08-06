@@ -18,3 +18,16 @@ export class CreateContactDto {
     @IsNotEmpty()
     @IsEmail()
     email: string;
+
+    @ApiProperty({ example: 'General Inquiry' })
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(100)
+    subject: string;
+
+    @ApiProperty({ example: 'Hello, I have a question.' })
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(1000)
+    message: string;
+}
