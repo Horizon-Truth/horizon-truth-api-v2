@@ -35,6 +35,10 @@ export class AuditLogsController {
     @Query('userId') userId?: string,
     @Query('action') action?: string,
     @Query('entityType') entityType?: string,
+    @Query('entityId') entityId?: string,
+    @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
     return this.auditLogsService.findAll({
       page: page ? +page : 1,
@@ -42,6 +46,10 @@ export class AuditLogsController {
       userId,
       action,
       entityType,
+      entityId,
+      search,
+      from,
+      to,
     });
   }
 

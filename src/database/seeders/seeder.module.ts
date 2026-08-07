@@ -22,6 +22,12 @@ import { Resource } from '../../resources/entities/resource.entity';
 import { BlogResourceSeederService } from './blog-resource-seeder.service';
 import { AuditLog } from '../../audit-logs/entities/audit-log.entity';
 import { AuditLogSeederService } from './audit-log-seeder.service';
+import { ModerationSeederService } from './moderation-seeder.service';
+import { ModerationFlag } from '../../moderation/entities/moderation-flag.entity';
+import { ModerationFlagAssignment } from '../../moderation/entities/moderation-flag-assignment.entity';
+import { IncidentReport } from '../../incidents/entities/incident-report.entity';
+import { IncidentStatus } from '../../incidents/entities/incident-status.entity';
+import { ModerationAction } from '../../incidents/entities/moderation-action.entity';
 
 @Module({
   imports: [
@@ -44,6 +50,11 @@ import { AuditLogSeederService } from './audit-log-seeder.service';
 
       Resource,
       AuditLog,
+      ModerationFlag,
+      ModerationFlagAssignment,
+      IncidentReport,
+      IncidentStatus,
+      ModerationAction,
     ]),
   ],
   providers: [
@@ -52,6 +63,7 @@ import { AuditLogSeederService } from './audit-log-seeder.service';
     ReportsSeederService,
     BlogResourceSeederService,
     AuditLogSeederService,
+    ModerationSeederService,
   ],
   exports: [
     GameSeederService,
@@ -59,6 +71,7 @@ import { AuditLogSeederService } from './audit-log-seeder.service';
     ReportsSeederService,
     BlogResourceSeederService,
     AuditLogSeederService,
+    ModerationSeederService,
   ],
 })
 export class SeederModule { }

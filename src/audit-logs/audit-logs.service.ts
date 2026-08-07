@@ -1,7 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AuditLog } from './entities/audit-log.entity';
+
+export interface AuditLogQuery {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  /** Free-text across action, entity type/id, reason and IP address. */
+  search?: string;
+  from?: string | Date;
+  to?: string | Date;
+}
 
 @Injectable()
 export class AuditLogsService {
@@ -16,6 +29,9 @@ export class AuditLogsService {
     entityType: string;
     entityId: string;
     metadata?: any;
+    previousValue?: Record<string, unknown> | null;
+    newValue?: Record<string, unknown> | null;
+    reason?: string | null;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<AuditLog> {
@@ -23,29 +39,9 @@ export class AuditLogsService {
     return this.auditLogRepository.save(log);
   }
 
-  async findAll(options: {
-    page?: number;
-    limit?: number;
-    userId?: string;
-    action?: string;
-    entityType?: string;
-  }) {
-    const { page = 1, limit = 20, userId, action, entityType } = options;
-    const query = this.auditLogRepository.createQueryBuilder('log')
-      .leftJoinAndSelect('log.user', 'user')
-      .orderBy('log.createdAt', 'DESC');
-
-    if (userId) {
-      query.andWhere('log.userId = :userId', { userId });
-    }
-
-    if (action) {
-      query.andWhere('log.action ILIKE :action', { action: `%${action}%` });
-    }
-
-    if (entityType) {
-      query.andWhere('log.entityType ILIKE :entityType', { entityType: `%${entityType}%` });
-    }
+  async findAll(options: AuditLogQuery) {
+    const { page = 1, limit = 20 } = options;
+    const query = this.buildQuery(options);
 
     const [items, total] = await query
       .skip((page - 1) * limit)
@@ -57,17 +53,19 @@ export class AuditLogsService {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     };
   }
 
-  async exportLogs(options: {
-    userId?: string;
-    action?: string;
-    entityType?: string;
-  }) {
-    const { userId, action, entityType } = options;
-    const query = this.auditLogRepository.createQueryBuilder('log')
+  async exportLogs(options: Omit<AuditLogQuery, 'page' | 'limit'>) {
+    return this.buildQuery(options).getMany();
+  }
+
+  private buildQuery(options: AuditLogQuery): SelectQueryBuilder<AuditLog> {
+    const { userId, action, entityType, entityId, search, from, to } = options;
+
+    const query = this.auditLogRepository
+      .createQueryBuilder('log')
       .leftJoinAndSelect('log.user', 'user')
       .orderBy('log.createdAt', 'DESC');
 
@@ -80,9 +78,34 @@ export class AuditLogsService {
     }
 
     if (entityType) {
-      query.andWhere('log.entityType ILIKE :entityType', { entityType: `%${entityType}%` });
+      query.andWhere('log.entityType ILIKE :entityType', {
+        entityType: `%${entityType}%`,
+      });
     }
 
-    return query.getMany();
+    if (entityId) {
+      query.andWhere('log.entityId = :entityId', { entityId });
+    }
+
+    if (search) {
+      query.andWhere(
+        `(log.action ILIKE :search
+          OR log.entityType ILIKE :search
+          OR log.entityId ILIKE :search
+          OR log.reason ILIKE :search
+          OR log.ipAddress ILIKE :search)`,
+        { search: `%${search}%` },
+      );
+    }
+
+    if (from) {
+      query.andWhere('log.createdAt >= :from', { from: new Date(from) });
+    }
+
+    if (to) {
+      query.andWhere('log.createdAt <= :to', { to: new Date(to) });
+    }
+
+    return query;
   }
 }
