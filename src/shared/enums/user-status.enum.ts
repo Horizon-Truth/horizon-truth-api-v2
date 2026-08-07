@@ -4,4 +4,3 @@ export enum UserStatus {
   DEACTIVATED = 'DEACTIVATED',
   ANONYMIZED = 'ANONYMIZED',
 }
-

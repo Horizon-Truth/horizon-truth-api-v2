@@ -120,7 +120,7 @@ npm run format           # Format code with Prettier
 ```bash
 npm run test             # Run unit tests
 npm run test:watch       # Run tests in watch mode
-npm run test:cov         # Generate test coverage report
+npm run test:cov         # Run tests + coverage report (fails under 15% global coverage)
 npm run test:debug       # Debug tests with inspector
 npm run test:e2e         # Run end-to-end tests
 ```
@@ -140,6 +140,45 @@ The project uses Jest with comprehensive testing configuration:
 - **E2E Tests:** Configured in `test/jest-e2e.json`
 - **Coverage:** Reports generated in `coverage/` directory
 - **Test Environment:** Node.js environment with proper TypeScript support
+
+### 📊 Test Coverage
+
+Generate a coverage report locally:
+
+```bash
+npm run test:cov         # Runs the unit suite and writes coverage/ to disk
+```
+
+This prints a summary to the terminal and writes the report to `coverage/`:
+
+- `coverage/lcov-report/index.html` — browsable HTML report (open it in a browser)
+- `coverage/lcov.info` — LCOV data for external coverage tooling
+- `coverage/coverage-summary.json` — machine-readable totals
+
+**Enforced thresholds.** A global minimum of **15%** is configured under
+`jest.coverageThreshold` in `package.json` for statements, branches, functions,
+and lines. `npm run test:cov` exits with a non-zero status if any metric falls
+below that floor, so **CI fails when coverage regresses past 15%**.
+
+Generated and excluded from coverage: spec files, type declarations, `main.ts`,
+seed scripts, and TypeORM migrations.
+
+**Where to see results.** Every CI run executes `yarn test:cov` and publishes:
+
+1. A **coverage table in the run summary** — open the latest run from the
+   [Actions tab](https://github.com/Horizon-Truth/horizon-truth-api-v2/actions/workflows/ci.yml)
+   and the per-metric breakdown is shown on the job summary page.
+2. A downloadable **`coverage-report` artifact** attached to the run
+   (retained 30 days) containing the full HTML report.
+
+Current coverage on the unit suite (220 tests across 19 suites):
+
+| Metric | Coverage |
+| :--- | ---: |
+| Statements | 38.02% |
+| Branches | 31.99% |
+| Functions | 29.78% |
+| Lines | 37.77% |
 
 ## 🔧 Database Configuration
 
