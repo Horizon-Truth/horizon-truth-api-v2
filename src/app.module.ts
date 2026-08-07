@@ -14,6 +14,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { PlayersModule } from './players/players.module';
 import { EngineModule } from './engine/engine.module';
 import { IncidentsModule } from './incidents/incidents.module';
+import { ModerationModule } from './moderation/moderation.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SeederModule } from './database/seeders/seeder.module';
@@ -59,6 +60,7 @@ import { GlobalExceptionFilter } from './shared/filters/global-exception.filter'
     PlayersModule,
     EngineModule,
     IncidentsModule,
+    ModerationModule,
     GamificationModule,
     AnalyticsModule,
     SeederModule,

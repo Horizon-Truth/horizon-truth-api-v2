@@ -5,6 +5,7 @@ import { SystemSeederService } from './database/seeders/system-seeder.service';
 import { ReportsSeederService } from './database/seeders/reports-seeder.service';
 import { BlogResourceSeederService } from './database/seeders/blog-resource-seeder.service';
 import { AuditLogSeederService } from './database/seeders/audit-log-seeder.service';
+import { ModerationSeederService } from './database/seeders/moderation-seeder.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -14,6 +15,7 @@ async function bootstrap() {
   const reportsSeeder = app.get(ReportsSeederService);
   const blogResourceSeeder = app.get(BlogResourceSeederService);
   const auditLogSeeder = app.get(AuditLogSeederService);
+  const moderationSeeder = app.get(ModerationSeederService);
 
   try {
     console.log('--- Starting System Seeding ---');
@@ -30,6 +32,9 @@ async function bootstrap() {
 
     console.log('--- Starting Audit Log Data Seeding ---');
     await auditLogSeeder.seed();
+
+    console.log('--- Starting Moderation Data Seeding ---');
+    await moderationSeeder.seed();
 
     console.log('✅ All database seeding completed successfully!');
   } catch (error) {

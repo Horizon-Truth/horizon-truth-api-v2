@@ -102,9 +102,27 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.d.ts",
+      "!main.ts",
+      "!seed*.ts",
+      "!database/migrations/**"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": [
+      "text-summary",
+      "json-summary",
+      "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 15,
+        "branches": 15,
+        "functions": 15,
+        "lines": 15
+      }
+    },
     "testEnvironment": "node"
   }
 }

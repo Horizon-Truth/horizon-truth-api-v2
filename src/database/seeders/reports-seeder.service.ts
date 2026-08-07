@@ -9,6 +9,7 @@ import { User } from '../../users/entities/user.entity';
 import { ReportStatus } from '../../shared/enums/report-status.enum';
 import { ReportPriorityLevel } from '../../shared/enums/report-priority-level.enum';
 import { ReportContentType } from '../../shared/enums/report-content-type.enum';
+import { SUPPORTED_LANGUAGES } from '../../shared/enums/content-language.enum';
 
 @Injectable()
 export class ReportsSeederService {
@@ -41,27 +42,52 @@ export class ReportsSeederService {
     this.logger.log('Reports data seeding completed!');
   }
 
+  /**
+   * Seeds the `languages` table from `SUPPORTED_LANGUAGES`, the single source
+   * of truth for the multilingual system.
+   *
+   * Previously this held its own hardcoded list, which had drifted: it used
+   * `or` for Afaan Oromo where the rest of the platform uses `om`, and spelled
+   * the name "Afan Oromo". Because the existence check only looked at `code`,
+   * a row already stored under `om` was invisible to it — so every re-seed
+   * tried to insert a duplicate and died on the `name` unique constraint.
+   *
+   * Both unique columns are now checked, and a legacy row is reconciled to the
+   * canonical spelling rather than duplicated.
+   */
   private async seedLanguages() {
     this.logger.log('Seeding languages...');
 
-    const languages = [
-      { name: 'English', code: 'en' },
-      { name: 'Amharic', code: 'am' },
-      { name: 'Afan Oromo', code: 'or' },
-    ];
-
-    for (const lang of languages) {
+    for (const descriptor of SUPPORTED_LANGUAGES) {
       const existing = await this.languageRepository.findOne({
-        where: { code: lang.code },
+        where: [{ code: descriptor.code }, { name: descriptor.englishName }],
       });
 
       if (!existing) {
-        const newLang = this.languageRepository.create({
-          ...lang,
-          isActive: true,
-        });
-        await this.languageRepository.save(newLang);
-        this.logger.log(`Created language: ${lang.name}`);
+        await this.languageRepository.save(
+          this.languageRepository.create({
+            name: descriptor.englishName,
+            code: descriptor.code,
+            isActive: true,
+          }),
+        );
+        this.logger.log(`Created language: ${descriptor.englishName}`);
+        continue;
+      }
+
+      // Bring a legacy row into line with the enum, e.g. "Afan Oromo"/`or`
+      // becoming "Afaan Oromo"/`om`.
+      if (
+        existing.name !== descriptor.englishName ||
+        existing.code !== descriptor.code
+      ) {
+        this.logger.log(
+          `Reconciling language "${existing.name}" (${existing.code}) → ` +
+            `"${descriptor.englishName}" (${descriptor.code})`,
+        );
+        existing.name = descriptor.englishName;
+        existing.code = descriptor.code;
+        await this.languageRepository.save(existing);
       }
     }
   }
