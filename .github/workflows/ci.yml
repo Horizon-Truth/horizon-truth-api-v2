@@ -22,5 +22,43 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run unit tests
-        run: yarn test
+      # Fails the job when global coverage drops below the 15% thresholds
+      # configured under "jest.coverageThreshold" in package.json.
+      - name: Run unit tests with coverage
+        run: yarn test:cov
+
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          if [ ! -f coverage/coverage-summary.json ]; then
+            echo "No coverage report was produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node -e '
+            const { total } = require("./coverage/coverage-summary.json");
+            const rows = ["statements", "branches", "functions", "lines"].map((k) => {
+              const m = total[k];
+              const status = m.pct >= 15 ? ":white_check_mark:" : ":x:";
+              return `| ${k} | ${m.pct}% | ${m.covered}/${m.total} | ${status} |`;
+            });
+            console.log([
+              "## Test Coverage",
+              "",
+              "Global threshold: **15%**",
+              "",
+              "| Metric | Coverage | Covered/Total | Status |",
+              "| :--- | ---: | ---: | :---: |",
+              ...rows,
+              "",
+              "Full HTML report: see the `coverage-report` artifact on this run.",
+            ].join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+          if-no-files-found: warn

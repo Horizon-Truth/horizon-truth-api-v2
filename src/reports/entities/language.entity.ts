@@ -15,7 +15,8 @@ export class Language {
   name: string;
 
   @Column({ unique: true })
-  code: string; // e.g., 'en', 'am', 'or'
+  /** ISO-style code from `ContentLanguage`: 'en', 'am', 'om'. */
+  code: string;
 
   @Column({ default: true })
   isActive: boolean;
