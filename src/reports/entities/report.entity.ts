@@ -15,6 +15,7 @@ import { User } from '../../users/entities/user.entity';
 import { ReportTag } from './report-tag.entity';
 import { ReportVerification } from './report-verification.entity';
 import { ReportEvidence } from './report-evidence.entity';
+import { ReportAiVerification } from './report-ai-verification.entity';
 import { ReportStatus } from '../../shared/enums/report-status.enum';
 import { ReportContentType } from '../../shared/enums/report-content-type.enum';
 import { ReportPriorityLevel } from '../../shared/enums/report-priority-level.enum';
@@ -105,6 +106,13 @@ export class Report {
 
   @OneToMany(() => ReportEvidence, (evidence) => evidence.report)
   evidence: ReportEvidence[];
+
+  /**
+   * AI verification attempts, newest last. This is an independent evidence
+   * layer: it never feeds `status`, `credibilityScore`, or moderator decisions.
+   */
+  @OneToMany(() => ReportAiVerification, (verification) => verification.report)
+  aiVerifications: ReportAiVerification[];
 
   @ApiProperty({ example: 85, default: 0 })
   @Column({ name: 'credibility_score', type: 'int', default: 0 })

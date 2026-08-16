@@ -11,6 +11,7 @@ import {
   Patch,
   Ip,
   Post,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -27,6 +28,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserStatus } from '../shared/enums/user-status.enum';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -228,7 +231,43 @@ export class UsersController {
   @Roles(UserRole.SYSTEM_ADMIN)
   @Put(':id/status')
   @ApiOperation({ summary: 'Update user status (SYSTEM_ADMIN only)' })
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.usersService.update(id, { status: status as any });
+  @ApiResponse({ status: 200, description: 'Status updated.' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @Request() req,
+  ) {
+    // Validated here rather than trusting the caller: an unknown value used to
+    // reach the enum column and fail as a 500.
+    if (!Object.values(UserStatus).includes(status as UserStatus)) {
+      throw new BadRequestException(
+        `status must be one of: ${Object.values(UserStatus).join(', ')}`,
+      );
+    }
+
+    return this.usersService.updateAsAdmin(
+      id,
+      { status: status as UserStatus },
+      req.user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a user — profile fields, role or status (SYSTEM_ADMIN)',
+  })
+  @ApiResponse({ status: 200, description: 'User updated.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Email or username already in use.',
+  })
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Request() req,
+  ) {
+    return this.usersService.updateAsAdmin(id, updateUserDto, req.user.userId);
   }
 }
