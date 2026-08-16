@@ -3,6 +3,7 @@ import {
   NotFoundException,
   UnauthorizedException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, ILike, FindOptionsWhere } from 'typeorm';
@@ -104,6 +105,61 @@ export class UsersService {
   async update(id: string, updateData: Partial<User>): Promise<User | null> {
     await this.usersRepository.update(id, updateData);
     return this.usersRepository.findOne({ where: { id } });
+  }
+
+  /**
+   * Administrative edit of another account, including role and status.
+   *
+   * Role changes are how moderation authority is granted, so this is the one
+   * place that has to be careful: an administrator must not be able to change
+   * their own role or status (self-promotion, and locking themselves out of
+   * the only admin account), and the unique columns are checked here so a
+   * collision surfaces as a 409 rather than a database error.
+   */
+  async updateAsAdmin(
+    id: string,
+    changes: Partial<
+      Pick<User, 'fullName' | 'username' | 'email' | 'role' | 'status'>
+    >,
+    actorId: string,
+  ): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const changesRole = changes.role !== undefined && changes.role !== user.role;
+    const changesStatus =
+      changes.status !== undefined && changes.status !== user.status;
+
+    if (id === actorId && (changesRole || changesStatus)) {
+      throw new BadRequestException(
+        'You cannot change your own role or status. Ask another administrator.',
+      );
+    }
+
+    if (changes.email && changes.email !== user.email) {
+      const clash = await this.usersRepository.findOne({
+        where: { email: changes.email },
+      });
+      if (clash && clash.id !== id) {
+        throw new ConflictException('That email is already in use.');
+      }
+    }
+
+    if (changes.username && changes.username !== user.username) {
+      const clash = await this.usersRepository.findOne({
+        where: { username: changes.username },
+      });
+      if (clash && clash.id !== id) {
+        throw new ConflictException('That username is already taken.');
+      }
+    }
+
+    Object.assign(user, changes);
+    await this.usersRepository.save(user);
+
+    return this.usersRepository.findOneOrFail({ where: { id } });
   }
 
   async findOneByResetToken(token: string): Promise<User | null> {

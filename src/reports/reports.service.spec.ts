@@ -9,6 +9,7 @@ describe('ReportsService', () => {
   let reportVerificationRepository: any;
   let reportEvidenceRepository: any;
   let auditLogsService: any;
+  let aiVerificationService: any;
 
   beforeEach(() => {
     reportRepository = {
@@ -34,6 +35,10 @@ describe('ReportsService', () => {
     auditLogsService = {
       createLog: jest.fn(),
     };
+    aiVerificationService = {
+      scheduleForReport: jest.fn().mockResolvedValue(null),
+      findLatestForReport: jest.fn().mockResolvedValue(null),
+    };
 
     service = new ReportsService(
       reportRepository,
@@ -41,6 +46,7 @@ describe('ReportsService', () => {
       reportVerificationRepository,
       reportEvidenceRepository,
       auditLogsService,
+      aiVerificationService,
     );
   });
 
@@ -80,6 +86,72 @@ describe('ReportsService', () => {
     expect(result.isDuplicate).toBe(true);
     expect(result.duplicateOfId).toBe(existing.id);
     expect(auditLogsService.createLog).toHaveBeenCalled();
+  });
+
+  it('schedules AI verification once a report is saved', async () => {
+    reportRepository.find.mockResolvedValue([]);
+    reportRepository.create.mockReturnValue({ title: 'Vaccines cause autism' });
+    reportRepository.save.mockResolvedValue({ id: 'new-report', title: 'Vaccines cause autism' });
+
+    await service.create(
+      {
+        title: 'Vaccines cause autism',
+        description: 'A viral post repeats this claim.',
+        contentType: 'POST' as any,
+        language: 'en',
+      },
+      'user-1',
+    );
+
+    expect(aiVerificationService.scheduleForReport).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'new-report' }),
+    );
+  });
+
+  it('still creates the report when AI verification cannot be scheduled', async () => {
+    reportRepository.find.mockResolvedValue([]);
+    reportRepository.create.mockReturnValue({ title: 'Vaccines cause autism' });
+    reportRepository.save.mockResolvedValue({ id: 'new-report' });
+    aiVerificationService.scheduleForReport.mockRejectedValue(new Error('AI service down'));
+
+    // The community reporting flow must survive an unavailable AI service.
+    await expect(
+      service.create(
+        {
+          title: 'Vaccines cause autism',
+          description: 'A viral post repeats this claim.',
+          contentType: 'POST' as any,
+          language: 'en',
+        },
+        'user-1',
+      ),
+    ).resolves.toEqual(expect.objectContaining({ id: 'new-report' }));
+  });
+
+  it('attaches the latest AI verification to a report detail lookup', async () => {
+    reportRepository.findOne.mockResolvedValue({ id: 'report-1', title: 'Report' });
+    aiVerificationService.findLatestForReport.mockResolvedValue({
+      id: 'attempt-1',
+      status: 'COMPLETED',
+      verdict: 'FALSE',
+    });
+
+    const result = await service.findById('report-1');
+
+    expect(result.aiVerification).toEqual(
+      expect.objectContaining({ id: 'attempt-1', verdict: 'FALSE' }),
+    );
+  });
+
+  it('serves a report with no AI verification as null rather than failing', async () => {
+    // Reports created before the feature existed have no attempt rows.
+    reportRepository.findOne.mockResolvedValue({ id: 'legacy-report', title: 'Old report' });
+    aiVerificationService.findLatestForReport.mockResolvedValue(null);
+
+    const result = await service.findById('legacy-report');
+
+    expect(result.aiVerification).toBeNull();
+    expect(result.id).toBe('legacy-report');
   });
 
   it('records an audit entry when a moderator updates report status', async () => {

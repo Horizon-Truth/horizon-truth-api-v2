@@ -5,9 +5,11 @@ import { Report } from './entities/report.entity';
 import { ReportTag } from './entities/report-tag.entity';
 import { ReportVerification } from './entities/report-verification.entity';
 import { ReportEvidence } from './entities/report-evidence.entity';
+import { ReportAiVerification } from './entities/report-ai-verification.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AiVerificationService } from './ai-verification.service';
 import { ReportStatus } from '../shared/enums/report-status.enum';
 
 @Injectable()
@@ -22,6 +24,7 @@ export class ReportsService {
     @InjectRepository(ReportEvidence)
     private readonly reportEvidenceRepository: Repository<ReportEvidence>,
     private readonly auditLogsService: AuditLogsService,
+    private readonly aiVerificationService: AiVerificationService,
   ) { }
 
   async create(
@@ -58,6 +61,11 @@ export class ReportsService {
       entityId: savedReport.id,
       metadata: { status: savedReport.status, duplicateOfId: savedReport.duplicateOfId },
     });
+
+    // Kicks off AI verification in the background. Scheduling only writes the
+    // PENDING row — the external call is detached — and any failure is swallowed
+    // here so a misbehaving AI service can never fail a community submission.
+    await this.aiVerificationService.scheduleForReport(savedReport).catch(() => null);
 
     return savedReport;
   }
@@ -110,13 +118,20 @@ export class ReportsService {
     };
   }
 
-  async findById(id: string): Promise<Report> {
+  async findById(id: string): Promise<Report & { aiVerification: ReportAiVerification | null }> {
     const report = await this.reportRepository.findOne({
       where: { id },
       relations: ['reporter', 'tags', 'verifications', 'verifications.user', 'evidence'],
     });
     if (!report) throw new NotFoundException('Report not found');
-    return report;
+
+    // Only the newest attempt travels with the report; the full history is
+    // served separately so ordinary detail requests stay small.
+    const aiVerification = await this.aiVerificationService
+      .findLatestForReport(id)
+      .catch(() => null);
+
+    return Object.assign(report, { aiVerification });
   }
 
   async addEvidence(reportId: string, userId: string, evidenceData: AddEvidenceDto): Promise<ReportEvidence> {
