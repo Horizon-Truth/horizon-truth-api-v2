@@ -12,8 +12,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
+import { AiVerificationService } from './ai-verification.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
+import { RequestAiVerificationDto } from './dto/request-ai-verification.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -22,7 +24,10 @@ import { UserRole } from '../shared/enums/user-role.enum';
 @ApiTags('Reports')
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) { }
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly aiVerificationService: AiVerificationService,
+  ) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -62,6 +67,47 @@ export class ReportsController {
     @Request() req: any,
   ) {
     return this.reportsService.addVerification(id, req.user.userId, verificationData);
+  }
+
+  @Get(':id/ai-verification')
+  @ApiOperation({
+    summary: 'Get the current AI verification for a report',
+    description:
+      'Returns `{ verification: null }` for reports that have never been analysed — including every report created before this feature existed.',
+  })
+  async getAiVerification(@Param('id') id: string) {
+    const verification = await this.aiVerificationService.findLatestForReport(id);
+    return { verification };
+  }
+
+  @Post(':id/ai-verification')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Request AI verification for a report',
+    description:
+      'Idempotent by default: an existing result is returned untouched. Pass `force: true` to run a new attempt; previous attempts are kept as history.',
+  })
+  async requestAiVerification(
+    @Param('id') id: string,
+    @Body() dto: RequestAiVerificationDto,
+    @Request() req: any,
+  ) {
+    const verification = await this.aiVerificationService.requestVerification(id, {
+      force: dto?.force === true,
+      requestedById: req.user?.userId,
+    });
+    return { verification };
+  }
+
+  @Get(':id/ai-verification/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List every AI verification attempt for a report (Moderator)' })
+  async getAiVerificationHistory(@Param('id') id: string) {
+    const attempts = await this.aiVerificationService.findHistoryForReport(id);
+    return { attempts };
   }
 
   @Patch(':id')
