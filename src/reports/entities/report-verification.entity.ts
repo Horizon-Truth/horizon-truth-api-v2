@@ -17,7 +17,9 @@ export class ReportVerification {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @ManyToOne(() => Report, (report) => report.verifications)
+    // Deleting a report purges its community verifications with it; without the
+    // cascade the FK blocks the delete and the endpoint fails with a 500.
+    @ManyToOne(() => Report, (report) => report.verifications, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'report_id' })
     report: Report;
 
