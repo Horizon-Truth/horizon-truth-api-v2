@@ -15,7 +15,9 @@ export class ReportEvidence {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Report, (report) => report.evidence)
+  // Same as community verifications: evidence belongs to its report and is
+  // removed with it, otherwise the FK blocks the delete.
+  @ManyToOne(() => Report, (report) => report.evidence, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'report_id' })
   report: Report;
 
