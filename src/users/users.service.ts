@@ -15,6 +15,7 @@ import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { IpPrivacyUtil } from '../shared/utils/ip-privacy.util';
 import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { UserStatus } from '../shared/enums/user-status.enum';
+import { assertStrongPassword } from '../shared/utils/password-policy.util';
 
 @Injectable()
 export class UsersService {
@@ -77,6 +78,11 @@ export class UsersService {
 
     const createData: Partial<User> = { ...userData };
     if (userData.password) {
+      assertStrongPassword(userData.password, {
+        email: userData.email ?? undefined,
+        username: userData.username ?? undefined,
+        fullName: userData.fullName ?? undefined,
+      });
       createData.passwordHash = await bcrypt.hash(userData.password, 10);
     }
 
@@ -279,7 +285,7 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['id', 'passwordHash'],
+      select: ['id', 'email', 'username', 'fullName', 'passwordHash'],
     });
 
     if (!user || !user.passwordHash) {
@@ -292,6 +298,19 @@ export class UsersService {
     );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    assertStrongPassword(newPassword, {
+      email: user.email ?? undefined,
+      username: user.username ?? undefined,
+      fullName: user.fullName ?? undefined,
+    });
+
+    const sameAsCurrent = await bcrypt.compare(newPassword, user.passwordHash);
+    if (sameAsCurrent) {
+      throw new BadRequestException(
+        'New password must be different from the current password.',
+      );
     }
 
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
