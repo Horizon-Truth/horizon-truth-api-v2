@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { Session } from './entities/session.entity';
+import { assertStrongPassword } from '../shared/utils/password-policy.util';
 
 @Injectable()
 export class AuthService {
@@ -186,6 +187,8 @@ export class AuthService {
       // Check expires exists
       throw new UnauthorizedException('Invalid or expired token');
     }
+
+    assertStrongPassword(newPassword, { email: user.email ?? undefined });
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersService.update(user.id, {
