@@ -207,9 +207,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Create a new user (SYSTEM_ADMIN only)' })
   @ApiResponse({ status: 201, description: 'User created successfully.' })
   async create(@Body() createUserDto: CreateUserDto) {
-    const password =
-      createUserDto.password || Math.random().toString(36).slice(-8);
-    return this.usersService.create({ ...createUserDto, password });
+    return this.usersService.create(createUserDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
