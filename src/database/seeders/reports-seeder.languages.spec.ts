@@ -94,7 +94,12 @@ describe('ReportsSeederService — languages', () => {
   });
 
   it('reconciles a legacy row instead of inserting a duplicate', async () => {
-    const legacy = { id: 'l-1', name: 'Afan Oromo', code: 'om', isActive: true };
+    const legacy = {
+      id: 'l-1',
+      name: 'Afan Oromo',
+      code: 'om',
+      isActive: true,
+    };
 
     languageRepository.findOne.mockImplementation(
       async ({ where }: { where: Array<Record<string, string>> }) => {

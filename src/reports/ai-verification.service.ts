@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { ReportAiVerification } from './entities/report-ai-verification.entity';
-import { AiVerificationClient, AiVerificationError } from './ai-verification.client';
+import {
+  AiVerificationClient,
+  AiVerificationError,
+} from './ai-verification.client';
 import { deriveVerificationClaim } from './ai-claim.util';
 import { AiVerificationStatus } from '../shared/enums/ai-verification-status.enum';
 
@@ -46,10 +49,12 @@ export class AiVerificationService {
     @InjectRepository(Report)
     private readonly reportRepository: Repository<Report>,
     private readonly client: AiVerificationClient,
-  ) { }
+  ) {}
 
   /** The current result for a report, or null when it was never analysed. */
-  async findLatestForReport(reportId: string): Promise<ReportAiVerification | null> {
+  async findLatestForReport(
+    reportId: string,
+  ): Promise<ReportAiVerification | null> {
     return this.verificationRepository.findOne({
       where: { reportId },
       order: { createdAt: 'DESC' },
@@ -57,7 +62,9 @@ export class AiVerificationService {
   }
 
   /** Full attempt history, newest first — moderator/audit view. */
-  async findHistoryForReport(reportId: string): Promise<ReportAiVerification[]> {
+  async findHistoryForReport(
+    reportId: string,
+  ): Promise<ReportAiVerification[]> {
     return this.verificationRepository.find({
       where: { reportId },
       order: { createdAt: 'DESC' },
@@ -69,7 +76,9 @@ export class AiVerificationService {
    * call in the background. Never throws: a failure here must not roll back or
    * fail the report the community just submitted.
    */
-  async scheduleForReport(report: Report): Promise<ReportAiVerification | null> {
+  async scheduleForReport(
+    report: Report,
+  ): Promise<ReportAiVerification | null> {
     try {
       const attempt = await this.createAttempt(report);
       this.runDetached(attempt.id, report.id);
@@ -93,7 +102,9 @@ export class AiVerificationService {
     reportId: string,
     options: RequestVerificationOptions = {},
   ): Promise<ReportAiVerification> {
-    const report = await this.reportRepository.findOne({ where: { id: reportId } });
+    const report = await this.reportRepository.findOne({
+      where: { id: reportId },
+    });
     if (!report) throw new NotFoundException('Report not found');
 
     const latest = await this.findLatestForReport(reportId);
@@ -121,8 +132,12 @@ export class AiVerificationService {
    * Runs one attempt end to end. Exposed (rather than private) so tests and any
    * future worker can drive an attempt synchronously.
    */
-  async processAttempt(attemptId: string): Promise<ReportAiVerification | null> {
-    const attempt = await this.verificationRepository.findOne({ where: { id: attemptId } });
+  async processAttempt(
+    attemptId: string,
+  ): Promise<ReportAiVerification | null> {
+    const attempt = await this.verificationRepository.findOne({
+      where: { id: attemptId },
+    });
     if (!attempt) return null;
 
     // Guard against a second runner picking up an attempt already in progress.
@@ -152,7 +167,9 @@ export class AiVerificationService {
 
       this.logger.warn(
         `AI verification failed for report ${attempt.reportId}: ${
-          error instanceof AiVerificationError ? `${error.reason} — ${error.message}` : 'unexpected error'
+          error instanceof AiVerificationError
+            ? `${error.reason} — ${error.message}`
+            : 'unexpected error'
         }`,
       );
     }
@@ -160,7 +177,10 @@ export class AiVerificationService {
     return this.verificationRepository.save(attempt);
   }
 
-  private async createAttempt(report: Report, requestedById?: string): Promise<ReportAiVerification> {
+  private async createAttempt(
+    report: Report,
+    requestedById?: string,
+  ): Promise<ReportAiVerification> {
     const claim = deriveVerificationClaim(report);
 
     const attempt = this.verificationRepository.create({
@@ -213,7 +233,10 @@ export class AiVerificationService {
 
   private ageMs(attempt: ReportAiVerification): number {
     const timestamp = attempt.updatedAt ?? attempt.createdAt;
-    const started = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+    const started =
+      timestamp instanceof Date
+        ? timestamp.getTime()
+        : new Date(timestamp).getTime();
     if (!Number.isFinite(started)) return Number.MAX_SAFE_INTEGER;
     return Date.now() - started;
   }

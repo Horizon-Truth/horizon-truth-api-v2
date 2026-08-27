@@ -42,7 +42,9 @@ export class AddReportAiVerification1755300000000 implements MigrationInterface 
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_report_ai_verifications_report_created`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS idx_report_ai_verifications_report_created`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS report_ai_verifications`);
   }
 }

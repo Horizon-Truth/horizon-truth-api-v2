@@ -35,7 +35,7 @@ import { UserStatus } from '../shared/enums/user-status.enum';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) { }
+  constructor(private usersService: UsersService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -166,7 +166,6 @@ export class UsersController {
     };
   }
 
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SYSTEM_ADMIN)
   @Delete(':id')
@@ -208,7 +207,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Create a new user (SYSTEM_ADMIN only)' })
   @ApiResponse({ status: 201, description: 'User created successfully.' })
   async create(@Body() createUserDto: CreateUserDto) {
-    const password = createUserDto.password || Math.random().toString(36).slice(-8);
+    const password =
+      createUserDto.password || Math.random().toString(36).slice(-8);
     return this.usersService.create({ ...createUserDto, password });
   }
 

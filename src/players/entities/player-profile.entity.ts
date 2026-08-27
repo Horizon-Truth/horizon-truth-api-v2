@@ -64,7 +64,8 @@ export class PlayerProfile {
 
   @ApiPropertyOptional({
     example: 'FACT_CHECKER',
-    description: 'Reputation role: OBSERVER | FACT_CHECKER | TRUSTED_VERIFIER | MODERATOR',
+    description:
+      'Reputation role: OBSERVER | FACT_CHECKER | TRUSTED_VERIFIER | MODERATOR',
   })
   @Column({ name: 'reputation_role', type: 'varchar', default: 'OBSERVER' })
   reputationRole: string;

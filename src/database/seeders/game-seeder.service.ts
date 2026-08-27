@@ -42,7 +42,7 @@ export class GameSeederService {
     private playerChoiceRepository: Repository<PlayerChoice>,
     @InjectRepository(GameOutcome)
     private gameOutcomeRepository: Repository<GameOutcome>,
-  ) { }
+  ) {}
 
   async seed() {
     this.logger.log('Starting game data seeding...');
@@ -103,19 +103,22 @@ export class GameSeederService {
     const avatars = [
       {
         name: 'Truth Seeker',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=TruthSeeker',
+        imageUrl:
+          'https://api.dicebear.com/7.x/adventurer/svg?seed=TruthSeeker',
         gender: 'NEUTRAL' as any,
         ageGroup: 'ADULT' as any,
       },
       {
         name: 'Fact Checker',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=FactChecker',
+        imageUrl:
+          'https://api.dicebear.com/7.x/adventurer/svg?seed=FactChecker',
         gender: 'FEMALE' as any,
         ageGroup: 'ADULT' as any,
       },
       {
         name: 'Media Analyst',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=MediaAnalyst',
+        imageUrl:
+          'https://api.dicebear.com/7.x/adventurer/svg?seed=MediaAnalyst',
         gender: 'MALE' as any,
         ageGroup: 'ADULT' as any,
       },
@@ -133,7 +136,8 @@ export class GameSeederService {
       },
       {
         name: 'Digital Native',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=DigitalNative',
+        imageUrl:
+          'https://api.dicebear.com/7.x/adventurer/svg?seed=DigitalNative',
         gender: 'MALE' as any,
         ageGroup: 'YOUTH' as any,
       },
@@ -145,7 +149,8 @@ export class GameSeederService {
       },
       {
         name: 'Truth Apprentice',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=TruthApprentice',
+        imageUrl:
+          'https://api.dicebear.com/7.x/adventurer/svg?seed=TruthApprentice',
         gender: 'NEUTRAL' as any,
         ageGroup: 'YOUTH' as any,
       },
@@ -185,23 +190,28 @@ export class GameSeederService {
     const regions = [
       {
         name: 'Luma City',
-        description: 'A vibrant urban center where information flows fast and social media shapes daily life.',
+        description:
+          'A vibrant urban center where information flows fast and social media shapes daily life.',
       },
       {
         name: 'Beko Town',
-        description: 'A close-knit community where word-of-mouth spreads like wildfire.',
+        description:
+          'A close-knit community where word-of-mouth spreads like wildfire.',
       },
       {
         name: 'Adama Heights',
-        description: 'A diverse suburban district with a strong youth activist culture.',
+        description:
+          'A diverse suburban district with a strong youth activist culture.',
       },
       {
         name: 'Dire Springs',
-        description: 'A rural region where limited internet access makes misinformation harder to verify.',
+        description:
+          'A rural region where limited internet access makes misinformation harder to verify.',
       },
       {
         name: 'Hawassa Bay',
-        description: 'A lakeside town with a growing tech scene and active Telegram communities.',
+        description:
+          'A lakeside town with a growing tech scene and active Telegram communities.',
       },
     ];
 
@@ -478,7 +488,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -10,
               influenceImpact: 15,
-              spreadSimulation: { reach: 4200, reshares: 2800, credibility_loss: 15 },
+              spreadSimulation: {
+                reach: 4200,
+                reshares: 2800,
+                credibility_loss: 15,
+              },
               psychologicalTrap: 'FOMO — Fear of Missing Out',
               nextSceneTitle: 'Notification Flood',
             },
@@ -518,7 +532,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
-              spreadSimulation: { reach: 15000, reshares: 8100, credibility_loss: 35 },
+              spreadSimulation: {
+                reach: 15000,
+                reshares: 8100,
+                credibility_loss: 35,
+              },
               psychologicalTrap: 'Social Proof + Bandwagon Effect',
               outcome: {
                 trustScoreDelta: -20,
@@ -711,7 +729,7 @@ export class GameSeederService {
                 outcomeType: OutcomeType.FAIL,
                 endScenario: true,
                 message:
-                  '📉 Knowing but doing nothing still causes harm. You verified the fake but let it continue spreading to others. Truth has no value if you don\'t act on it.',
+                  "📉 Knowing but doing nothing still causes harm. You verified the fake but let it continue spreading to others. Truth has no value if you don't act on it.",
               },
             },
           ],
@@ -735,7 +753,8 @@ export class GameSeederService {
       learningObjective:
         'Recognize financial phishing tactics: fake domains, urgency, social proof from friends, and requests for sensitive data.',
       psychologicalTrigger: 'Greed and social proof (friends engaging)',
-      behavioralRisk: 'Submitting personal financial data to unverified sources',
+      behavioralRisk:
+        'Submitting personal financial data to unverified sources',
       preventionLesson:
         'Legitimate banks never ask for account numbers via social media. Always verify giveaways on the official bank website.',
       theme: 'Financial Phishing & Social Engineering',
@@ -769,7 +788,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -20,
               influenceImpact: 5,
-              spreadSimulation: { reach: 8700, reshares: 5400, credibility_loss: 25 },
+              spreadSimulation: {
+                reach: 8700,
+                reshares: 5400,
+                credibility_loss: 25,
+              },
               psychologicalTrap: 'Greed + Urgency Pressure',
               nextSceneTitle: 'Phishing Page',
             },
@@ -847,7 +870,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
-              spreadSimulation: { reach: 2000, reshares: 0, credibility_loss: 80 },
+              spreadSimulation: {
+                reach: 2000,
+                reshares: 0,
+                credibility_loss: 80,
+              },
               psychologicalTrap: 'Sunk Cost Fallacy',
               outcome: {
                 trustScoreDelta: -25,
@@ -871,7 +898,7 @@ export class GameSeederService {
           order: 4,
           title: 'Fake Domain Detected',
           description:
-            'Verification reveals the domain is fake — it\'s not the real X-Bank.',
+            "Verification reveals the domain is fake — it's not the real X-Bank.",
           sceneType: 'ANALYSIS',
           sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
@@ -891,7 +918,7 @@ export class GameSeederService {
                 outcomeType: OutcomeType.PASS,
                 endScenario: true,
                 message:
-                  '✅ You stopped a financial scam. Your report helped Facebook remove the post and warn 8,000 people who had already clicked. You protected your community\'s savings.',
+                  "✅ You stopped a financial scam. Your report helped Facebook remove the post and warn 8,000 people who had already clicked. You protected your community's savings.",
               },
             },
             {
@@ -951,7 +978,7 @@ export class GameSeederService {
           order: 6,
           title: 'Bank Website Check',
           description:
-            'You go directly to X-Bank\'s official website to check for announcements.',
+            "You go directly to X-Bank's official website to check for announcements.",
           sceneType: 'ANALYSIS',
           sceneTypeLabel: 'Analysis Report',
           contentType: SceneContentType.TEXT,
@@ -984,7 +1011,7 @@ export class GameSeederService {
                 outcomeType: OutcomeType.FAIL,
                 endScenario: true,
                 message:
-                  '📉 Silence allows theft. You confirmed it was fake but didn\'t report it. The scam continued and 2,000 people lost their savings.',
+                  "📉 Silence allows theft. You confirmed it was fake but didn't report it. The scam continued and 2,000 people lost their savings.",
               },
             },
           ],
@@ -1043,7 +1070,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -25,
               influenceImpact: 35,
-              spreadSimulation: { reach: 15400, reshares: 9200, credibility_loss: 50 },
+              spreadSimulation: {
+                reach: 15400,
+                reshares: 9200,
+                credibility_loss: 50,
+              },
               psychologicalTrap: 'Fear + Tribal Identity',
               nextSceneTitle: 'Network Propagation Map',
             },
@@ -1052,7 +1083,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -20,
               influenceImpact: 30,
-              spreadSimulation: { reach: 8500, reshares: 3400, credibility_loss: 40 },
+              spreadSimulation: {
+                reach: 8500,
+                reshares: 3400,
+                credibility_loss: 40,
+              },
               psychologicalTrap: 'Anger + Emotional Hijacking',
               nextSceneTitle: 'Friends Reacting To Status',
             },
@@ -1117,7 +1152,11 @@ export class GameSeederService {
               actionType: PlayerActionType.CHOICE,
               scoreImpact: -30,
               influenceImpact: 20,
-              spreadSimulation: { reach: 25000, reshares: 12000, credibility_loss: 65 },
+              spreadSimulation: {
+                reach: 25000,
+                reshares: 12000,
+                credibility_loss: 65,
+              },
               psychologicalTrap: 'Empathy Exploitation',
               nextSceneTitle: 'Community Protector Badge',
             },
@@ -1135,7 +1174,7 @@ export class GameSeederService {
           order: 4,
           title: 'Community Protector Badge',
           description:
-            'You feel proud — you\'re helping coordinate a community response.',
+            "You feel proud — you're helping coordinate a community response.",
           sceneType: 'INVESTIGATION',
           sceneTypeLabel: 'False Reward',
           contentType: SceneContentType.TEXT,
@@ -1158,8 +1197,7 @@ export class GameSeederService {
         {
           order: 5,
           title: 'Morning After Tragedy',
-          description:
-            'You wake up at 6:00 AM to devastating news.',
+          description: 'You wake up at 6:00 AM to devastating news.',
           sceneType: 'ANALYSIS',
           sceneTypeLabel: 'Consequence Reveal',
           contentType: SceneContentType.TEXT,
@@ -1213,8 +1251,7 @@ export class GameSeederService {
         {
           order: 7,
           title: 'Friends Reacting To Status',
-          description:
-            'Your angry status post is trending in youth circles.',
+          description: 'Your angry status post is trending in youth circles.',
           sceneType: 'INVESTIGATION',
           sceneTypeLabel: 'Social Amplification',
           contentType: SceneContentType.FEED,
@@ -1342,7 +1379,9 @@ export class GameSeederService {
     });
 
     const totalPossibleScore = data.scenes.reduce((acc, scene) => {
-      const maxImpact = scene.choices?.length ? Math.max(...scene.choices.map(c => c.scoreImpact || 0)) : 0;
+      const maxImpact = scene.choices?.length
+        ? Math.max(...scene.choices.map((c) => c.scoreImpact || 0))
+        : 0;
       return acc + maxImpact;
     }, 0);
 
@@ -1416,7 +1455,7 @@ export class GameSeederService {
       sceneMap.set(sceneData.title, savedScene.id);
 
       // Create/Update scene content
-      let content = await this.sceneContentRepository.findOne({
+      const content = await this.sceneContentRepository.findOne({
         where: { sceneId: savedScene.id },
       });
 
@@ -1492,6 +1531,8 @@ export class GameSeederService {
       }
     }
 
-    this.logger.log(`Setup/Updated ${data.scenes.length} scenes for: ${data.title}`);
+    this.logger.log(
+      `Setup/Updated ${data.scenes.length} scenes for: ${data.title}`,
+    );
   }
 }

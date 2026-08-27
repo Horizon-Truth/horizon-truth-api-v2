@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { AiVerificationService } from './ai-verification.service';
@@ -27,8 +28,9 @@ export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
     private readonly aiVerificationService: AiVerificationService,
-  ) { }
+  ) {}
 
+  @Throttle({ default: { limit: 10, ttl: 300000 } }) // 10 per 5 min
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -53,7 +55,11 @@ export class ReportsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add supporting evidence to a report' })
-  addEvidence(@Param('id') id: string, @Body() evidenceDto: AddEvidenceDto, @Request() req: any) {
+  addEvidence(
+    @Param('id') id: string,
+    @Body() evidenceDto: AddEvidenceDto,
+    @Request() req: any,
+  ) {
     return this.reportsService.addEvidence(id, req.user.userId, evidenceDto);
   }
 
@@ -63,10 +69,15 @@ export class ReportsController {
   @ApiOperation({ summary: 'Add community verification to a report' })
   addVerification(
     @Param('id') id: string,
-    @Body() verificationData: { comment: string; status: string; rating?: number },
+    @Body()
+    verificationData: { comment: string; status: string; rating?: number },
     @Request() req: any,
   ) {
-    return this.reportsService.addVerification(id, req.user.userId, verificationData);
+    return this.reportsService.addVerification(
+      id,
+      req.user.userId,
+      verificationData,
+    );
   }
 
   @Get(':id/ai-verification')
@@ -76,7 +87,8 @@ export class ReportsController {
       'Returns `{ verification: null }` for reports that have never been analysed — including every report created before this feature existed.',
   })
   async getAiVerification(@Param('id') id: string) {
-    const verification = await this.aiVerificationService.findLatestForReport(id);
+    const verification =
+      await this.aiVerificationService.findLatestForReport(id);
     return { verification };
   }
 
@@ -93,10 +105,13 @@ export class ReportsController {
     @Body() dto: RequestAiVerificationDto,
     @Request() req: any,
   ) {
-    const verification = await this.aiVerificationService.requestVerification(id, {
-      force: dto?.force === true,
-      requestedById: req.user?.userId,
-    });
+    const verification = await this.aiVerificationService.requestVerification(
+      id,
+      {
+        force: dto?.force === true,
+        requestedById: req.user?.userId,
+      },
+    );
     return { verification };
   }
 
@@ -104,7 +119,9 @@ export class ReportsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'List every AI verification attempt for a report (Moderator)' })
+  @ApiOperation({
+    summary: 'List every AI verification attempt for a report (Moderator)',
+  })
   async getAiVerificationHistory(@Param('id') id: string) {
     const attempts = await this.aiVerificationService.findHistoryForReport(id);
     return { attempts };

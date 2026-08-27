@@ -15,4 +15,4 @@ import { UsersModule } from '../users/users.module';
   controllers: [AdminOrganizationsController],
   exports: [TypeOrmModule, OrganizationsService],
 })
-export class OrganizationsModule { }
+export class OrganizationsModule {}

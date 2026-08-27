@@ -63,7 +63,9 @@ describe('Report child cascade rules', () => {
 
   it.each(children)('deletes %s with their report', (_label, entity) => {
     const metadata = dataSource.getMetadata(entity);
-    const relation = metadata.relations.find((candidate) => candidate.propertyName === 'report');
+    const relation = metadata.relations.find(
+      (candidate) => candidate.propertyName === 'report',
+    );
 
     expect(relation).toBeDefined();
     expect(relation!.inverseEntityMetadata.target).toBe(Report);

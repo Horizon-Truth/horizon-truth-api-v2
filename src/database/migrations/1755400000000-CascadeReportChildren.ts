@@ -16,7 +16,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class CascadeReportChildren1755400000000 implements MigrationInterface {
   name = 'CascadeReportChildren1755400000000';
 
-  private static readonly CHILD_TABLES = ['report_verifications', 'report_evidence'];
+  private static readonly CHILD_TABLES = [
+    'report_verifications',
+    'report_evidence',
+  ];
 
   private async recreateForeignKey(
     queryRunner: QueryRunner,
@@ -40,7 +43,9 @@ export class CascadeReportChildren1755400000000 implements MigrationInterface {
     );
 
     for (const { constraint_name } of existing) {
-      await queryRunner.query(`ALTER TABLE "${table}" DROP CONSTRAINT "${constraint_name}"`);
+      await queryRunner.query(
+        `ALTER TABLE "${table}" DROP CONSTRAINT "${constraint_name}"`,
+      );
     }
 
     const name = `FK_${table}_report_id`;

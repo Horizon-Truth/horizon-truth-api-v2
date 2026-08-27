@@ -34,15 +34,26 @@ describe('AiVerificationService', () => {
     verificationRepository = {
       create: jest.fn((data: any) => ({ ...data })),
       save: jest.fn(async (entity: any) => {
-        const saved = { id: entity.id ?? `attempt-${stored.length + 1}`, ...entity };
+        const saved = {
+          id: entity.id ?? `attempt-${stored.length + 1}`,
+          ...entity,
+        };
         const index = stored.findIndex((item) => item.id === saved.id);
         if (index >= 0) stored[index] = saved;
-        else stored.push({ ...saved, createdAt: new Date(), updatedAt: new Date() });
+        else
+          stored.push({
+            ...saved,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         return saved;
       }),
       findOne: jest.fn(async ({ where }: any) => {
-        if (where.id) return stored.find((item) => item.id === where.id) ?? null;
-        const matches = stored.filter((item) => item.reportId === where.reportId);
+        if (where.id)
+          return stored.find((item) => item.id === where.id) ?? null;
+        const matches = stored.filter(
+          (item) => item.reportId === where.reportId,
+        );
         return matches.at(-1) ?? null;
       }),
       find: jest.fn(async ({ where }: any) =>
@@ -51,7 +62,9 @@ describe('AiVerificationService', () => {
     };
 
     reportRepository = {
-      findOne: jest.fn(async ({ where }: any) => (where.id === report.id ? report : null)),
+      findOne: jest.fn(async ({ where }: any) =>
+        where.id === report.id ? report : null,
+      ),
     };
 
     client = {
@@ -59,7 +72,11 @@ describe('AiVerificationService', () => {
       detect: jest.fn().mockResolvedValue(detectionResult),
     };
 
-    service = new AiVerificationService(verificationRepository, reportRepository, client);
+    service = new AiVerificationService(
+      verificationRepository,
+      reportRepository,
+      client,
+    );
   });
 
   describe('scheduleForReport', () => {
@@ -93,14 +110,19 @@ describe('AiVerificationService', () => {
     it('never throws when the attempt cannot even be recorded', async () => {
       verificationRepository.save.mockRejectedValueOnce(new Error('db down'));
 
-      await expect(service.scheduleForReport(report as any)).resolves.toBeNull();
+      await expect(
+        service.scheduleForReport(report as any),
+      ).resolves.toBeNull();
     });
   });
 
   describe('processAttempt', () => {
     it('marks the attempt FAILED with a user-safe message when the AI errors', async () => {
       client.detect.mockRejectedValue(
-        new AiVerificationError('TIMEOUT', 'The AI verification service took too long to respond.'),
+        new AiVerificationError(
+          'TIMEOUT',
+          'The AI verification service took too long to respond.',
+        ),
       );
 
       const attempt = await service.scheduleForReport(report as any);
@@ -116,14 +138,18 @@ describe('AiVerificationService', () => {
     });
 
     it('does not leak unexpected error detail into the stored message', async () => {
-      client.detect.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.5:443'));
+      client.detect.mockRejectedValue(
+        new Error('connect ECONNREFUSED 10.0.0.5:443'),
+      );
 
       const attempt = await service.scheduleForReport(report as any);
       await flush();
       await flush();
 
       const finished = stored.find((item) => item.id === attempt!.id);
-      expect(finished.errorMessage).toBe('AI verification could not be completed.');
+      expect(finished.errorMessage).toBe(
+        'AI verification could not be completed.',
+      );
     });
 
     it('skips an attempt that is already being processed', async () => {
@@ -142,7 +168,9 @@ describe('AiVerificationService', () => {
 
   describe('requestVerification', () => {
     it('rejects an unknown report', async () => {
-      await expect(service.requestVerification('missing')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.requestVerification('missing'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('returns the stored result without calling the AI again', async () => {
@@ -174,7 +202,9 @@ describe('AiVerificationService', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.requestVerification('report-1', { force: true });
+      const result = await service.requestVerification('report-1', {
+        force: true,
+      });
       await flush();
 
       expect(result.id).toBe('attempt-running');
@@ -219,7 +249,9 @@ describe('AiVerificationService', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.requestVerification('report-1', { force: true });
+      const result = await service.requestVerification('report-1', {
+        force: true,
+      });
       await flush();
 
       expect(result.id).toBe('attempt-fresh');
@@ -227,13 +259,17 @@ describe('AiVerificationService', () => {
     });
 
     it('runs a first attempt for a report created before the feature existed', async () => {
-      const result = await service.requestVerification('report-1', { requestedById: 'user-2' });
+      const result = await service.requestVerification('report-1', {
+        requestedById: 'user-2',
+      });
       await flush();
       await flush();
 
       expect(result.status).toBeDefined();
       expect(client.detect).toHaveBeenCalledWith('Vaccines Cause Autism');
-      expect(stored.at(-1)).toMatchObject({ status: AiVerificationStatus.COMPLETED });
+      expect(stored.at(-1)).toMatchObject({
+        status: AiVerificationStatus.COMPLETED,
+      });
     });
   });
 
@@ -245,7 +281,11 @@ describe('AiVerificationService', () => {
     it('lists every attempt for moderators', async () => {
       stored.push(
         { id: 'a1', reportId: 'report-1', status: AiVerificationStatus.FAILED },
-        { id: 'a2', reportId: 'report-1', status: AiVerificationStatus.COMPLETED },
+        {
+          id: 'a2',
+          reportId: 'report-1',
+          status: AiVerificationStatus.COMPLETED,
+        },
       );
 
       const history = await service.findHistoryForReport('report-1');

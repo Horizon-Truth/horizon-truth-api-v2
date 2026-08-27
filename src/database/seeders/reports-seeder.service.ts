@@ -26,7 +26,7 @@ export class ReportsSeederService {
     private languageRepository: Repository<Language>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   async seed() {
     this.logger.log('Starting reports data seeding...');
@@ -97,13 +97,38 @@ export class ReportsSeederService {
 
     const tagsMetadata = [
       { name: 'Health', slug: 'health', icon: 'ShieldCheck', color: '#10b981' },
-      { name: 'Social Media', slug: 'social', icon: 'Megaphone', color: '#3b82f6' },
+      {
+        name: 'Social Media',
+        slug: 'social',
+        icon: 'Megaphone',
+        color: '#3b82f6',
+      },
       { name: 'Finance', slug: 'finance', icon: 'Star', color: '#f59e0b' },
       { name: 'Other', slug: 'other', icon: 'Info', color: '#6b7280' },
-      { name: 'False Information', slug: 'false_information', icon: 'AlertCircle', color: '#ef4444' },
-      { name: 'Manipulated Media', slug: 'manipulated_media', icon: 'Video', color: '#8b5cf6' },
-      { name: 'Misleading Content', slug: 'misleading_content', icon: 'FileText', color: '#f97316' },
-      { name: 'Harmful Advice', slug: 'harmful_advice', icon: 'Flame', color: '#dc2626' },
+      {
+        name: 'False Information',
+        slug: 'false_information',
+        icon: 'AlertCircle',
+        color: '#ef4444',
+      },
+      {
+        name: 'Manipulated Media',
+        slug: 'manipulated_media',
+        icon: 'Video',
+        color: '#8b5cf6',
+      },
+      {
+        name: 'Misleading Content',
+        slug: 'misleading_content',
+        icon: 'FileText',
+        color: '#f97316',
+      },
+      {
+        name: 'Harmful Advice',
+        slug: 'harmful_advice',
+        icon: 'Flame',
+        color: '#dc2626',
+      },
     ];
 
     const seededTags: ReportTag[] = [];
@@ -137,7 +162,8 @@ export class ReportsSeederService {
     const reportsData = [
       {
         title: 'Viral Health Cure Claim',
-        description: 'A popular social media post claiming a miracle cure for respiratory illnesses without medical evidence.',
+        description:
+          'A popular social media post claiming a miracle cure for respiratory illnesses without medical evidence.',
         contentType: ReportContentType.ARTICLE,
         status: ReportStatus.UNDER_REVIEW,
         priority: ReportPriorityLevel.HIGH,
@@ -146,13 +172,23 @@ export class ReportsSeederService {
         sourceUrl: 'https://health-fake-news.com/miracle-cure',
         tagSlugs: ['health', 'false_information'],
         verifications: [
-          { status: 'FALSE', comment: 'This contradicts all peer-reviewed studies on the subject.', rating: 1 },
-          { status: 'FAKE', comment: 'Post flagged as harmful by 150+ users.', rating: 1 },
-        ]
+          {
+            status: 'FALSE',
+            comment:
+              'This contradicts all peer-reviewed studies on the subject.',
+            rating: 1,
+          },
+          {
+            status: 'FAKE',
+            comment: 'Post flagged as harmful by 150+ users.',
+            rating: 1,
+          },
+        ],
       },
       {
         title: 'Manipulated Crypto News',
-        description: 'Deepfake video of a CEO promoting a fraudulent investment scheme.',
+        description:
+          'Deepfake video of a CEO promoting a fraudulent investment scheme.',
         contentType: ReportContentType.VIDEO,
         status: ReportStatus.VERIFIED,
         priority: ReportPriorityLevel.CRITICAL,
@@ -161,13 +197,22 @@ export class ReportsSeederService {
         sourceUrl: 'https://crypto-news.com/deepfake-ceo',
         tagSlugs: ['finance', 'manipulated_media'],
         verifications: [
-          { status: 'TRUE', comment: 'Confirmed deepfake by AI analysis tools.', rating: 5 },
-          { status: 'VERIFIED', comment: 'Official company statement confirms this is fake.', rating: 5 },
-        ]
+          {
+            status: 'TRUE',
+            comment: 'Confirmed deepfake by AI analysis tools.',
+            rating: 5,
+          },
+          {
+            status: 'VERIFIED',
+            comment: 'Official company statement confirms this is fake.',
+            rating: 5,
+          },
+        ],
       },
       {
         title: 'Unverified Local Election Rumor',
-        description: "WhatsApp message circulating rumors about polling station changes in District B.",
+        description:
+          'WhatsApp message circulating rumors about polling station changes in District B.',
         contentType: ReportContentType.POST,
         status: ReportStatus.NEW,
         priority: ReportPriorityLevel.MEDIUM,
@@ -176,9 +221,13 @@ export class ReportsSeederService {
         sourceUrl: 'whatsapp://share?text=polling-station-rumor',
         tagSlugs: ['social', 'misleading_content'],
         verifications: [
-          { status: 'NEEDS_REVIEW', comment: 'Waiting for official confirmation from election board.', rating: 3 },
-        ]
-      }
+          {
+            status: 'NEEDS_REVIEW',
+            comment: 'Waiting for official confirmation from election board.',
+            rating: 3,
+          },
+        ],
+      },
     ];
 
     for (const data of reportsData) {
@@ -188,7 +237,7 @@ export class ReportsSeederService {
 
       if (!existing) {
         const { tagSlugs, verifications, ...reportInfo } = data;
-        const reportTags = tags.filter(t => tagSlugs.includes(t.slug));
+        const reportTags = tags.filter((t) => tagSlugs.includes(t.slug));
 
         const report = this.reportRepository.create({
           ...reportInfo,
@@ -206,7 +255,9 @@ export class ReportsSeederService {
           });
           await this.reportVerificationRepository.save(verification);
         }
-        this.logger.log(`Created report: ${data.title} with ${verifications.length} verifications`);
+        this.logger.log(
+          `Created report: ${data.title} with ${verifications.length} verifications`,
+        );
       }
     }
   }
