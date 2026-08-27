@@ -5,9 +5,9 @@ import { NewsletterService } from './newsletter.service';
 import { NewsletterController } from './newsletter.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Newsletter])],
-    controllers: [NewsletterController],
-    providers: [NewsletterService],
-    exports: [NewsletterService],
+  imports: [TypeOrmModule.forFeature([Newsletter])],
+  controllers: [NewsletterController],
+  providers: [NewsletterService],
+  exports: [NewsletterService],
 })
-export class NewsletterModule { }
+export class NewsletterModule {}

@@ -20,7 +20,9 @@ describe('ContentLanguage config', () => {
   });
 
   it('exposes native names for the switcher', () => {
-    const am = SUPPORTED_LANGUAGES.find((l) => l.code === ContentLanguage.AMHARIC);
+    const am = SUPPORTED_LANGUAGES.find(
+      (l) => l.code === ContentLanguage.AMHARIC,
+    );
     const om = SUPPORTED_LANGUAGES.find(
       (l) => l.code === ContentLanguage.AFAAN_OROMO,
     );

@@ -25,4 +25,4 @@ import { BadgeAdminController } from './admin/badge-admin.controller';
   providers: [GamificationService],
   exports: [GamificationService],
 })
-export class GamificationModule { }
+export class GamificationModule {}

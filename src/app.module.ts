@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditLogInterceptor } from './audit-logs/interceptors/audit-log.interceptor';
+import { RequestLoggingInterceptor } from './shared/interceptors/request-logging.interceptor';
 
 import { OrganizationsModule } from './organizations/organizations.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
@@ -88,6 +89,10 @@ import { GlobalExceptionFilter } from './shared/filters/global-exception.filter'
       provide: APP_INTERCEPTOR,
       useClass: AuditLogInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestLoggingInterceptor,
+    },
   ],
 })
-export class AppModule { }
+export class AppModule {}

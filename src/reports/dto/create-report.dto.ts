@@ -54,7 +54,10 @@ export class CreateReportDto {
   @IsOptional()
   reportedContentReference?: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['https://example.com/evidence'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['https://example.com/evidence'],
+  })
   @IsArray()
   @IsOptional()
   evidenceLinks?: string[];

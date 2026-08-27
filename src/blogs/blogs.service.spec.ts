@@ -47,7 +47,10 @@ describe('BlogsService (language filtering)', () => {
   });
 
   it('applies a search filter scoped within the language', async () => {
-    await service.findAll({ language: ContentLanguage.ENGLISH, search: 'fake' });
+    await service.findAll({
+      language: ContentLanguage.ENGLISH,
+      search: 'fake',
+    });
     expect(qb.andWhere).toHaveBeenCalledWith('blog.language = :language', {
       language: ContentLanguage.ENGLISH,
     });

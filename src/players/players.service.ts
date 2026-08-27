@@ -16,10 +16,7 @@ import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { PlayerAlgorithmProfile } from '../analytics/entities/player-algorithm-profile.entity';
 import { PlayerLearningProfile } from './entities/player-learning-profile.entity';
 import { UpdateLearningProfileDto } from './dto/update-learning-profile.dto';
-import {
-  mergeSkillBooks,
-  mergeCalibrations,
-} from './learning-profile.util';
+import { mergeSkillBooks, mergeCalibrations } from './learning-profile.util';
 
 @Injectable()
 export class PlayersService {
@@ -34,7 +31,7 @@ export class PlayersService {
     private algorithmProfileRepository: Repository<PlayerAlgorithmProfile>,
     @InjectRepository(PlayerLearningProfile)
     private learningProfileRepository: Repository<PlayerLearningProfile>,
-  ) { }
+  ) {}
 
   /**
    * Get the player's learning ledgers (skill book + confidence calibration).

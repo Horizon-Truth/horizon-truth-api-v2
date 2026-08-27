@@ -32,4 +32,4 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
   providers: [ReportsService, AiVerificationService, AiVerificationClient],
   exports: [ReportsService, AiVerificationService, ReportTagsModule],
 })
-export class ReportsModule { }
+export class ReportsModule {}

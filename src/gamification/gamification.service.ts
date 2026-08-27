@@ -26,7 +26,7 @@ export class GamificationService {
     private userBadgeRepository: Repository<UserBadge>,
     @InjectRepository(Leaderboard)
     private leaderboardRepository: Repository<Leaderboard>,
-  ) { }
+  ) {}
 
   /**
    * Get all badges
@@ -112,12 +112,9 @@ export class GamificationService {
     }
 
     // Fetch scenario to check which one it is
-    const scenario = await this.userBadgeRepository.manager.findOne(
-      Scenario,
-      {
-        where: { id: outcome.scenarioId },
-      },
-    );
+    const scenario = await this.userBadgeRepository.manager.findOne(Scenario, {
+      where: { id: outcome.scenarioId },
+    });
 
     if (!scenario) return awardedBadges;
 
@@ -134,7 +131,9 @@ export class GamificationService {
       try {
         // awardBadge handles duplication check
         await this.awardBadge(userId, badgeToAward);
-        const fullBadge = await this.badgeRepository.findOne({ where: { code: badgeToAward } });
+        const fullBadge = await this.badgeRepository.findOne({
+          where: { code: badgeToAward },
+        });
         if (fullBadge) {
           awardedBadges.push(fullBadge);
         }
@@ -209,7 +208,9 @@ export class GamificationService {
       if (criterion.Met && !existingBadgeCodes.has(criterion.code)) {
         try {
           await this.awardBadge(userId, criterion.code);
-          const fullBadge = await this.badgeRepository.findOne({ where: { code: criterion.code } });
+          const fullBadge = await this.badgeRepository.findOne({
+            where: { code: criterion.code },
+          });
           if (fullBadge) {
             awardedBadges.push(fullBadge);
           }

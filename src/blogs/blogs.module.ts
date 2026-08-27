@@ -5,9 +5,9 @@ import { BlogsController } from './blogs.controller';
 import { Blog } from './entities/blog.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Blog])],
-    controllers: [BlogsController],
-    providers: [BlogsService],
-    exports: [BlogsService],
+  imports: [TypeOrmModule.forFeature([Blog])],
+  controllers: [BlogsController],
+  providers: [BlogsService],
+  exports: [BlogsService],
 })
-export class BlogsModule { }
+export class BlogsModule {}

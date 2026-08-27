@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
@@ -28,6 +29,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 300000 } }) // 10 per 5 min
   @Post()
   @ApiOperation({ summary: 'Create new feedback' })
   create(@Request() req, @Body() createFeedbackDto: CreateFeedbackDto) {
@@ -35,6 +37,7 @@ export class FeedbackController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 per 5 min
   @Post('guest')
   @ApiOperation({ summary: 'Create new feedback as a guest' })
   createGuest(@Body() createFeedbackDto: CreateFeedbackDto) {

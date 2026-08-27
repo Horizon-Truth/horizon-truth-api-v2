@@ -25,7 +25,7 @@ export class UsersService {
     private activityRepository: Repository<UserActivity>,
     @InjectRepository(PlayerProfile)
     private playerProfileRepository: Repository<PlayerProfile>,
-  ) { }
+  ) {}
 
   async findOneByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
@@ -65,7 +65,10 @@ export class UsersService {
 
   async create(userData: Partial<User> & { password?: string }): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
-      where: [{ email: userData.email ?? undefined }, { username: userData.username ?? undefined }],
+      where: [
+        { email: userData.email ?? undefined },
+        { username: userData.username ?? undefined },
+      ],
     });
 
     if (existingUser) {
@@ -128,7 +131,8 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    const changesRole = changes.role !== undefined && changes.role !== user.role;
+    const changesRole =
+      changes.role !== undefined && changes.role !== user.role;
     const changesStatus =
       changes.status !== undefined && changes.status !== user.status;
 

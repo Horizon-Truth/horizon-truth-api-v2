@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Query,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -69,22 +63,25 @@ export class AuditLogsController {
       entityType,
     });
 
-    const csvHeader = 'ID,Timestamp,User,Email,Action,Entity Type,Entity ID,IP Address,User Agent,Metadata\n';
-    const csvRows = logs.map(log => {
-      const row = [
-        log.id,
-        log.createdAt.toISOString(),
-        log.user?.username || 'System',
-        log.user?.email || 'automated@horizon',
-        `"${log.action.replace(/"/g, '""')}"`,
-        log.entityType,
-        log.entityId,
-        log.ipAddress || 'unknown',
-        `"${(log.userAgent || '').replace(/"/g, '""')}"`,
-        `"${JSON.stringify(log.metadata || {}).replace(/"/g, '""')}"`
-      ];
-      return row.join(',');
-    }).join('\n');
+    const csvHeader =
+      'ID,Timestamp,User,Email,Action,Entity Type,Entity ID,IP Address,User Agent,Metadata\n';
+    const csvRows = logs
+      .map((log) => {
+        const row = [
+          log.id,
+          log.createdAt.toISOString(),
+          log.user?.username || 'System',
+          log.user?.email || 'automated@horizon',
+          `"${log.action.replace(/"/g, '""')}"`,
+          log.entityType,
+          log.entityId,
+          log.ipAddress || 'unknown',
+          `"${(log.userAgent || '').replace(/"/g, '""')}"`,
+          `"${JSON.stringify(log.metadata || {}).replace(/"/g, '""')}"`,
+        ];
+        return row.join(',');
+      })
+      .join('\n');
 
     const csvContent = csvHeader + csvRows;
 

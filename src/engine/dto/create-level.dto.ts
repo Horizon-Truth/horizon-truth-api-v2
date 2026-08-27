@@ -11,7 +11,9 @@ export class CreateLevelDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional({ example: 'Introduction to identifying fake news and bias.' })
+  @ApiPropertyOptional({
+    example: 'Introduction to identifying fake news and bias.',
+  })
   @IsString()
   @IsOptional()
   description?: string;

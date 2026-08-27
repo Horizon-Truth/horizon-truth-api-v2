@@ -7,15 +7,17 @@ import {
 
 describe('extractClaimStatement', () => {
   it('drops the attribution and keeps what was claimed', () => {
-    expect(extractClaimStatement('Viral Facebook Post Claims Vaccines Cause Autism')).toBe(
-      'Vaccines Cause Autism',
-    );
+    expect(
+      extractClaimStatement('Viral Facebook Post Claims Vaccines Cause Autism'),
+    ).toBe('Vaccines Cause Autism');
   });
 
   it('handles other attribution verbs', () => {
-    expect(extractClaimStatement('A TikTok video alleges that 5G towers spread the virus')).toBe(
-      '5G towers spread the virus',
-    );
+    expect(
+      extractClaimStatement(
+        'A TikTok video alleges that 5G towers spread the virus',
+      ),
+    ).toBe('5G towers spread the virus');
   });
 
   it('strips reporter labels', () => {
@@ -26,7 +28,9 @@ describe('extractClaimStatement', () => {
 
   it('removes URLs and wrapping quotes', () => {
     expect(
-      extractClaimStatement('"The election was rigged" https://example.com/post'),
+      extractClaimStatement(
+        '"The election was rigged" https://example.com/post',
+      ),
     ).toBe('The election was rigged');
   });
 
@@ -36,7 +40,9 @@ describe('extractClaimStatement', () => {
   });
 
   it('keeps a bare claim untouched apart from casing', () => {
-    expect(extractClaimStatement('vaccines cause autism')).toBe('Vaccines cause autism');
+    expect(extractClaimStatement('vaccines cause autism')).toBe(
+      'Vaccines cause autism',
+    );
   });
 });
 
@@ -60,7 +66,9 @@ describe('extractClaimFromDescription', () => {
   });
 
   it('falls back to the whole description when everything reads as narration', () => {
-    expect(extractClaimFromDescription('I saw something odd here.')).toBe('I saw something odd here');
+    expect(extractClaimFromDescription('I saw something odd here.')).toBe(
+      'I saw something odd here',
+    );
   });
 });
 
@@ -68,7 +76,8 @@ describe('deriveVerificationClaim', () => {
   it('verifies the claim, not the report title framing', () => {
     const claim = deriveVerificationClaim({
       title: 'Viral Facebook Post Claims Vaccines Cause Autism',
-      description: 'This post has been shared 40,000 times and links to a retracted study.',
+      description:
+        'This post has been shared 40,000 times and links to a retracted study.',
     });
 
     expect(claim).toBe('Vaccines Cause Autism');
@@ -82,16 +91,21 @@ describe('deriveVerificationClaim', () => {
         'A popular social media post claiming a miracle cure for respiratory illnesses without medical evidence.',
     });
 
-    expect(claim).toBe('A miracle cure for respiratory illnesses without medical evidence');
+    expect(claim).toBe(
+      'A miracle cure for respiratory illnesses without medical evidence',
+    );
   });
 
   it('handles a label title ending in "News"', () => {
     const claim = deriveVerificationClaim({
       title: 'Manipulated Crypto News',
-      description: 'Deepfake video of a CEO promoting a fraudulent investment scheme.',
+      description:
+        'Deepfake video of a CEO promoting a fraudulent investment scheme.',
     });
 
-    expect(claim).toBe('Deepfake video of a CEO promoting a fraudulent investment scheme');
+    expect(claim).toBe(
+      'Deepfake video of a CEO promoting a fraudulent investment scheme',
+    );
   });
 
   it('strips noun-form attribution such as "rumors about"', () => {
