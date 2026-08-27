@@ -1,9 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  IsOptional,
   IsString,
   MinLength,
   Matches,
@@ -29,12 +28,13 @@ export class CreateUserDto {
   @IsEnum(UserRole)
   role: UserRole;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
       'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
+    example: 'SecureP@ss1',
   })
-  @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: 'Password is required' })
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   @Matches(/[a-z]/, {
     message: 'Password must contain at least one lowercase letter',
@@ -46,5 +46,5 @@ export class CreateUserDto {
   @Matches(/[^a-zA-Z0-9]/, {
     message: 'Password must contain at least one special character',
   })
-  password?: string;
+  password: string;
 }
