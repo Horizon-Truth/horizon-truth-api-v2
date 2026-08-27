@@ -42,9 +42,9 @@ describe('EngineService', () => {
       release: jest.fn(),
       manager: {
         createQueryBuilder: jest.fn(() => ({
-            setLock: jest.fn().mockReturnThis(),
-            where: jest.fn().mockReturnThis(),
-            getOne: jest.fn(),
+          setLock: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getOne: jest.fn(),
         })),
         findOne: jest.fn(),
         create: jest.fn(),
@@ -64,14 +64,32 @@ describe('EngineService', () => {
         EngineService,
         { provide: getRepositoryToken(Scenario), useFactory: mockRepository },
         { provide: getRepositoryToken(Scene), useFactory: mockRepository },
-        { provide: getRepositoryToken(GameProgress), useFactory: mockRepository },
-        { provide: getRepositoryToken(PlayerAction), useFactory: mockRepository },
-        { provide: getRepositoryToken(GameOutcome), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(GameProgress),
+          useFactory: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(PlayerAction),
+          useFactory: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(GameOutcome),
+          useFactory: mockRepository,
+        },
         { provide: getRepositoryToken(GameLevel), useFactory: mockRepository },
-        { provide: getRepositoryToken(PlayerChoice), useFactory: mockRepository },
-        { provide: getRepositoryToken(SceneContent), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(PlayerChoice),
+          useFactory: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(SceneContent),
+          useFactory: mockRepository,
+        },
         { provide: getRepositoryToken(GuestPlay), useFactory: mockRepository },
-        { provide: getRepositoryToken(PlayerScenarioRecord), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(PlayerScenarioRecord),
+          useFactory: mockRepository,
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: GamificationService, useValue: mockGamificationService },
       ],
@@ -100,20 +118,28 @@ describe('EngineService', () => {
     it('should throw NotFoundException if scenario not found', async () => {
       scenarioRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getScenarioById('none')).rejects.toThrow(NotFoundException);
+      await expect(service.getScenarioById('none')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('startGame', () => {
     it('should create new progress if none exists', async () => {
-      const scenario = { id: 's1', isActive: true, scenes: [{ id: 'sc1', order: 1 }] };
+      const scenario = {
+        id: 's1',
+        isActive: true,
+        scenes: [{ id: 'sc1', order: 1 }],
+      };
       scenarioRepository.findOne.mockResolvedValue(scenario);
       gameProgressRepository.findOne.mockResolvedValue(null);
       gameProgressRepository.create.mockReturnValue({ id: 'p1' });
       gameProgressRepository.save.mockResolvedValue({ id: 'p1' });
 
       // Mock getGameProgress internal call
-      jest.spyOn(service, 'getGameProgress').mockResolvedValue({ id: 'p1' } as any);
+      jest
+        .spyOn(service, 'getGameProgress')
+        .mockResolvedValue({ id: 'p1' } as any);
 
       const result = await service.startGame('u1', 's1');
 
@@ -125,7 +151,9 @@ describe('EngineService', () => {
       const scenario = { id: 's1', isActive: false };
       scenarioRepository.findOne.mockResolvedValue(scenario);
 
-      await expect(service.startGame('u1', 's1')).rejects.toThrow(BadRequestException);
+      await expect(service.startGame('u1', 's1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

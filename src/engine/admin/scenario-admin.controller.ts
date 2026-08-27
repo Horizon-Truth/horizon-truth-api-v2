@@ -99,7 +99,10 @@ export class ScenarioAdminController {
 
   @Get()
   @ApiOperation({ summary: 'Get all scenarios for management' })
-  @ApiResponse({ status: 200, description: 'Scenarios retrieved successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Scenarios retrieved successfully.',
+  })
   async getScenarios(@Query() query: any) {
     return this.engineService.getScenarios(query);
   }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Organization } from './entities/organization.entity';
@@ -15,7 +19,7 @@ export class OrganizationsService {
     private readonly organizationRepository: Repository<Organization>,
     private readonly usersService: UsersService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async findAll(query: any): Promise<any> {
     const { status, type, country, page = 1, limit = 10 } = query;
@@ -68,7 +72,9 @@ export class OrganizationsService {
 
     try {
       // 1. Create Organization
-      const org = this.organizationRepository.create(orgData as Partial<Organization>);
+      const org = this.organizationRepository.create(
+        orgData as Partial<Organization>,
+      );
       const savedOrg = await queryRunner.manager.save(org);
 
       // 2. Create Admin User if details provided
@@ -78,7 +84,10 @@ export class OrganizationsService {
           password: adminPassword,
           fullName: adminFullName || orgData.name + ' Admin',
           role: UserRole.ORG_ADMIN,
-          username: adminEmail.split('@')[0] + '_' + Math.random().toString(36).substring(2, 5),
+          username:
+            adminEmail.split('@')[0] +
+            '_' +
+            Math.random().toString(36).substring(2, 5),
         });
 
         // 3. Link User to Organization
@@ -147,10 +156,12 @@ export class OrganizationsService {
   }
 
   async findUserOrganization(userId: string): Promise<string | null> {
-    const orgUser = await this.dataSource.getRepository(OrganizationUser).findOne({
-      where: { userId },
-      select: ['organizationId'],
-    });
+    const orgUser = await this.dataSource
+      .getRepository(OrganizationUser)
+      .findOne({
+        where: { userId },
+        select: ['organizationId'],
+      });
     return orgUser ? orgUser.organizationId : null;
   }
 }

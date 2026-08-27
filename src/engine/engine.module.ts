@@ -38,8 +38,12 @@ import { SceneAdminController } from './admin/scene-admin.controller';
     ]),
     forwardRef(() => GamificationModule),
   ],
-  controllers: [EngineController, ScenarioAdminController, SceneAdminController],
+  controllers: [
+    EngineController,
+    ScenarioAdminController,
+    SceneAdminController,
+  ],
   providers: [EngineService],
   exports: [EngineService, TypeOrmModule],
 })
-export class EngineModule { }
+export class EngineModule {}

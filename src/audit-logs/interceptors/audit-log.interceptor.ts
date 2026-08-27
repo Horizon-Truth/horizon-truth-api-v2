@@ -23,11 +23,18 @@ export class AuditLogInterceptor implements NestInterceptor {
 
     // We only log non-GET requests for admin/moderator operations
     // and we exclude game-playing related endpoints if they are too noisy
-    const isAdministrativeAction = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-    const isAdminUser = user && [UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN].includes(user.role);
+    const isAdministrativeAction = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
+      method,
+    );
+    const isAdminUser =
+      user &&
+      [UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN].includes(
+        user.role,
+      );
 
     // Exclude game submission if it's too frequent (though usually it's not under these roles)
-    const isGameSubmission = url.includes('/engine/submit') || url.includes('/engine/start');
+    const isGameSubmission =
+      url.includes('/engine/submit') || url.includes('/engine/start');
 
     if (isAdministrativeAction && isAdminUser && !isGameSubmission) {
       return next.handle().pipe(
@@ -37,7 +44,9 @@ export class AuditLogInterceptor implements NestInterceptor {
           },
           error: (error) => {
             // Optionally log errors too
-            this.logger.error(`Error in administrative action ${method} ${url}: ${error.message}`);
+            this.logger.error(
+              `Error in administrative action ${method} ${url}: ${error.message}`,
+            );
           },
         }),
       );
@@ -46,14 +55,23 @@ export class AuditLogInterceptor implements NestInterceptor {
     return next.handle();
   }
 
-  private async logAction(user: any, method: string, url: string, body: any, responseData: any, ip: string, userAgent: string) {
+  private async logAction(
+    user: any,
+    method: string,
+    url: string,
+    body: any,
+    responseData: any,
+    ip: string,
+    userAgent: string,
+  ) {
     try {
       // Determine entity type and ID from URL or response
-      const urlParts = url.split('/').filter(p => p);
+      const urlParts = url.split('/').filter((p) => p);
       const entityType = urlParts[0] || 'unknown';
-      
+
       // Try to find an ID in the URL or the response data
-      const entityId = urlParts[1] || responseData?.id || responseData?.uuid || 'n/a';
+      const entityId =
+        urlParts[1] || responseData?.id || responseData?.uuid || 'n/a';
 
       const action = `${method} ${url}`;
 
@@ -79,7 +97,7 @@ export class AuditLogInterceptor implements NestInterceptor {
     const sanitized = { ...body };
     // Remove sensitive fields
     const sensitiveFields = ['password', 'token', 'secret', 'apiKey'];
-    sensitiveFields.forEach(field => {
+    sensitiveFields.forEach((field) => {
       if (field in sanitized) sanitized[field] = '[REDACTED]';
     });
     return sanitized;
@@ -88,7 +106,8 @@ export class AuditLogInterceptor implements NestInterceptor {
   private sanitizeResponse(data: any) {
     if (!data) return null;
     // For large responses, we might want to truncate or selective log
-    if (Array.isArray(data)) return { count: data.length, note: 'List response' };
+    if (Array.isArray(data))
+      return { count: data.length, note: 'List response' };
     return data;
   }
 }

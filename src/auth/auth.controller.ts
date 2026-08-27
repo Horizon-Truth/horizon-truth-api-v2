@@ -19,6 +19,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -107,10 +108,11 @@ export class AuthController {
     return this.authService.forgotPassword(email);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 per 5 min
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password with token' })
-  async resetPassword(@Body() body: any) {
-    return this.authService.resetPassword(body.token, body.new_password);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.new_password);
   }
 
   // Session Management Endpoints

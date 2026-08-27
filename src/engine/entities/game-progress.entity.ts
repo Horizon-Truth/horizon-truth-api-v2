@@ -71,24 +71,38 @@ export class GameProgress {
 
   @ApiPropertyOptional({
     example: 'TRUTH_VICTORY',
-    description: 'Narrative ending: TRUTH_VICTORY | CONTAINED_EARLY | VIRAL_MISINFORMATION | COMMUNITY_CRISIS',
+    description:
+      'Narrative ending: TRUTH_VICTORY | CONTAINED_EARLY | VIRAL_MISINFORMATION | COMMUNITY_CRISIS',
   })
   @Column({ name: 'narrative_ending', type: 'varchar', nullable: true })
   narrativeEnding: string;
 
-  @ApiProperty({ example: 5, description: 'Total number of choices made in this game session' })
+  @ApiProperty({
+    example: 5,
+    description: 'Total number of choices made in this game session',
+  })
   @Column({ name: 'total_decisions', type: 'int', default: 0 })
   totalDecisions: number;
 
-  @ApiProperty({ example: 4, description: 'Number of correct (positive score impact) decisions in this session' })
+  @ApiProperty({
+    example: 4,
+    description:
+      'Number of correct (positive score impact) decisions in this session',
+  })
   @Column({ name: 'correct_decisions', type: 'int', default: 0 })
   correctDecisions: number;
 
-  @ApiProperty({ example: 80, description: 'Real-time accuracy percentage (0-100)' })
+  @ApiProperty({
+    example: 80,
+    description: 'Real-time accuracy percentage (0-100)',
+  })
   @Column({ name: 'accuracy_rate', type: 'int', default: 0 })
   accuracyRate: number;
 
-  @ApiProperty({ example: 100, description: 'Sum of maximum possible scores for all scenes visited' })
+  @ApiProperty({
+    example: 100,
+    description: 'Sum of maximum possible scores for all scenes visited',
+  })
   @Column({ name: 'max_possible_score', type: 'int', default: 0 })
   maxPossibleScore: number;
 }

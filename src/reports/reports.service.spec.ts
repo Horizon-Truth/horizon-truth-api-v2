@@ -91,7 +91,10 @@ describe('ReportsService', () => {
   it('schedules AI verification once a report is saved', async () => {
     reportRepository.find.mockResolvedValue([]);
     reportRepository.create.mockReturnValue({ title: 'Vaccines cause autism' });
-    reportRepository.save.mockResolvedValue({ id: 'new-report', title: 'Vaccines cause autism' });
+    reportRepository.save.mockResolvedValue({
+      id: 'new-report',
+      title: 'Vaccines cause autism',
+    });
 
     await service.create(
       {
@@ -112,7 +115,9 @@ describe('ReportsService', () => {
     reportRepository.find.mockResolvedValue([]);
     reportRepository.create.mockReturnValue({ title: 'Vaccines cause autism' });
     reportRepository.save.mockResolvedValue({ id: 'new-report' });
-    aiVerificationService.scheduleForReport.mockRejectedValue(new Error('AI service down'));
+    aiVerificationService.scheduleForReport.mockRejectedValue(
+      new Error('AI service down'),
+    );
 
     // The community reporting flow must survive an unavailable AI service.
     await expect(
@@ -129,7 +134,10 @@ describe('ReportsService', () => {
   });
 
   it('attaches the latest AI verification to a report detail lookup', async () => {
-    reportRepository.findOne.mockResolvedValue({ id: 'report-1', title: 'Report' });
+    reportRepository.findOne.mockResolvedValue({
+      id: 'report-1',
+      title: 'Report',
+    });
     aiVerificationService.findLatestForReport.mockResolvedValue({
       id: 'attempt-1',
       status: 'COMPLETED',
@@ -145,7 +153,10 @@ describe('ReportsService', () => {
 
   it('serves a report with no AI verification as null rather than failing', async () => {
     // Reports created before the feature existed have no attempt rows.
-    reportRepository.findOne.mockResolvedValue({ id: 'legacy-report', title: 'Old report' });
+    reportRepository.findOne.mockResolvedValue({
+      id: 'legacy-report',
+      title: 'Old report',
+    });
     aiVerificationService.findLatestForReport.mockResolvedValue(null);
 
     const result = await service.findById('legacy-report');

@@ -31,7 +31,9 @@ describe('normaliseVerdict', () => {
   it('maps known synonyms onto the styled verdicts', () => {
     expect(normaliseVerdict('fake')).toBe(AiVerdict.FALSE);
     expect(normaliseVerdict('Partially True')).toBe(AiVerdict.MIXED);
-    expect(normaliseVerdict('insufficient evidence')).toBe(AiVerdict.UNVERIFIED);
+    expect(normaliseVerdict('insufficient evidence')).toBe(
+      AiVerdict.UNVERIFIED,
+    );
   });
 
   it('passes unknown verdicts through instead of mislabelling them', () => {
@@ -105,7 +107,10 @@ describe('normaliseSources', () => {
 
 describe('normaliseDetectionResponse', () => {
   it('maps the documented payload onto the application model', () => {
-    const result = normaliseDetectionResponse(successPayload, 'vaccines cause autism');
+    const result = normaliseDetectionResponse(
+      successPayload,
+      'vaccines cause autism',
+    );
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -119,7 +124,10 @@ describe('normaliseDetectionResponse', () => {
   });
 
   it('tolerates a response missing optional fields', () => {
-    const result = normaliseDetectionResponse({ verdict: 'MIXED' }, 'some claim');
+    const result = normaliseDetectionResponse(
+      { verdict: 'MIXED' },
+      'some claim',
+    );
 
     expect(result.verdict).toBe(AiVerdict.MIXED);
     expect(result.confidence).toBeUndefined();
@@ -129,9 +137,15 @@ describe('normaliseDetectionResponse', () => {
   });
 
   it('rejects a payload carrying no assessment at all', () => {
-    expect(() => normaliseDetectionResponse({}, 'claim')).toThrow(AiVerificationError);
-    expect(() => normaliseDetectionResponse('nope', 'claim')).toThrow(AiVerificationError);
-    expect(() => normaliseDetectionResponse(null, 'claim')).toThrow(AiVerificationError);
+    expect(() => normaliseDetectionResponse({}, 'claim')).toThrow(
+      AiVerificationError,
+    );
+    expect(() => normaliseDetectionResponse('nope', 'claim')).toThrow(
+      AiVerificationError,
+    );
+    expect(() => normaliseDetectionResponse(null, 'claim')).toThrow(
+      AiVerificationError,
+    );
   });
 });
 
@@ -164,13 +178,17 @@ describe('AiVerificationClient.detect', () => {
   });
 
   it('reports a timeout as a friendly TIMEOUT failure', async () => {
-    global.fetch = jest.fn().mockRejectedValue(
-      Object.assign(new Error('aborted'), { name: 'TimeoutError' }),
-    ) as any;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('aborted'), { name: 'TimeoutError' }),
+      ) as any;
 
     const client = new AiVerificationClient(configService);
 
-    await expect(client.detect('claim')).rejects.toMatchObject({ reason: 'TIMEOUT' });
+    await expect(client.detect('claim')).rejects.toMatchObject({
+      reason: 'TIMEOUT',
+    });
   });
 
   it('maps a non-2xx response to HTTP_ERROR without leaking the body', async () => {
@@ -190,11 +208,15 @@ describe('AiVerificationClient.detect', () => {
   });
 
   it('maps unreachable hosts to NETWORK', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED')) as any;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('ECONNREFUSED')) as any;
 
     const client = new AiVerificationClient(configService);
 
-    await expect(client.detect('claim')).rejects.toMatchObject({ reason: 'NETWORK' });
+    await expect(client.detect('claim')).rejects.toMatchObject({
+      reason: 'NETWORK',
+    });
   });
 
   it('rejects unparseable JSON', async () => {
@@ -208,7 +230,9 @@ describe('AiVerificationClient.detect', () => {
 
     const client = new AiVerificationClient(configService);
 
-    await expect(client.detect('claim')).rejects.toMatchObject({ reason: 'MALFORMED_RESPONSE' });
+    await expect(client.detect('claim')).rejects.toMatchObject({
+      reason: 'MALFORMED_RESPONSE',
+    });
   });
 
   it('refuses to call the API without a claim', async () => {
@@ -217,20 +241,32 @@ describe('AiVerificationClient.detect', () => {
 
     const client = new AiVerificationClient(configService);
 
-    await expect(client.detect('   ')).rejects.toMatchObject({ reason: 'INVALID_REQUEST' });
+    await expect(client.detect('   ')).rejects.toMatchObject({
+      reason: 'INVALID_REQUEST',
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('honours a configured endpoint override', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => successPayload });
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => successPayload,
+    });
     global.fetch = fetchMock as any;
 
     const client = new AiVerificationClient({
-      get: (key: string) => (key === 'AI_VERIFICATION_URL' ? 'https://ai.example.test/detect' : undefined),
+      get: (key: string) =>
+        key === 'AI_VERIFICATION_URL'
+          ? 'https://ai.example.test/detect'
+          : undefined,
     } as any);
 
     expect(client.provider).toBe('ai.example.test');
     await client.detect('claim');
-    expect(fetchMock).toHaveBeenCalledWith('https://ai.example.test/detect', expect.anything());
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://ai.example.test/detect',
+      expect.anything(),
+    );
   });
 });

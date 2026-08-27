@@ -20,14 +20,14 @@ describe('PlayersService', () => {
     create: jest.fn(),
     save: jest.fn(),
     manager: {
-        createQueryBuilder: jest.fn(() => ({
-            select: jest.fn().mockReturnThis(),
-            addSelect: jest.fn().mockReturnThis(),
-            from: jest.fn().mockReturnThis(),
-            where: jest.fn().mockReturnThis(),
-            andWhere: jest.fn().mockReturnThis(),
-            getRawOne: jest.fn(),
-        })),
+      createQueryBuilder: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn(),
+      })),
     },
   };
 
@@ -82,7 +82,9 @@ describe('PlayersService', () => {
     playerProfileRepository = module.get(getRepositoryToken(PlayerProfile));
     avatarRepository = module.get(getRepositoryToken(Avatar));
     regionRepository = module.get(getRepositoryToken(Region));
-    algorithmProfileRepository = module.get(getRepositoryToken(PlayerAlgorithmProfile));
+    algorithmProfileRepository = module.get(
+      getRepositoryToken(PlayerAlgorithmProfile),
+    );
   });
 
   it('should be defined', () => {
@@ -92,24 +94,34 @@ describe('PlayersService', () => {
   describe('createProfile', () => {
     it('should throw BadRequestException if profile already exists', async () => {
       mockPlayerProfileRepository.findOne.mockResolvedValue({ id: '1' });
-      await expect(service.createProfile('u1', { avatarId: 'a1' } as any))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.createProfile('u1', { avatarId: 'a1' } as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if avatar is not found', async () => {
       mockPlayerProfileRepository.findOne.mockResolvedValue(null);
       mockAvatarRepository.findOne.mockResolvedValue(null);
-      await expect(service.createProfile('u1', { avatarId: 'a1' } as any))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.createProfile('u1', { avatarId: 'a1' } as any),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should create and save profile if valid', async () => {
       mockPlayerProfileRepository.findOne.mockResolvedValue(null);
       mockAvatarRepository.findOne.mockResolvedValue({ id: 'a1' });
-      mockPlayerProfileRepository.create.mockReturnValue({ userId: 'u1', avatarId: 'a1' });
-      mockPlayerProfileRepository.save.mockResolvedValue({ id: 'p1', userId: 'u1' });
+      mockPlayerProfileRepository.create.mockReturnValue({
+        userId: 'u1',
+        avatarId: 'a1',
+      });
+      mockPlayerProfileRepository.save.mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+      });
 
-      const result = await service.createProfile('u1', { avatarId: 'a1' } as any);
+      const result = await service.createProfile('u1', {
+        avatarId: 'a1',
+      } as any);
 
       expect(result.id).toBe('p1');
       expect(mockPlayerProfileRepository.save).toHaveBeenCalled();
@@ -120,7 +132,10 @@ describe('PlayersService', () => {
     it('should set onboardingCompleted to true and save', async () => {
       const profile = { userId: 'u1', onboardingCompleted: false };
       mockPlayerProfileRepository.findOne.mockResolvedValue(profile);
-      mockPlayerProfileRepository.save.mockResolvedValue({ ...profile, onboardingCompleted: true });
+      mockPlayerProfileRepository.save.mockResolvedValue({
+        ...profile,
+        onboardingCompleted: true,
+      });
 
       await service.completeOnboarding('u1');
 
@@ -130,7 +145,9 @@ describe('PlayersService', () => {
 
     it('should throw NotFoundException if profile not found', async () => {
       mockPlayerProfileRepository.findOne.mockResolvedValue(null);
-      await expect(service.completeOnboarding('u1')).rejects.toThrow(NotFoundException);
+      await expect(service.completeOnboarding('u1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

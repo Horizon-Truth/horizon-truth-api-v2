@@ -64,7 +64,7 @@ export class EngineService {
     private dataSource: DataSource,
     @Inject(forwardRef(() => GamificationService))
     private gamificationService: GamificationService,
-  ) { }
+  ) {}
 
   /**
    * Save anonymous guest play data
@@ -91,7 +91,16 @@ export class EngineService {
    * Get list of scenarios with optional filtering and user records
    */
   async getScenarios(query: ScenarioQueryDto, userId?: string): Promise<any> {
-    const { difficulty, scenarioType, isActive, isArchived, language, search, page = 1, limit = 10 } = query;
+    const {
+      difficulty,
+      scenarioType,
+      isActive,
+      isArchived,
+      language,
+      search,
+      page = 1,
+      limit = 10,
+    } = query;
     const skip = (page - 1) * limit;
 
     // Fetch all matching scenarios (ignoring pagination at DB level to allow sorting by computed lockStatus)
@@ -116,11 +125,15 @@ export class EngineService {
     }
 
     if (difficulty) {
-      queryBuilder.andWhere('scenario.difficulty = :difficulty', { difficulty });
+      queryBuilder.andWhere('scenario.difficulty = :difficulty', {
+        difficulty,
+      });
     }
 
     if (scenarioType) {
-      queryBuilder.andWhere('scenario.scenarioType = :scenarioType', { scenarioType });
+      queryBuilder.andWhere('scenario.scenarioType = :scenarioType', {
+        scenarioType,
+      });
     }
 
     if (isActive !== undefined) {
@@ -130,9 +143,14 @@ export class EngineService {
     if (isArchived !== undefined) {
       if (isArchived === false) {
         // Support existing data where isArchived might be NULL
-        queryBuilder.andWhere('(scenario.isArchived = :isArchived OR scenario.isArchived IS NULL)', { isArchived });
+        queryBuilder.andWhere(
+          '(scenario.isArchived = :isArchived OR scenario.isArchived IS NULL)',
+          { isArchived },
+        );
       } else {
-        queryBuilder.andWhere('scenario.isArchived = :isArchived', { isArchived });
+        queryBuilder.andWhere('scenario.isArchived = :isArchived', {
+          isArchived,
+        });
       }
     }
 
@@ -156,32 +174,41 @@ export class EngineService {
         }),
         this.gameProgressRepository.find({
           where: { userId, status: GameProgressStatus.IN_PROGRESS },
-          select: ['id', 'scenarioId']
-        })
+          select: ['id', 'scenarioId'],
+        }),
       ]);
     }
 
     // Build a map for prerequisite lookups
-    const allScenarios = await this.scenarioRepository.find({ select: ['id', 'minimumScore', 'unlockScenarioId'] });
-    const scenarioMap = new Map(allScenarios.map(s => [s.id, s]));
+    const allScenarios = await this.scenarioRepository.find({
+      select: ['id', 'minimumScore', 'unlockScenarioId'],
+    });
+    const scenarioMap = new Map(allScenarios.map((s) => [s.id, s]));
 
     // Map records and compute lockStatus
     const scenariosWithRecords = scenarios.map((scenario) => {
-      const userRecord = userRecords.find((r) => r.scenarioId === scenario.id) || null;
+      const userRecord =
+        userRecords.find((r) => r.scenarioId === scenario.id) || null;
       const progress = activeProgress.find((p) => p.scenarioId === scenario.id);
 
       let lockStatus: 'LOCKED' | 'AVAILABLE' | 'VERIFIED' = 'AVAILABLE';
-      
+
       // Only compute lock status if a userId is provided (intended for players)
       if (userId) {
         if (userRecord?.isCompleted) {
           lockStatus = 'VERIFIED';
         } else if (scenario.unlockScenarioId) {
-          const prereqRecord = userRecords.find((r) => r.scenarioId === scenario.unlockScenarioId);
+          const prereqRecord = userRecords.find(
+            (r) => r.scenarioId === scenario.unlockScenarioId,
+          );
           const prereqScenario = scenarioMap.get(scenario.unlockScenarioId);
           const requiredScore = prereqScenario?.minimumScore ?? 70;
 
-          if (!prereqRecord || !prereqRecord.isCompleted || (prereqRecord.bestAccuracyRate ?? 0) < requiredScore) {
+          if (
+            !prereqRecord ||
+            !prereqRecord.isCompleted ||
+            (prereqRecord.bestAccuracyRate ?? 0) < requiredScore
+          ) {
             lockStatus = 'LOCKED';
           }
         }
@@ -202,8 +229,8 @@ export class EngineService {
       if (!userId) {
         return (a.order || 0) - (b.order || 0);
       }
-      
-      const statusScore = { 'VERIFIED': 0, 'AVAILABLE': 0, 'LOCKED': 1 };
+
+      const statusScore = { VERIFIED: 0, AVAILABLE: 0, LOCKED: 1 };
       const statusDiff = statusScore[a.lockStatus] - statusScore[b.lockStatus];
       if (statusDiff !== 0) return statusDiff;
       return (a.order || 0) - (b.order || 0);
@@ -235,9 +262,9 @@ export class EngineService {
       ],
       order: {
         scenes: {
-          order: 'ASC'
-        }
-      }
+          order: 'ASC',
+        },
+      },
     });
 
     if (!scenario) {
@@ -261,7 +288,10 @@ export class EngineService {
     return this.gameLevelRepository.save(level);
   }
 
-  async updateLevel(id: string, dto: UpdateLevelDto): Promise<GameLevel | null> {
+  async updateLevel(
+    id: string,
+    dto: UpdateLevelDto,
+  ): Promise<GameLevel | null> {
     await this.gameLevelRepository.update(id, dto);
     return this.gameLevelRepository.findOne({ where: { id } });
   }
@@ -295,41 +325,53 @@ export class EngineService {
   /**
    * Import scenarios from JSON data
    */
-  async importScenarios(data: any[]): Promise<{ imported: number; skipped: number; total: number }> {
+  async importScenarios(
+    data: any[],
+  ): Promise<{ imported: number; skipped: number; total: number }> {
     let imported = 0;
     let skipped = 0;
 
     // Get all levels to map them by levelNumber (since IDs vary between environments)
     const levels = await this.gameLevelRepository.find();
-    const levelMap = new Map(levels.map(l => [l.levelNumber, l.id]));
+    const levelMap = new Map(levels.map((l) => [l.levelNumber, l.id]));
 
     for (const scenarioData of data) {
       // 1. Resolve target level ID (Map Level Number to local Level ID, or create if missing)
       let targetLevelId: string | null = null;
-      
-      if (scenarioData.gameLevel && typeof scenarioData.gameLevel.levelNumber === 'number') {
+
+      if (
+        scenarioData.gameLevel &&
+        typeof scenarioData.gameLevel.levelNumber === 'number'
+      ) {
         const levelNumber = scenarioData.gameLevel.levelNumber;
-        let localLevel = levels.find(l => l.levelNumber === levelNumber);
-        
+        let localLevel = levels.find((l) => l.levelNumber === levelNumber);
+
         if (!localLevel) {
           // Level doesn't exist, Create it!
-          console.log(`Level ${levelNumber} not found, creating: ${scenarioData.gameLevel.name}`);
-          localLevel = await this.gameLevelRepository.save(this.gameLevelRepository.create({
-            levelNumber: levelNumber,
-            name: scenarioData.gameLevel.name || `Level ${levelNumber}`,
-            description: scenarioData.gameLevel.description,
-            estimatedDurationMinutes: scenarioData.gameLevel.estimatedDurationMinutes,
-            isActive: scenarioData.gameLevel.isActive ?? true
-          }));
+          console.log(
+            `Level ${levelNumber} not found, creating: ${scenarioData.gameLevel.name}`,
+          );
+          localLevel = await this.gameLevelRepository.save(
+            this.gameLevelRepository.create({
+              levelNumber: levelNumber,
+              name: scenarioData.gameLevel.name || `Level ${levelNumber}`,
+              description: scenarioData.gameLevel.description,
+              estimatedDurationMinutes:
+                scenarioData.gameLevel.estimatedDurationMinutes,
+              isActive: scenarioData.gameLevel.isActive ?? true,
+            }),
+          );
           // Refresh levels list for subsequent scenarios in the same import batch
           levels.push(localLevel);
         }
-        
+
         targetLevelId = localLevel.id;
       }
 
       if (!targetLevelId) {
-        console.warn(`Could not resolve or create level for scenario: ${scenarioData.title}`);
+        console.warn(
+          `Could not resolve or create level for scenario: ${scenarioData.title}`,
+        );
         skipped++;
         continue;
       }
@@ -373,7 +415,7 @@ export class EngineService {
 
       try {
         const { gameLevel, createdAt, scenes, type, ...payload } = scenarioData;
-        
+
         // Map type to scenarioType if needed
         const scenarioType = type || payload.scenarioType;
 
@@ -390,7 +432,12 @@ export class EngineService {
         // Process scenes if present
         if (scenes && Array.isArray(scenes)) {
           for (const sceneData of scenes) {
-            const { content, choices, id: _sceneId, ...scenePayload } = sceneData;
+            const {
+              content,
+              choices,
+              id: _sceneId,
+              ...scenePayload
+            } = sceneData;
             const scene = queryRunner.manager.create(Scene, {
               ...scenePayload,
               scenarioId: savedScenario.id,
@@ -417,7 +464,11 @@ export class EngineService {
             // Process choices
             if (choices && Array.isArray(choices)) {
               for (const choiceData of choices) {
-                const { outcomes, id: _choiceId, ...choicePayload } = choiceData;
+                const {
+                  outcomes,
+                  id: _choiceId,
+                  ...choicePayload
+                } = choiceData;
                 const choice = queryRunner.manager.create(PlayerChoice, {
                   ...choicePayload,
                   sceneId: savedScene.id,
@@ -457,7 +508,10 @@ export class EngineService {
         imported++;
       } catch (error) {
         await queryRunner.rollbackTransaction();
-        console.error(`Error importing scenario ${scenarioData.id || scenarioData.title}:`, error);
+        console.error(
+          `Error importing scenario ${scenarioData.id || scenarioData.title}:`,
+          error,
+        );
         skipped++;
       } finally {
         await queryRunner.release();
@@ -473,15 +527,17 @@ export class EngineService {
    */
   async resolveImportedLinks(): Promise<void> {
     const scenarios = await this.scenarioRepository.find();
-    const titleMap = new Map(scenarios.map(s => [s.title, s.id]));
+    const titleMap = new Map(scenarios.map((s) => [s.title, s.id]));
 
     for (const scenario of scenarios) {
       if (scenario.unlockScenarioId) {
         // Check if current ID exists
-        const exists = scenarios.some(s => s.id === scenario.unlockScenarioId);
+        const exists = scenarios.some(
+          (s) => s.id === scenario.unlockScenarioId,
+        );
         if (!exists) {
-          // Find by title in we have one (exports usually don't include title of prerequisite, 
-          // but we can look it up if we have the original data. 
+          // Find by title in we have one (exports usually don't include title of prerequisite,
+          // but we can look it up if we have the original data.
           // For now, this is a placeholder/helper if needed.)
         }
       }
@@ -733,8 +789,10 @@ export class EngineService {
 
       // 6. Aggregate score and influence to progress (Always do this if choice exists)
       if (choice) {
-        progress.totalScore = (progress.totalScore || 0) + (choice.scoreImpact || 0);
-        progress.influenceScore = (progress.influenceScore || 0) + (choice.influenceImpact || 0);
+        progress.totalScore =
+          (progress.totalScore || 0) + (choice.scoreImpact || 0);
+        progress.influenceScore =
+          (progress.influenceScore || 0) + (choice.influenceImpact || 0);
 
         // Track accuracy metrics
         progress.totalDecisions = (progress.totalDecisions || 0) + 1;
@@ -746,29 +804,39 @@ export class EngineService {
         const sceneChoices = await queryRunner.manager.find(PlayerChoice, {
           where: { sceneId: progress.currentSceneId },
         });
-        const maxImpact = Math.max(0, ...sceneChoices.map(c => c.scoreImpact || 0));
-        progress.maxPossibleScore = (progress.maxPossibleScore || 0) + maxImpact;
+        const maxImpact = Math.max(
+          0,
+          ...sceneChoices.map((c) => c.scoreImpact || 0),
+        );
+        progress.maxPossibleScore =
+          (progress.maxPossibleScore || 0) + maxImpact;
 
         // Calculate real-time percentage based on visited scenes
         if (progress.maxPossibleScore > 0) {
-          progress.accuracyRate = Math.max(0, Math.round(((progress.totalScore || 0) / progress.maxPossibleScore) * 100));
+          progress.accuracyRate = Math.max(
+            0,
+            Math.round(
+              ((progress.totalScore || 0) / progress.maxPossibleScore) * 100,
+            ),
+          );
         } else {
           progress.accuracyRate = 0;
         }
 
         // 7. Update persistent trust score (Sync with choice quality)
-        const playerProfile = await queryRunner.manager.findOne(
-          PlayerProfile,
-          { where: { userId } },
-        );
+        const playerProfile = await queryRunner.manager.findOne(PlayerProfile, {
+          where: { userId },
+        });
 
         if (playerProfile) {
           // Use trustScoreDelta if available, otherwise fallback to scoreImpact
-          const trustDelta = templateOutcome?.trustScoreDelta !== undefined
-            ? templateOutcome.trustScoreDelta
-            : (choice.scoreImpact || 0);
+          const trustDelta =
+            templateOutcome?.trustScoreDelta !== undefined
+              ? templateOutcome.trustScoreDelta
+              : choice.scoreImpact || 0;
 
-          playerProfile.currentTrustScore = (playerProfile.currentTrustScore || 50) + trustDelta;
+          playerProfile.currentTrustScore =
+            (playerProfile.currentTrustScore || 50) + trustDelta;
           await queryRunner.manager.save(PlayerProfile, playerProfile);
 
           // Update result for frontend feedback
@@ -823,7 +891,10 @@ export class EngineService {
       if (endScenarioRequested) {
         await queryRunner.manager.save(progress);
         await queryRunner.commitTransaction();
-        return this.completeGame(progressId, templateOutcome?.outcomeType || OutcomeType.SUCCESS);
+        return this.completeGame(
+          progressId,
+          templateOutcome?.outcomeType || OutcomeType.SUCCESS,
+        );
       }
 
       if (nextSceneId) {
@@ -927,7 +998,11 @@ export class EngineService {
       outcomeType,
       score,
       completedAt: progress.completedAt,
-      feedback: this.generateFeedback(outcomeType, score, progress.accuracyRate || 0),
+      feedback: this.generateFeedback(
+        outcomeType,
+        score,
+        progress.accuracyRate || 0,
+      ),
     });
 
     await this.gameOutcomeRepository.save(outcome);
@@ -974,9 +1049,11 @@ export class EngineService {
 
     // Update player reputation role and streak
     try {
-      const playerProfile = await this.dataSource.getRepository(PlayerProfile).findOne({
-        where: { userId: progress.userId },
-      });
+      const playerProfile = await this.dataSource
+        .getRepository(PlayerProfile)
+        .findOne({
+          where: { userId: progress.userId },
+        });
 
       if (playerProfile) {
         // Update reputation role based on influence score
@@ -1009,7 +1086,8 @@ export class EngineService {
             // Already played today — streak unchanged
           } else if (lastPlayed === yesterdayStr) {
             // Played yesterday — increment streak
-            playerProfile.currentStreak = (playerProfile.currentStreak || 0) + 1;
+            playerProfile.currentStreak =
+              (playerProfile.currentStreak || 0) + 1;
           } else {
             // Missed a day — reset streak
             playerProfile.currentStreak = 1;
@@ -1094,7 +1172,9 @@ export class EngineService {
     // Load scenario and progress to complete the outcome data
     const [scenario, progress] = await Promise.all([
       this.scenarioRepository.findOne({ where: { id: outcome.scenarioId } }),
-      this.gameProgressRepository.findOne({ where: { id: outcome.progressId } })
+      this.gameProgressRepository.findOne({
+        where: { id: outcome.progressId },
+      }),
     ]);
 
     return {
@@ -1107,9 +1187,9 @@ export class EngineService {
       narrativeEnding: progress?.narrativeEnding ?? null,
       scenario: scenario
         ? {
-          id: scenario.id,
-          title: scenario.title,
-        }
+            id: scenario.id,
+            title: scenario.title,
+          }
         : null,
     };
   }
@@ -1154,7 +1234,7 @@ export class EngineService {
       if (order === undefined || order === null) {
         const lastScene = await queryRunner.manager.findOne(Scene, {
           where: { scenarioId },
-          order: { order: 'DESC' }
+          order: { order: 'DESC' },
         });
         order = lastScene ? lastScene.order + 1 : 1;
       }
@@ -1168,7 +1248,9 @@ export class EngineService {
         sceneType: createDto.sceneType,
         contentType: createDto.contentType || 'TEXT',
         isTerminal: createDto.isTerminal || false,
-        availableChoices: createDto.choices ? createDto.choices.map((c: any) => c.label) : ['CHOICE', 'NEXT', 'FINISH'],
+        availableChoices: createDto.choices
+          ? createDto.choices.map((c: any) => c.label)
+          : ['CHOICE', 'NEXT', 'FINISH'],
       });
       const savedScene = await queryRunner.manager.save(scene);
 
@@ -1233,16 +1315,23 @@ export class EngineService {
     await queryRunner.startTransaction();
 
     try {
-      const scene = await queryRunner.manager.findOne(Scene, { where: { id }, relations: ['content'] });
+      const scene = await queryRunner.manager.findOne(Scene, {
+        where: { id },
+        relations: ['content'],
+      });
       if (!scene) throw new NotFoundException('Scene not found');
 
       // Update basic fields
       if (updateDto.title !== undefined) scene.title = updateDto.title;
-      if (updateDto.description !== undefined) scene.description = updateDto.description;
+      if (updateDto.description !== undefined)
+        scene.description = updateDto.description;
       if (updateDto.order !== undefined) scene.order = updateDto.order;
-      if (updateDto.sceneType !== undefined) scene.sceneType = updateDto.sceneType;
-      if (updateDto.contentType !== undefined) scene.contentType = updateDto.contentType;
-      if (updateDto.isTerminal !== undefined) scene.isTerminal = updateDto.isTerminal;
+      if (updateDto.sceneType !== undefined)
+        scene.sceneType = updateDto.sceneType;
+      if (updateDto.contentType !== undefined)
+        scene.contentType = updateDto.contentType;
+      if (updateDto.isTerminal !== undefined)
+        scene.isTerminal = updateDto.isTerminal;
       if (updateDto.choices) {
         scene.availableChoices = updateDto.choices.map((c: any) => c.label);
       }
@@ -1255,31 +1344,43 @@ export class EngineService {
         if (!content) {
           content = this.sceneContentRepository.create({ sceneId: id });
         }
-        if (updateDto.content.contentType !== undefined) content.contentType = updateDto.content.contentType;
-        if (updateDto.content.textBody !== undefined) content.textBody = updateDto.content.textBody;
-        if (updateDto.content.imageUrl !== undefined) content.imageUrl = updateDto.content.imageUrl;
-        if (updateDto.content.videoUrl !== undefined) content.videoUrl = updateDto.content.videoUrl;
+        if (updateDto.content.contentType !== undefined)
+          content.contentType = updateDto.content.contentType;
+        if (updateDto.content.textBody !== undefined)
+          content.textBody = updateDto.content.textBody;
+        if (updateDto.content.imageUrl !== undefined)
+          content.imageUrl = updateDto.content.imageUrl;
+        if (updateDto.content.videoUrl !== undefined)
+          content.videoUrl = updateDto.content.videoUrl;
         await queryRunner.manager.save(SceneContent, content);
       }
 
       // Recreate choices (simplified approach: delete old, create new)
       if (updateDto.choices !== undefined) {
-        const oldChoices = await queryRunner.manager.find(PlayerChoice, { where: { sceneId: id } });
-        const oldChoiceIds = oldChoices.map(c => c.id);
+        const oldChoices = await queryRunner.manager.find(PlayerChoice, {
+          where: { sceneId: id },
+        });
+        const oldChoiceIds = oldChoices.map((c) => c.id);
 
         if (oldChoiceIds.length > 0) {
           // 1. Delete template outcomes (userId is null)
-          await queryRunner.manager.delete(GameOutcome, { playerChoiceId: In(oldChoiceIds), userId: IsNull() });
+          await queryRunner.manager.delete(GameOutcome, {
+            playerChoiceId: In(oldChoiceIds),
+            userId: IsNull(),
+          });
 
           // 2. Nullify playerChoiceId in player outcomes (userId is NOT null) to preserve history but allow deletion
-          await queryRunner.manager.createQueryBuilder()
+          await queryRunner.manager
+            .createQueryBuilder()
             .update(GameOutcome)
             .set({ playerChoiceId: null as any })
             .where({ playerChoiceId: In(oldChoiceIds) })
             .execute();
 
           // 3. Now it's safe to delete the choices
-          await queryRunner.manager.delete(PlayerChoice, { id: In(oldChoiceIds) });
+          await queryRunner.manager.delete(PlayerChoice, {
+            id: In(oldChoiceIds),
+          });
         }
 
         for (const choiceDto of updateDto.choices) {
@@ -1315,7 +1416,6 @@ export class EngineService {
         where: { id },
         relations: ['content', 'choices', 'choices.outcomes'],
       }) as unknown as Scene;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -1334,7 +1434,9 @@ export class EngineService {
     // Delete child entities manually to avoid FK violations
     for (const choice of scene.choices || []) {
       if (choice.outcomes?.length) {
-        await this.gameOutcomeRepository.delete(choice.outcomes.map((o) => o.id));
+        await this.gameOutcomeRepository.delete(
+          choice.outcomes.map((o) => o.id),
+        );
       }
     }
     if (scene.choices?.length) {
@@ -1383,7 +1485,7 @@ export class EngineService {
     if (scenarioData.order === undefined || scenarioData.order === null) {
       const lastScenario = await this.scenarioRepository.findOne({
         where: {},
-        order: { order: 'DESC' }
+        order: { order: 'DESC' },
       });
       scenarioData.order = lastScenario ? lastScenario.order + 10 : 10;
     }
@@ -1420,7 +1522,11 @@ export class EngineService {
   /**
    * Generate feedback based on outcome and accuracy
    */
-  private generateFeedback(outcomeType: OutcomeType, score: number, accuracyRate: number): string {
+  private generateFeedback(
+    outcomeType: OutcomeType,
+    score: number,
+    accuracyRate: number,
+  ): string {
     // If accuracy is very low, provide critical feedback regardless of outcome type
     if (accuracyRate < 30) {
       return `This didn't end well. Your accuracy was only ${accuracyRate}%. Review the scenario to understand where things went wrong.`;
@@ -1441,21 +1547,29 @@ export class EngineService {
       [OutcomeType.DEATH]: `Game over! Your choices had severe consequences. Accuracy: ${accuracyRate}%`,
     };
 
-    return feedbackMap[outcomeType] || `Game completed. Accuracy: ${accuracyRate}%`;
+    return (
+      feedbackMap[outcomeType] || `Game completed. Accuracy: ${accuracyRate}%`
+    );
   }
 
   /**
    * Get summary of player choices and consequences for the "Investigation Reveal" screen
    */
   async getScenarioSummary(userId: string, progressId: string): Promise<any> {
-    console.log(`[EngineService] getScenarioSummary: userId=${userId}, progressId=${progressId}`);
+    console.log(
+      `[EngineService] getScenarioSummary: userId=${userId}, progressId=${progressId}`,
+    );
     // Verify progress belongs to user
     const progress = await this.gameProgressRepository.findOne({
       where: { id: progressId, userId },
       relations: ['scenario'],
     });
-    console.log(`[EngineService] getScenarioSummary: progress found = ${progress ? 'true' : 'false'}`);
-    console.log(`[EngineService] getScenarioSummary: progress object = ${JSON.stringify(progress)}`);
+    console.log(
+      `[EngineService] getScenarioSummary: progress found = ${progress ? 'true' : 'false'}`,
+    );
+    console.log(
+      `[EngineService] getScenarioSummary: progress object = ${JSON.stringify(progress)}`,
+    );
 
     if (!progress) {
       throw new NotFoundException('Game progress not found');
@@ -1474,11 +1588,13 @@ export class EngineService {
 
     // Fetch only the scenes that the player actually interacted with during this session
     // We determine this by checking the sceneId of the choices the player made
-    const visitedSceneIds = outcomes.map((o) => o.playerChoice?.sceneId).filter(Boolean);
+    const visitedSceneIds = outcomes
+      .map((o) => o.playerChoice?.sceneId)
+      .filter(Boolean);
 
     const scenes = await this.sceneRepository.find({
       where: {
-        id: In(visitedSceneIds)
+        id: In(visitedSceneIds),
       },
       relations: ['choices'],
       order: { order: 'ASC' },
@@ -1493,8 +1609,8 @@ export class EngineService {
       const bestChoice =
         scene.choices?.length > 0
           ? [...scene.choices].sort(
-            (a, b) => (b.scoreImpact || 0) - (a.scoreImpact || 0),
-          )[0]
+              (a, b) => (b.scoreImpact || 0) - (a.scoreImpact || 0),
+            )[0]
           : null;
 
       return {

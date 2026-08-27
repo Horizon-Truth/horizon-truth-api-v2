@@ -5,9 +5,9 @@ import { ResourcesController } from './resources.controller';
 import { Resource } from './entities/resource.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Resource])],
-    controllers: [ResourcesController],
-    providers: [ResourcesService],
-    exports: [ResourcesService],
+  imports: [TypeOrmModule.forFeature([Resource])],
+  controllers: [ResourcesController],
+  providers: [ResourcesService],
+  exports: [ResourcesService],
 })
-export class ResourcesModule { }
+export class ResourcesModule {}

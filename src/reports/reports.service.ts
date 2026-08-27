@@ -25,7 +25,7 @@ export class ReportsService {
     private readonly reportEvidenceRepository: Repository<ReportEvidence>,
     private readonly auditLogsService: AuditLogsService,
     private readonly aiVerificationService: AiVerificationService,
-  ) { }
+  ) {}
 
   async create(
     createDto: CreateReportDto,
@@ -59,13 +59,18 @@ export class ReportsService {
       action: 'created',
       entityType: 'Report',
       entityId: savedReport.id,
-      metadata: { status: savedReport.status, duplicateOfId: savedReport.duplicateOfId },
+      metadata: {
+        status: savedReport.status,
+        duplicateOfId: savedReport.duplicateOfId,
+      },
     });
 
     // Kicks off AI verification in the background. Scheduling only writes the
     // PENDING row — the external call is detached — and any failure is swallowed
     // here so a misbehaving AI service can never fail a community submission.
-    await this.aiVerificationService.scheduleForReport(savedReport).catch(() => null);
+    await this.aiVerificationService
+      .scheduleForReport(savedReport)
+      .catch(() => null);
 
     return savedReport;
   }
@@ -118,10 +123,18 @@ export class ReportsService {
     };
   }
 
-  async findById(id: string): Promise<Report & { aiVerification: ReportAiVerification | null }> {
+  async findById(
+    id: string,
+  ): Promise<Report & { aiVerification: ReportAiVerification | null }> {
     const report = await this.reportRepository.findOne({
       where: { id },
-      relations: ['reporter', 'tags', 'verifications', 'verifications.user', 'evidence'],
+      relations: [
+        'reporter',
+        'tags',
+        'verifications',
+        'verifications.user',
+        'evidence',
+      ],
     });
     if (!report) throw new NotFoundException('Report not found');
 
@@ -134,7 +147,11 @@ export class ReportsService {
     return Object.assign(report, { aiVerification });
   }
 
-  async addEvidence(reportId: string, userId: string, evidenceData: AddEvidenceDto): Promise<ReportEvidence> {
+  async addEvidence(
+    reportId: string,
+    userId: string,
+    evidenceData: AddEvidenceDto,
+  ): Promise<ReportEvidence> {
     const report = await this.findById(reportId);
     const evidence = this.reportEvidenceRepository.create({
       ...evidenceData,
@@ -144,7 +161,10 @@ export class ReportsService {
     });
 
     const saved = await this.reportEvidenceRepository.save(evidence);
-    const credibilityScore = Math.max(report.credibilityScore, evidenceData.credibilityScore ?? 0);
+    const credibilityScore = Math.max(
+      report.credibilityScore,
+      evidenceData.credibilityScore ?? 0,
+    );
     await this.reportRepository.update(reportId, { credibilityScore });
 
     await this.auditLogsService.createLog({
@@ -173,12 +193,20 @@ export class ReportsService {
 
     const saved = await this.reportVerificationRepository.save(verification);
 
-    const verifications = await this.reportVerificationRepository.findBy({ reportId });
-    const positiveCount = verifications.filter((v) => v.status === 'TRUE' || v.status === 'VERIFIED').length;
-    const negativeCount = verifications.filter((v) => v.status === 'FALSE' || v.status === 'FAKE').length;
+    const verifications = await this.reportVerificationRepository.findBy({
+      reportId,
+    });
+    const positiveCount = verifications.filter(
+      (v) => v.status === 'TRUE' || v.status === 'VERIFIED',
+    ).length;
+    const negativeCount = verifications.filter(
+      (v) => v.status === 'FALSE' || v.status === 'FAKE',
+    ).length;
 
     if (verifications.length > 0) {
-      const credibilityScore = Math.round((positiveCount / (positiveCount + negativeCount || 1)) * 100);
+      const credibilityScore = Math.round(
+        (positiveCount / (positiveCount + negativeCount || 1)) * 100,
+      );
       await this.reportRepository.update(reportId, { credibilityScore });
     }
 
@@ -217,9 +245,12 @@ export class ReportsService {
     await this.reportRepository.remove(report);
   }
 
-  private async findPotentialDuplicates(reportData: Partial<Report>): Promise<Report[]> {
+  private async findPotentialDuplicates(
+    reportData: Partial<Report>,
+  ): Promise<Report[]> {
     const normalizedTitle = reportData.title?.toLowerCase().trim() || '';
-    const normalizedDescription = reportData.description?.toLowerCase().trim() || '';
+    const normalizedDescription =
+      reportData.description?.toLowerCase().trim() || '';
     const normalizedUrl = reportData.sourceUrl?.toLowerCase().trim() || '';
 
     const candidates = await this.reportRepository.find({
@@ -229,9 +260,16 @@ export class ReportsService {
     });
 
     return candidates.filter((candidate) => {
-      const titleMatch = candidate.title?.toLowerCase().includes(normalizedTitle) || normalizedTitle.includes(candidate.title?.toLowerCase() || '');
-      const descriptionMatch = candidate.description?.toLowerCase().includes(normalizedDescription) || normalizedDescription.includes(candidate.description?.toLowerCase() || '');
-      const urlMatch = normalizedUrl && candidate.sourceUrl?.toLowerCase() === normalizedUrl;
+      const titleMatch =
+        candidate.title?.toLowerCase().includes(normalizedTitle) ||
+        normalizedTitle.includes(candidate.title?.toLowerCase() || '');
+      const descriptionMatch =
+        candidate.description?.toLowerCase().includes(normalizedDescription) ||
+        normalizedDescription.includes(
+          candidate.description?.toLowerCase() || '',
+        );
+      const urlMatch =
+        normalizedUrl && candidate.sourceUrl?.toLowerCase() === normalizedUrl;
       return titleMatch || descriptionMatch || urlMatch;
     });
   }

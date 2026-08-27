@@ -22,4 +22,3 @@ import { MailModule } from '../mail/mail.module';
   exports: [UsersService, UserInvitationsService],
 })
 export class UsersModule {}
-

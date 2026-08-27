@@ -46,7 +46,9 @@ export class GameOutcome {
   @Column({ name: 'player_choice_id', nullable: true })
   playerChoiceId: string;
 
-  @ManyToOne(() => PlayerChoice, (choice) => choice.outcomes, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PlayerChoice, (choice) => choice.outcomes, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'player_choice_id' })
   playerChoice: PlayerChoice;
 

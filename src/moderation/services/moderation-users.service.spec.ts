@@ -449,95 +449,95 @@ describe('ModerationUsersService', () => {
       expect(service.computeRiskScore(many, 50)).toBe(100);
     });
   });
-    // =======================================================================
+  // =======================================================================
 
-    describe('getOwnRecord', () => {
-        // This is the one endpoint a sanctioned user can reach, so what it
-        // withholds matters as much as what it returns.
-        beforeEach(() => {
-            sanctionRepo.find.mockResolvedValue([
-                makeSanction({
-                    id: 's-1',
-                    type: UserSanctionType.TEMPORARY_SUSPENSION,
-                    reason: 'Third upheld harassment report.',
-                    notes: 'Internal: linked to the ring in HT-99A1.',
-                    issuedById: 'mod-7',
-                }),
-            ]);
-        });
-
-        it('never exposes internal notes to the subject', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(JSON.stringify(record)).not.toContain('Internal:');
-            expect(record.sanctions[0]).not.toHaveProperty('notes');
-        });
-
-        it('never exposes the issuing moderator, to prevent retaliation', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(JSON.stringify(record)).not.toContain('mod-7');
-            expect(record.sanctions[0]).not.toHaveProperty('issuedById');
-            expect(record.sanctions[0]).not.toHaveProperty('issuedBy');
-        });
-
-        it('never exposes the risk score', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(record).not.toHaveProperty('riskScore');
-        });
-
-        it('does return the reason, so the user knows what they did', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(record.sanctions[0].reason).toBe(
-                'Third upheld harassment report.',
-            );
-        });
-
-        it('marks a recent, un-appealed sanction as appealable', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(record.sanctions[0].isAppealable).toBe(true);
-        });
-
-        it('marks a sanction outside the appeal window as not appealable', async () => {
-            sanctionRepo.find.mockResolvedValue([
-                makeSanction({
-                    id: 's-old',
-                    createdAt: new Date(Date.now() - 45 * 86_400_000),
-                }),
-            ]);
-
-            const record = await service.getOwnRecord('player-1');
-            expect(record.sanctions[0].isAppealable).toBe(false);
-        });
-
-        it('marks an already-appealed sanction as not appealable', async () => {
-            appealRepo.find.mockResolvedValue([
-                { id: 'a-1', sanctionId: 's-1', status: 'SUBMITTED' },
-            ]);
-
-            const record = await service.getOwnRecord('player-1');
-            expect(record.sanctions[0].isAppealable).toBe(false);
-        });
-
-        it('marks an overturned sanction as not appealable', async () => {
-            sanctionRepo.find.mockResolvedValue([
-                makeSanction({
-                    id: 's-1',
-                    status: UserSanctionStatus.OVERTURNED,
-                }),
-            ]);
-
-            const record = await service.getOwnRecord('player-1');
-            expect(record.sanctions[0].isAppealable).toBe(false);
-        });
-
-        it('publishes the appeal window so the UI can explain the deadline', async () => {
-            const record = await service.getOwnRecord('player-1');
-
-            expect(record.appealWindowDays).toBe(30);
-        });
+  describe('getOwnRecord', () => {
+    // This is the one endpoint a sanctioned user can reach, so what it
+    // withholds matters as much as what it returns.
+    beforeEach(() => {
+      sanctionRepo.find.mockResolvedValue([
+        makeSanction({
+          id: 's-1',
+          type: UserSanctionType.TEMPORARY_SUSPENSION,
+          reason: 'Third upheld harassment report.',
+          notes: 'Internal: linked to the ring in HT-99A1.',
+          issuedById: 'mod-7',
+        }),
+      ]);
     });
+
+    it('never exposes internal notes to the subject', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(JSON.stringify(record)).not.toContain('Internal:');
+      expect(record.sanctions[0]).not.toHaveProperty('notes');
+    });
+
+    it('never exposes the issuing moderator, to prevent retaliation', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(JSON.stringify(record)).not.toContain('mod-7');
+      expect(record.sanctions[0]).not.toHaveProperty('issuedById');
+      expect(record.sanctions[0]).not.toHaveProperty('issuedBy');
+    });
+
+    it('never exposes the risk score', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(record).not.toHaveProperty('riskScore');
+    });
+
+    it('does return the reason, so the user knows what they did', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(record.sanctions[0].reason).toBe(
+        'Third upheld harassment report.',
+      );
+    });
+
+    it('marks a recent, un-appealed sanction as appealable', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(record.sanctions[0].isAppealable).toBe(true);
+    });
+
+    it('marks a sanction outside the appeal window as not appealable', async () => {
+      sanctionRepo.find.mockResolvedValue([
+        makeSanction({
+          id: 's-old',
+          createdAt: new Date(Date.now() - 45 * 86_400_000),
+        }),
+      ]);
+
+      const record = await service.getOwnRecord('player-1');
+      expect(record.sanctions[0].isAppealable).toBe(false);
+    });
+
+    it('marks an already-appealed sanction as not appealable', async () => {
+      appealRepo.find.mockResolvedValue([
+        { id: 'a-1', sanctionId: 's-1', status: 'SUBMITTED' },
+      ]);
+
+      const record = await service.getOwnRecord('player-1');
+      expect(record.sanctions[0].isAppealable).toBe(false);
+    });
+
+    it('marks an overturned sanction as not appealable', async () => {
+      sanctionRepo.find.mockResolvedValue([
+        makeSanction({
+          id: 's-1',
+          status: UserSanctionStatus.OVERTURNED,
+        }),
+      ]);
+
+      const record = await service.getOwnRecord('player-1');
+      expect(record.sanctions[0].isAppealable).toBe(false);
+    });
+
+    it('publishes the appeal window so the UI can explain the deadline', async () => {
+      const record = await service.getOwnRecord('player-1');
+
+      expect(record.appealWindowDays).toBe(30);
+    });
+  });
 });

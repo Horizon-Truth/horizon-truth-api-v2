@@ -74,4 +74,4 @@ import { ModerationAction } from '../../incidents/entities/moderation-action.ent
     ModerationSeederService,
   ],
 })
-export class SeederModule { }
+export class SeederModule {}

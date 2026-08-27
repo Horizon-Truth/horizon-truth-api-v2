@@ -57,4 +57,4 @@ import { ReportVerification } from '../reports/entities/report-verification.enti
   providers: [AnalyticsService],
   exports: [AnalyticsService, TypeOrmModule],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

@@ -24,10 +24,14 @@ export class AuditLogSeederService {
       return;
     }
 
-    const admin = await this.userRepository.findOne({ where: { role: 'SYSTEM_ADMIN' } as any });
-    
+    const admin = await this.userRepository.findOne({
+      where: { role: 'SYSTEM_ADMIN' } as any,
+    });
+
     if (!admin) {
-      this.logger.warn('No SYSTEM_ADMIN user found, audit logs will be seeded without userId.');
+      this.logger.warn(
+        'No SYSTEM_ADMIN user found, audit logs will be seeded without userId.',
+      );
     }
 
     const sampleLogs = [
@@ -36,9 +40,13 @@ export class AuditLogSeederService {
         action: 'POST /api/scenarios',
         entityType: 'engine',
         entityId: 'scenario-001',
-        metadata: { name: 'Sample Scenario', description: 'Created via seeder' },
+        metadata: {
+          name: 'Sample Scenario',
+          description: 'Created via seeder',
+        },
         ipAddress: '127.0.0.1',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        userAgent:
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       },
       {
         userId: admin?.id,
@@ -47,7 +55,8 @@ export class AuditLogSeederService {
         entityId: admin?.id || 'admin-user-id',
         metadata: { updatedFields: ['fullName'] },
         ipAddress: '127.0.0.1',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        userAgent:
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       },
       {
         userId: admin?.id,
@@ -66,7 +75,7 @@ export class AuditLogSeederService {
         metadata: { status: 'active' },
         ipAddress: '10.0.0.5',
         userAgent: 'PostmanRuntime/7.36.1',
-      }
+      },
     ];
 
     for (const logData of sampleLogs) {

@@ -1,19 +1,19 @@
 import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Query,
-    Delete,
-    UseGuards,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  Delete,
+  UseGuards,
 } from '@nestjs/common';
 import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto, UpdateResourceDto } from './dto/resource.dto';
@@ -26,55 +26,60 @@ import { ContentLanguage } from '../shared/enums/content-language.enum';
 @ApiTags('resources')
 @Controller('resources')
 export class ResourcesController {
-    constructor(private readonly resourcesService: ResourcesService) { }
+  constructor(private readonly resourcesService: ResourcesService) {}
 
-    @Get()
-    @ApiOperation({ summary: 'Get all resources (optionally filtered by language)' })
-    @ApiQuery({ name: 'language', enum: ContentLanguage, required: false })
-    @ApiQuery({ name: 'search', required: false })
-    findAll(
-        @Query('language') language?: ContentLanguage,
-        @Query('search') search?: string,
-    ) {
-        return this.resourcesService.findAll({ language, search });
-    }
+  @Get()
+  @ApiOperation({
+    summary: 'Get all resources (optionally filtered by language)',
+  })
+  @ApiQuery({ name: 'language', enum: ContentLanguage, required: false })
+  @ApiQuery({ name: 'search', required: false })
+  findAll(
+    @Query('language') language?: ContentLanguage,
+    @Query('search') search?: string,
+  ) {
+    return this.resourcesService.findAll({ language, search });
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Get resource by ID' })
-    findOne(@Param('id') id: string) {
-        return this.resourcesService.findOne(id);
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Get resource by ID' })
+  findOne(@Param('id') id: string) {
+    return this.resourcesService.findOne(id);
+  }
 
-    @Get('slug/:slug')
-    @ApiOperation({ summary: 'Get resource by slug' })
-    findBySlug(@Param('slug') slug: string) {
-        return this.resourcesService.findBySlug(slug);
-    }
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get resource by slug' })
+  findBySlug(@Param('slug') slug: string) {
+    return this.resourcesService.findBySlug(slug);
+  }
 
-    @Post()
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create a new resource (Admin/Moderator only)' })
-    create(@Body() createResourceDto: CreateResourceDto) {
-        return this.resourcesService.create(createResourceDto);
-    }
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new resource (Admin/Moderator only)' })
+  create(@Body() createResourceDto: CreateResourceDto) {
+    return this.resourcesService.create(createResourceDto);
+  }
 
-    @Patch(':id')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update a resource (Admin/Moderator only)' })
-    update(@Param('id') id: string, @Body() updateResourceDto: UpdateResourceDto) {
-        return this.resourcesService.update(id, updateResourceDto);
-    }
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a resource (Admin/Moderator only)' })
+  update(
+    @Param('id') id: string,
+    @Body() updateResourceDto: UpdateResourceDto,
+  ) {
+    return this.resourcesService.update(id, updateResourceDto);
+  }
 
-    @Delete(':id')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Delete a resource (Admin/Moderator only)' })
-    remove(@Param('id') id: string) {
-        return this.resourcesService.remove(id);
-    }
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a resource (Admin/Moderator only)' })
+  remove(@Param('id') id: string) {
+    return this.resourcesService.remove(id);
+  }
 }

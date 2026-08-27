@@ -37,7 +37,9 @@ export class Report {
   @Column()
   title: string;
 
-  @ApiProperty({ example: 'This article contains false information about healthcare.' })
+  @ApiProperty({
+    example: 'This article contains false information about healthcare.',
+  })
   @Column({ type: 'text' })
   description: string;
 
@@ -53,7 +55,10 @@ export class Report {
   @Column({ name: 'reported_content_reference', nullable: true })
   reportedContentReference?: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['https://example.com/evidence'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['https://example.com/evidence'],
+  })
   @Column({ name: 'evidence_links', type: 'jsonb', nullable: true })
   evidenceLinks?: string[];
 
@@ -85,7 +90,10 @@ export class Report {
   })
   status: ReportStatus;
 
-  @ApiProperty({ enum: ReportPriorityLevel, default: ReportPriorityLevel.MEDIUM })
+  @ApiProperty({
+    enum: ReportPriorityLevel,
+    default: ReportPriorityLevel.MEDIUM,
+  })
   @Column({
     type: 'enum',
     enum: ReportPriorityLevel,

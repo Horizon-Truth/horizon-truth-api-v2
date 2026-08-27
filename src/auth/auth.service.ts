@@ -19,7 +19,7 @@ export class AuthService {
     private configService: ConfigService,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
-  ) { }
+  ) {}
 
   async validateUser(emailOrUsername: string, pass: string): Promise<any> {
     let user = await this.usersService.findOneByEmail(emailOrUsername);
@@ -146,7 +146,7 @@ export class AuthService {
         fullName,
         avatarUrl,
         nickname,
-        onboardingCompleted: (user as any)?.playerProfile?.onboardingCompleted,
+        onboardingCompleted: user?.playerProfile?.onboardingCompleted,
       },
     };
   }

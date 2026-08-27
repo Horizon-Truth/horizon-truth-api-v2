@@ -21,16 +21,23 @@ import { AiVerdict } from '../../shared/enums/ai-verdict.enum';
  * attempt, only ever read back with their attempt, and never queried on their own.
  */
 export class AiVerificationSource {
-  @ApiProperty({ example: 'Fact Checked: Vaccines: Safe and Effective, No Link to Autism' })
+  @ApiProperty({
+    example: 'Fact Checked: Vaccines: Safe and Effective, No Link to Autism',
+  })
   title: string;
 
   @ApiProperty({ example: 'https://www.aap.org/en/news-room/fact-checked/...' })
   url: string;
 
-  @ApiPropertyOptional({ example: 'Immunizations work by prompting your immune system...' })
+  @ApiPropertyOptional({
+    example: 'Immunizations work by prompting your immune system...',
+  })
   content?: string;
 
-  @ApiPropertyOptional({ example: 0.74, description: 'Relevance in the 0–1 range' })
+  @ApiPropertyOptional({
+    example: 0.74,
+    description: 'Relevance in the 0–1 range',
+  })
   score?: number;
 }
 
@@ -50,7 +57,9 @@ export class ReportAiVerification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Report, (report) => report.aiVerifications, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Report, (report) => report.aiVerifications, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'report_id' })
   report: Report;
 
@@ -63,11 +72,21 @@ export class ReportAiVerification {
   @Column({ type: 'text' })
   claim: string;
 
-  @ApiProperty({ enum: AiVerificationStatus, default: AiVerificationStatus.PENDING })
-  @Column({ type: 'varchar', length: 32, default: AiVerificationStatus.PENDING })
+  @ApiProperty({
+    enum: AiVerificationStatus,
+    default: AiVerificationStatus.PENDING,
+  })
+  @Column({
+    type: 'varchar',
+    length: 32,
+    default: AiVerificationStatus.PENDING,
+  })
   status: AiVerificationStatus;
 
-  @ApiPropertyOptional({ example: 'FALSE', description: 'Known values in AiVerdict; may evolve' })
+  @ApiPropertyOptional({
+    example: 'FALSE',
+    description: 'Known values in AiVerdict; may evolve',
+  })
   @Column({ type: 'varchar', length: 64, nullable: true })
   verdict?: AiVerdict | string;
 
@@ -75,11 +94,15 @@ export class ReportAiVerification {
   @Column({ type: 'varchar', length: 32, nullable: true })
   confidence?: string;
 
-  @ApiPropertyOptional({ example: 'Extensive scientific research has found no credible link...' })
+  @ApiPropertyOptional({
+    example: 'Extensive scientific research has found no credible link...',
+  })
   @Column({ type: 'text', nullable: true })
   reasoning?: string;
 
-  @ApiPropertyOptional({ example: 'Vaccines do not cause autism; extensive research...' })
+  @ApiPropertyOptional({
+    example: 'Vaccines do not cause autism; extensive research...',
+  })
   @Column({ name: 'evidence_summary', type: 'text', nullable: true })
   evidenceSummary?: string;
 

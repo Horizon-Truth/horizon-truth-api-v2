@@ -11,19 +11,19 @@ import { VerificationAction } from './entities/verification-action.entity';
 import { ResponseTiming } from './entities/response-timing.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            SessionContext,
-            DecisionOutcome,
-            SocialContextExposure,
-            Dissemination,
-            ContentConsumption,
-            VerificationAction,
-            ResponseTiming,
-        ])
-    ],
-    controllers: [TelemetryController],
-    providers: [TelemetryService],
-    exports: [TelemetryService]
+  imports: [
+    TypeOrmModule.forFeature([
+      SessionContext,
+      DecisionOutcome,
+      SocialContextExposure,
+      Dissemination,
+      ContentConsumption,
+      VerificationAction,
+      ResponseTiming,
+    ]),
+  ],
+  controllers: [TelemetryController],
+  providers: [TelemetryService],
+  exports: [TelemetryService],
 })
-export class TelemetryModule { }
+export class TelemetryModule {}

@@ -96,7 +96,10 @@ function asText(value: unknown, max = MAX_TEXT_LENGTH): string | undefined {
 
 /** Uppercases and underscores an upstream label so synonyms match reliably. */
 function canonicalKey(value: string): string {
-  return value.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
 }
 
 export function normaliseVerdict(value: unknown): AiVerdict | string {
@@ -128,7 +131,8 @@ export function sanitiseSourceUrl(value: unknown): string | undefined {
 
   try {
     const parsed = new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
+      return undefined;
     return parsed.toString();
   } catch {
     return undefined;
@@ -175,9 +179,15 @@ export function normaliseSources(value: unknown): AiVerificationSource[] {
  * Maps the raw API payload onto the application model, tolerating missing
  * fields. Throws only when the payload carries nothing usable at all.
  */
-export function normaliseDetectionResponse(payload: unknown, requestedClaim: string): AiDetectionResult {
+export function normaliseDetectionResponse(
+  payload: unknown,
+  requestedClaim: string,
+): AiDetectionResult {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new AiVerificationError('MALFORMED_RESPONSE', 'The AI service returned an unexpected response.');
+    throw new AiVerificationError(
+      'MALFORMED_RESPONSE',
+      'The AI service returned an unexpected response.',
+    );
   }
 
   const raw = payload as Record<string, unknown>;
@@ -188,7 +198,10 @@ export function normaliseDetectionResponse(payload: unknown, requestedClaim: str
 
   const hasVerdict = asText(raw.verdict) !== undefined;
   if (!hasVerdict && !reasoning && !evidenceSummary && sources.length === 0) {
-    throw new AiVerificationError('MALFORMED_RESPONSE', 'The AI service returned no usable assessment.');
+    throw new AiVerificationError(
+      'MALFORMED_RESPONSE',
+      'The AI service returned no usable assessment.',
+    );
   }
 
   return {
@@ -208,9 +221,11 @@ export class AiVerificationClient {
   private readonly timeoutMs: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.endpoint = this.configService.get<string>('AI_VERIFICATION_URL') ?? DEFAULT_ENDPOINT;
+    this.endpoint =
+      this.configService.get<string>('AI_VERIFICATION_URL') ?? DEFAULT_ENDPOINT;
     this.timeoutMs = Number(
-      this.configService.get<string>('AI_VERIFICATION_TIMEOUT_MS') ?? DEFAULT_TIMEOUT_MS,
+      this.configService.get<string>('AI_VERIFICATION_TIMEOUT_MS') ??
+        DEFAULT_TIMEOUT_MS,
     );
   }
 
@@ -226,30 +241,49 @@ export class AiVerificationClient {
   async detect(claim: string): Promise<AiDetectionResult> {
     const trimmed = claim?.trim();
     if (!trimmed) {
-      throw new AiVerificationError('INVALID_REQUEST', 'No claim was available to verify.');
+      throw new AiVerificationError(
+        'INVALID_REQUEST',
+        'No claim was available to verify.',
+      );
     }
 
-    const timeout = Number.isFinite(this.timeoutMs) && this.timeoutMs > 0 ? this.timeoutMs : DEFAULT_TIMEOUT_MS;
+    const timeout =
+      Number.isFinite(this.timeoutMs) && this.timeoutMs > 0
+        ? this.timeoutMs
+        : DEFAULT_TIMEOUT_MS;
 
     let response: Response;
     try {
       response = await fetch(this.endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify({ claim: trimmed }),
         signal: AbortSignal.timeout(timeout),
       });
     } catch (error) {
       const name = (error as Error)?.name;
       if (name === 'TimeoutError' || name === 'AbortError') {
-        throw new AiVerificationError('TIMEOUT', 'The AI verification service took too long to respond.');
+        throw new AiVerificationError(
+          'TIMEOUT',
+          'The AI verification service took too long to respond.',
+        );
       }
-      this.logger.warn(`AI verification request failed: ${(error as Error)?.message}`);
-      throw new AiVerificationError('NETWORK', 'The AI verification service could not be reached.');
+      this.logger.warn(
+        `AI verification request failed: ${(error as Error)?.message}`,
+      );
+      throw new AiVerificationError(
+        'NETWORK',
+        'The AI verification service could not be reached.',
+      );
     }
 
     if (!response.ok) {
-      this.logger.warn(`AI verification responded with HTTP ${response.status}`);
+      this.logger.warn(
+        `AI verification responded with HTTP ${response.status}`,
+      );
       throw new AiVerificationError(
         'HTTP_ERROR',
         'The AI verification service returned an error.',
@@ -261,7 +295,10 @@ export class AiVerificationClient {
     try {
       payload = await response.json();
     } catch {
-      throw new AiVerificationError('MALFORMED_RESPONSE', 'The AI service returned an unreadable response.');
+      throw new AiVerificationError(
+        'MALFORMED_RESPONSE',
+        'The AI service returned an unreadable response.',
+      );
     }
 
     return normaliseDetectionResponse(payload, trimmed);

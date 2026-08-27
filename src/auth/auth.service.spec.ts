@@ -65,7 +65,11 @@ describe('AuthService', () => {
 
   describe('validateUser', () => {
     it('should return user without password hash if validation succeeds', async () => {
-      const user = { id: '1', email: 'test@example.com', passwordHash: 'hashed' };
+      const user = {
+        id: '1',
+        email: 'test@example.com',
+        passwordHash: 'hashed',
+      };
       mockUsersService.findOneByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
@@ -85,7 +89,11 @@ describe('AuthService', () => {
     });
 
     it('should return null if password does not match', async () => {
-      const user = { id: '1', email: 'test@example.com', passwordHash: 'hashed' };
+      const user = {
+        id: '1',
+        email: 'test@example.com',
+        passwordHash: 'hashed',
+      };
       mockUsersService.findOneByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
@@ -97,12 +105,12 @@ describe('AuthService', () => {
 
   describe('getTokens', () => {
     it('should return access and refresh tokens', async () => {
-      const user = { 
-        id: '1', 
-        username: 'test', 
-        role: 'PLAYER', 
+      const user = {
+        id: '1',
+        username: 'test',
+        role: 'PLAYER',
         fullName: 'Test User',
-        playerProfile: { onboardingCompleted: true }
+        playerProfile: { onboardingCompleted: true },
       };
       mockJwtService.signAsync.mockResolvedValue('token');
       mockConfigService.get.mockReturnValue('secret');
@@ -119,7 +127,13 @@ describe('AuthService', () => {
   describe('validateSession', () => {
     it('should return session if refresh token matches', async () => {
       const sessions = [
-        { id: 's1', userId: '1', refreshTokenHash: 'hashedToken', isActive: true, expiresAt: new Date(Date.now() + 10000) }
+        {
+          id: 's1',
+          userId: '1',
+          refreshTokenHash: 'hashedToken',
+          isActive: true,
+          expiresAt: new Date(Date.now() + 10000),
+        },
       ];
       sessionRepository.find.mockResolvedValue(sessions);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -128,7 +142,10 @@ describe('AuthService', () => {
 
       expect(result).toBeDefined();
       expect(result?.id).toBe('s1');
-      expect(bcrypt.compare).toHaveBeenCalledWith('refreshToken', 'hashedToken');
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'refreshToken',
+        'hashedToken',
+      );
     });
 
     it('should return null if no active session matches', async () => {

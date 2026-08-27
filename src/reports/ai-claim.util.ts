@@ -69,7 +69,10 @@ function tidy(text: string): string {
 }
 
 function stripWrappers(text: string): string {
-  return text.replace(WRAPPING_QUOTES, '').replace(/[\s.,;:]+$/, '').trim();
+  return text
+    .replace(WRAPPING_QUOTES, '')
+    .replace(/[\s.,;:]+$/, '')
+    .trim();
 }
 
 function capitaliseFirst(text: string): string {
@@ -121,7 +124,9 @@ function isLabelShaped(text: string): boolean {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
   // Trailing punctuation is already stripped by the time this runs.
-  return CONTENT_NOUN.test(words[words.length - 1]) && !PREDICATE_MARKER.test(text);
+  return (
+    CONTENT_NOUN.test(words[words.length - 1]) && !PREDICATE_MARKER.test(text)
+  );
 }
 
 /** Rejects text that names the content but asserts nothing checkable. */
@@ -136,7 +141,9 @@ function isSubstantive(claim: string): boolean {
  * reporter quoted the content, otherwise the first sentence that is not
  * narration about how they came across it.
  */
-export function extractClaimFromDescription(raw: string | null | undefined): string {
+export function extractClaimFromDescription(
+  raw: string | null | undefined,
+): string {
   if (!raw) return '';
 
   const text = tidy(raw);
@@ -177,5 +184,7 @@ export function deriveVerificationClaim(report: ClaimCandidateInput): string {
   if (isSubstantive(fromDescription)) return truncate(fromDescription);
 
   // Neither source produced a full claim; send whichever text exists.
-  return truncate(fromTitle || fromDescription || tidy(report.title ?? '') || '');
+  return truncate(
+    fromTitle || fromDescription || tidy(report.title ?? '') || '',
+  );
 }

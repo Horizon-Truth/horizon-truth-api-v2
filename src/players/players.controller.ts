@@ -32,7 +32,7 @@ import { UserRole } from '../shared/enums/user-role.enum';
 @ApiTags('Players')
 @Controller('players')
 export class PlayersController {
-  constructor(private readonly playersService: PlayersService) { }
+  constructor(private readonly playersService: PlayersService) {}
 
   @Get('avatars')
   @ApiOperation({ summary: 'List all available avatars' })

@@ -86,17 +86,26 @@ export class CreateScenarioDto {
   @IsInt()
   totalScenes?: number;
 
-  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'UUID of scenario that must be passed before this one unlocks' })
+  @ApiPropertyOptional({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'UUID of scenario that must be passed before this one unlocks',
+  })
   @IsOptional()
   @IsUUID()
   unlockScenarioId?: string;
 
-  @ApiPropertyOptional({ example: 'MISINFORMATION_101', description: 'Campaign tag for grouping scenarios' })
+  @ApiPropertyOptional({
+    example: 'MISINFORMATION_101',
+    description: 'Campaign tag for grouping scenarios',
+  })
   @IsOptional()
   @IsString()
   campaignTag?: string;
 
-  @ApiPropertyOptional({ example: 1, description: 'Display order of the scenario' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Display order of the scenario',
+  })
   @IsOptional()
   @IsInt()
   order?: number;
