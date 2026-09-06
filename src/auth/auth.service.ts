@@ -124,7 +124,7 @@ export class AuthService {
           fullName,
         },
         {
-          secret: this.configService.get<string>('JWT_SECRET') || 'secretKey',
+          secret: this.configService.getOrThrow<string>('JWT_SECRET'),
           expiresIn: '7d',
         },
       ),
@@ -135,9 +135,7 @@ export class AuthService {
           role,
         },
         {
-          secret:
-            this.configService.get<string>('JWT_REFRESH_SECRET') ||
-            'refreshSecretKey',
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
           expiresIn: '7d',
         },
       ),
