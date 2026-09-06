@@ -22,7 +22,10 @@ import { Session } from './entities/session.entity';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        signOptions: {
+          algorithm: 'HS256',
+          expiresIn: '7d',
+        },
       }),
       inject: [ConfigService],
     }),

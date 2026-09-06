@@ -19,6 +19,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
       secretOrKey:
         configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       passReqToCallback: true,
+      algorithms: ['HS256'],
     });
   }
 

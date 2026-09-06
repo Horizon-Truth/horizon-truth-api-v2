@@ -118,12 +118,12 @@ export class AuthService {
         {
           sub: userId,
           username,
-          role,
           avatarUrl,
           nickname,
           fullName,
         },
         {
+          algorithm: 'HS256',
           secret: this.configService.getOrThrow<string>('JWT_SECRET'),
           expiresIn: '7d',
         },
@@ -132,9 +132,9 @@ export class AuthService {
         {
           sub: userId,
           username,
-          role,
         },
         {
+          algorithm: 'HS256',
           secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
           expiresIn: '7d',
         },
