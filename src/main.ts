@@ -14,22 +14,32 @@ async function bootstrap() {
 
   app.use(
     helmet({
+      // Prevent clickjacking — deny framing entirely
+      frameguard: { action: 'deny' },
+      // Disable MIME-type sniffing
+      noSniff: true,
+      // Force browser to only connect over HTTPS (1 year, include subdomains)
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      // Prevent reflected XSS — let browser filter block scripts
+      xssFilter: true,
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: [
-            "'self'",
-            "'unsafe-inline'",
-            'https://fonts.googleapis.com',
-          ],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", 'data:', 'blob:'],
           connectSrc: ["'self'"],
         },
       },
-      crossOriginEmbedderPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: true,
+      crossOriginOpenerPolicy: { policy: 'same-origin' },
+      crossOriginResourcePolicy: { policy: 'same-origin' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }),
   );
 
@@ -43,8 +53,17 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = [
+    // Production
+    'https://horizontruth.org',
+    'https://www.horizontruth.org',
+    // Local development
+    'http://localhost:5173',
+    'http://localhost:4173',
+  ];
+
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

@@ -15,6 +15,16 @@ export class PublicStatsController {
   @Get()
   @ApiOperation({ summary: 'Aggregate public stats for the landing page' })
   async getPublicStats() {
-    return this.analyticsService.getPublicStats();
+    // Only return rounded, non-identifying headline totals.
+    // Never expose per-user detail, exact raw counts that reveal
+    // operational weakness, or internal metric precision.
+    const stats = await this.analyticsService.getPublicStats();
+    return {
+      activeUsers: stats.activeUsers,
+      reportsVerified: stats.reportsDebunked,
+      // Rounded ranges prevent precise profiling; no verifier count
+      // exposed ( avoids highlighting weak staffing points ).
+      accuracyRate: stats.accuracyRate,
+    };
   }
 }

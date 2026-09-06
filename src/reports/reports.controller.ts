@@ -40,7 +40,10 @@ export class ReportsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all reports' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all reports (Admin)' })
   findAll(@Query() query: any) {
     return this.reportsService.findAll(query);
   }

@@ -24,7 +24,7 @@ async function run() {
 
     // Create a forged valid token for this user
     const payload = { sub: userId };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
       expiresIn: '1h',
     });
     console.log('Forged token for userId', userId);

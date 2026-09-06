@@ -2,22 +2,28 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
 import { Session } from './entities/session.entity';
 import { assertStrongPassword } from '../shared/utils/password-policy.util';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
   ) {}
@@ -112,13 +118,13 @@ export class AuthService {
         {
           sub: userId,
           username,
-          role,
           avatarUrl,
           nickname,
           fullName,
         },
         {
-          secret: this.configService.get<string>('JWT_SECRET') || 'secretKey',
+          algorithm: 'HS256',
+          secret: this.configService.getOrThrow<string>('JWT_SECRET'),
           expiresIn: '7d',
         },
       ),
@@ -126,12 +132,10 @@ export class AuthService {
         {
           sub: userId,
           username,
-          role,
         },
         {
-          secret:
-            this.configService.get<string>('JWT_REFRESH_SECRET') ||
-            'refreshSecretKey',
+          algorithm: 'HS256',
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
           expiresIn: '7d',
         },
       ),
@@ -159,21 +163,47 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findOneByEmail(email);
-    if (!user) return; // Don't reveal user existence
+    if (!user) {
+      // Don't reveal whether the user exists
+      return { message: 'If user exists, reset email sent' };
+    }
 
-    const token =
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
+    // Generate a cryptographically-secure token and hash it for storage
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(rawToken, 10);
     const expires = new Date();
     expires.setHours(expires.getHours() + 1);
 
     await this.usersService.update(user.id, {
-      resetPasswordToken: token,
+      resetPasswordToken: tokenHash,
       resetPasswordExpires: expires,
     });
 
-    // Mock email sending
-    console.log(`[Email Service] Password reset token for ${email}: ${token}`);
+    // Build the reset link — falls back to a generic message if FRONTEND_URL is not set
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const resetLink = frontendUrl
+      ? `${frontendUrl}/reset-password?token=${rawToken}`
+      : null;
+
+    try {
+      await this.mailService.send({
+        to: email,
+        subject: 'Reset your Horizon Truth password',
+        text: resetLink
+          ? `Click the link to reset your password (expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, ignore this email.`
+          : `Your password reset token (expires in 1 hour):\n\n${rawToken}\n\nIf you didn't request this, ignore this email.`,
+        html: resetLink
+          ? `<p>Click the link below to reset your password (expires in 1 hour):</p><p><a href="${resetLink}">Reset password</a></p><p>If you didn't request this, ignore this email.</p>`
+          : `<p>Your password reset token (expires in 1 hour):</p><p><strong>${rawToken}</strong></p><p>If you didn't request this, ignore this email.</p>`,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to send reset email to ${email}: ${(err as Error).message}`,
+      );
+      // Still return the same message so the email's existence isn't leaked
+      return { message: 'If user exists, reset email sent' };
+    }
+
     return { message: 'If user exists, reset email sent' };
   }
 
@@ -184,7 +214,15 @@ export class AuthService {
       !user.resetPasswordExpires ||
       user.resetPasswordExpires < new Date()
     ) {
-      // Check expires exists
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    // Verify the raw token against the stored hash
+    const tokenMatches = await bcrypt.compare(
+      token,
+      user.resetPasswordToken!,
+    );
+    if (!tokenMatches) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
