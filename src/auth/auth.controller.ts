@@ -51,6 +51,23 @@ export class AuthController {
       const userAgent = req.headers['user-agent'];
       return this.authService.login(user, ip, userAgent);
     } catch (error) {
+      // Do not reveal whether the email/username exists
+      // (user-enumeration defense: CWE-204).
+      const messageIncludesDuplicate =
+        error instanceof HttpException &&
+        (error.message?.toLowerCase().includes('already exists') ||
+          error.message?.toLowerCase().includes('already taken') ||
+          error.message?.toLowerCase().includes('already') ||
+          (typeof (error.getResponse?.() || error) === 'string' &&
+            (error.getResponse?.()?.toString?.() || '')
+              .toLowerCase()
+              .includes('already')));
+      if (messageIncludesDuplicate) {
+        throw new HttpException(
+          'Registration failed. If the account exists, please sign in or reset your password.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       if (error instanceof HttpException) {
         throw error;
       }

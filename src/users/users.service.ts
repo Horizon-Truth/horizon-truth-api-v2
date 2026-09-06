@@ -73,9 +73,8 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException(
-        'User with this email or username already exists',
-      );
+      // Generic message — never confirm whether the identifier exists
+      throw new ConflictException('Unable to complete registration');
     }
 
     const createData: Partial<User> = { ...userData };
@@ -164,7 +163,7 @@ export class UsersService {
         where: { username: changes.username },
       });
       if (clash && clash.id !== id) {
-        throw new ConflictException('That username is already taken.');
+        throw new ConflictException('Unable to complete update');
       }
     }
 
@@ -241,7 +240,7 @@ export class UsersService {
         where: { username: updateDto.username },
       });
       if (existingUser && existingUser.id !== userId) {
-        throw new BadRequestException('Username already exists');
+        throw new BadRequestException('Unable to complete update');
       }
     }
 
