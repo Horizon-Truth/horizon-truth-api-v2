@@ -218,9 +218,10 @@ export class UsersController {
     return this.usersService.findAll(query);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
   @Get(':id')
-  @ApiOperation({ summary: 'Get user details' })
+  @ApiOperation({ summary: 'Get any user details (SYSTEM_ADMIN only)' })
   async findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
   }

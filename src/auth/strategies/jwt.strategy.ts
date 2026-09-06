@@ -13,7 +13,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'secretKey',
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+      // Reject any token whose header `alg` is not HS256.
+      // Without this, an attacker can forge a token with `alg: none`
+      // or try an algorithm-confusion attack.
+      algorithms: ['HS256'],
     });
   }
 

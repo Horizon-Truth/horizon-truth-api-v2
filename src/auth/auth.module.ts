@@ -21,8 +21,11 @@ import { Session } from './entities/session.entity';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'secretKey',
-        signOptions: { expiresIn: '7d' },
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          algorithm: 'HS256',
+          expiresIn: '7d',
+        },
       }),
       inject: [ConfigService],
     }),
