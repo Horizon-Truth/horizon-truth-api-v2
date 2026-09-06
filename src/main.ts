@@ -29,14 +29,10 @@ async function bootstrap() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: [
-            "'self'",
-            "'unsafe-inline'",
-            'https://fonts.googleapis.com',
-          ],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", 'data:', 'blob:'],
           connectSrc: ["'self'"],
         },
       },
@@ -57,8 +53,17 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = [
+    // Production
+    'https://horizontruth.org',
+    'https://www.horizontruth.org',
+    // Local development
+    'http://localhost:5173',
+    'http://localhost:4173',
+  ];
+
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
