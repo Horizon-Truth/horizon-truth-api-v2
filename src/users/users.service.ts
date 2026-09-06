@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, ILike, FindOptionsWhere } from 'typeorm';
+import { Repository, IsNull, ILike, FindOptionsWhere, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserActivity } from './entities/user-activity.entity';
@@ -73,7 +73,9 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new Error('User with this email or username already exists');
+      throw new ConflictException(
+        'User with this email or username already exists',
+      );
     }
 
     const createData: Partial<User> = { ...userData };
@@ -173,10 +175,18 @@ export class UsersService {
   }
 
   async findOneByResetToken(token: string): Promise<User | null> {
-    return this.usersRepository.findOne({
-      where: { resetPasswordToken: token },
+    // The stored token is a bcrypt hash — we must compare candidate
+    // tokens one-by-one because bcrypt hashes are not equality-searchable.
+    const all = await this.usersRepository.find({
+      where: { resetPasswordExpires: MoreThan(new Date()) },
       select: ['id', 'email', 'resetPasswordToken', 'resetPasswordExpires'],
     });
+    for (const u of all) {
+      if (u.resetPasswordToken && (await bcrypt.compare(token, u.resetPasswordToken))) {
+        return u;
+      }
+    }
+    return null;
   }
 
   async findAll(query: any): Promise<any> {
