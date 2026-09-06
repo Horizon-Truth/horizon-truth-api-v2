@@ -14,6 +14,18 @@ async function bootstrap() {
 
   app.use(
     helmet({
+      // Prevent clickjacking — deny framing entirely
+      frameguard: { action: 'deny' },
+      // Disable MIME-type sniffing
+      noSniff: true,
+      // Force browser to only connect over HTTPS (1 year, include subdomains)
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      // Prevent reflected XSS — let browser filter block scripts
+      xssFilter: true,
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -28,8 +40,10 @@ async function bootstrap() {
           connectSrc: ["'self'"],
         },
       },
-      crossOriginEmbedderPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: true,
+      crossOriginOpenerPolicy: { policy: 'same-origin' },
+      crossOriginResourcePolicy: { policy: 'same-origin' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }),
   );
 
