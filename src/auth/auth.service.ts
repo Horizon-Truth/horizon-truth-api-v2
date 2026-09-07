@@ -180,7 +180,7 @@ export class AuthService {
     });
 
     // Build the reset link — falls back to a generic message if FRONTEND_URL is not set
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://horizontruth.org';
     const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
 
     try {
