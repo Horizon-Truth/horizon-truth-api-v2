@@ -3,14 +3,56 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import compression from 'compression';
 import helmet from 'helmet';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { RequestLoggingInterceptor } from './shared/interceptors/request-logging.interceptor';
+
+/**
+ * Permissions-Policy header. Helmet 8.x does not ship a built-in
+ * `permissionsPolicy` option, so we set it explicitly. The list mirrors
+ * Mozilla's baseline recommendation — disable powerful features the
+ * Horizon app does not need and pin the remaining ones to first-party.
+ */
+const PERMISSIONS_POLICY = [
+  'accelerometer=()',
+  'autoplay=()',
+  'browsing-topics=()',
+  'camera=()',
+  'cross-origin-isolated=()',
+  'display-capture=()',
+  'encrypted-media=()',
+  'fullscreen=(self)',
+  'geolocation=(self)',
+  'gyroscope=()',
+  'keyboard-map=()',
+  'magnetometer=()',
+  'microphone=()',
+  'midi=()',
+  'payment=()',
+  'picture-in-picture=()',
+  'publickey-credentials-get=(self)',
+  'screen-wake-lock=()',
+  'sync-xhr=()',
+  'usb=()',
+  'xr-spatial-tracking=()',
+].join(', ');
+
+function permissionsPolicyMiddleware(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  res.setHeader('Permissions-Policy', PERMISSIONS_POLICY);
+  next();
+}
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   app.use(compression());
+
+  app.use(permissionsPolicyMiddleware);
 
   app.use(
     helmet({
