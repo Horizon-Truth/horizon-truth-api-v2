@@ -180,21 +180,15 @@ export class AuthService {
     });
 
     // Build the reset link — falls back to a generic message if FRONTEND_URL is not set
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    const resetLink = frontendUrl
-      ? `${frontendUrl}/reset-password?token=${rawToken}`
-      : null;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
 
     try {
       await this.mailService.send({
         to: email,
         subject: 'Reset your Horizon Truth password',
-        text: resetLink
-          ? `Click the link to reset your password (expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, ignore this email.`
-          : `Your password reset token (expires in 1 hour):\n\n${rawToken}\n\nIf you didn't request this, ignore this email.`,
-        html: resetLink
-          ? `<p>Click the link below to reset your password (expires in 1 hour):</p><p><a href="${resetLink}">Reset password</a></p><p>If you didn't request this, ignore this email.</p>`
-          : `<p>Your password reset token (expires in 1 hour):</p><p><strong>${rawToken}</strong></p><p>If you didn't request this, ignore this email.</p>`,
+        text: `Click the link to reset your password (expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, ignore this email.`,
+        html: `<p>Click the link below to reset your password (expires in 1 hour):</p><p><a href="${resetLink}">Reset password</a></p><p>If you didn't request this, ignore this email.</p>`,
       });
     } catch (err) {
       this.logger.error(
