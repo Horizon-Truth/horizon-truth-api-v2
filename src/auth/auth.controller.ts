@@ -96,6 +96,28 @@ export class AuthController {
     return this.authService.login(user, ip, userAgent);
   }
 
+  @Throttle({ default: { limit: 15, ttl: 300000 } }) // same budget as login
+  @Post('restore-account')
+  @ApiOperation({
+    summary:
+      'Cancel a pending account deletion and sign in (requires credentials)',
+  })
+  @ApiResponse({ status: 201, description: 'Account restored; tokens issued.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 410, description: 'Account already erased.' })
+  async restoreAccount(
+    @Body() loginDto: LoginDto,
+    @Request() req,
+    @Ip() ip: string,
+  ) {
+    return this.authService.restoreAccount(
+      loginDto.email,
+      loginDto.password,
+      ip,
+      req.headers['user-agent'],
+    );
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @ApiOperation({ summary: 'Logout user' })

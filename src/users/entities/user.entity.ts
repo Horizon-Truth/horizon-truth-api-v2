@@ -79,7 +79,7 @@ export class User {
 
   @ApiPropertyOptional()
   @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
-  lastLoginAt?: Date;
+  lastLoginAt?: Date | null;
 
   @ApiPropertyOptional({
     description: 'User preferences for notifications, privacy, theme, etc.',
@@ -92,9 +92,44 @@ export class User {
     language?: string;
   } | null;
 
+  // The account-lifecycle columns below are TIMESTAMPTZ (unlike the older naive
+  // columns) because the lifecycle job compares them to the application clock.
+
+  @ApiPropertyOptional({
+    description:
+      'Last authenticated activity (login or API use). Drives the inactive-account policy.',
+  })
+  @Column({ name: 'last_active_at', type: 'timestamptz', nullable: true })
+  lastActiveAt?: Date | null;
+
   @ApiPropertyOptional({ description: 'Soft delete timestamp' })
   @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
-  deletedAt?: Date;
+  deletedAt?: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'When the account will be permanently erased: the end of the recovery window after a deletion request, or the end of the notice period for an inactive account.',
+  })
+  @Column({
+    name: 'deletion_scheduled_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  deletionScheduledAt?: Date | null;
+
+  @Column({
+    name: 'inactivity_notice_sent_at',
+    type: 'timestamptz',
+    nullable: true,
+    select: false,
+  })
+  inactivityNoticeSentAt?: Date | null;
+
+  @ApiPropertyOptional({
+    description: 'When personal and gameplay data was erased (tombstone row)',
+  })
+  @Column({ name: 'purged_at', type: 'timestamptz', nullable: true })
+  purgedAt?: Date | null;
 
   @OneToOne(() => PlayerProfile, (profile) => profile.user)
   playerProfile: PlayerProfile;

@@ -24,6 +24,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { AccountLifecycleService } from './account-lifecycle.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -35,7 +36,10 @@ import { UserStatus } from '../shared/enums/user-status.enum';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private accountLifecycle: AccountLifecycleService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -132,35 +136,41 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete('me')
-  @ApiOperation({ summary: 'Delete own account (soft delete)' })
-  @ApiResponse({ status: 200, description: 'Account deleted successfully.' })
+  @ApiOperation({
+    summary:
+      'Request deletion of own account (soft delete, restorable during the recovery window)',
+  })
+  @ApiResponse({ status: 200, description: 'Account scheduled for deletion.' })
   async deleteOwnAccount(@Request() req) {
-    await this.usersService.softDelete(req.user.userId);
+    // Logged before the request so the entry exists while the account can
+    // still be restored; erasure removes it with the rest of the account.
     await this.usersService.logActivity(
       req.user.userId,
-      'ACCOUNT_DELETED',
+      'ACCOUNT_DELETION_REQUESTED',
       {},
       req.ip,
       req.headers['user-agent'],
     );
+    const { deletionScheduledAt } = await this.accountLifecycle.requestDeletion(
+      req.user.userId,
+    );
     return {
-      message: 'Account deleted successfully. Contact admin to restore.',
+      message:
+        'Your account is scheduled for deletion. Sign in and restore it before the deletion date if you change your mind.',
+      deletionScheduledAt,
+      recoveryDays: this.accountLifecycle.policy.deletionGraceDays,
     };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('me/anonymize')
-  @ApiOperation({ summary: 'Anonymize own account & PII' })
-  @ApiResponse({ status: 200, description: 'Account anonymized successfully.' })
+  @ApiOperation({
+    summary:
+      'Erase own account immediately, skipping the recovery window (irreversible)',
+  })
+  @ApiResponse({ status: 200, description: 'Account erased.' })
   async anonymizeMe(@Request() req) {
-    await this.usersService.anonymizeAccount(req.user.userId);
-    await this.usersService.logActivity(
-      req.user.userId,
-      'ACCOUNT_ANONYMIZED',
-      {},
-      req.ip,
-      req.headers['user-agent'],
-    );
+    await this.accountLifecycle.purge(req.user.userId, 'USER_REQUEST');
     return {
       message: 'Account anonymized successfully. You are now logged out.',
     };
@@ -168,21 +178,43 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SYSTEM_ADMIN)
+  @Post('lifecycle/run')
+  @ApiOperation({
+    summary:
+      'Run the account-lifecycle job now: due erasures and inactivity notices (SYSTEM_ADMIN only)',
+  })
+  async runAccountLifecycle() {
+    return this.accountLifecycle.runOnce();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SYSTEM_ADMIN)
   @Delete(':id')
-  @ApiOperation({ summary: 'Hard delete user (SYSTEM_ADMIN only)' })
+  @ApiOperation({
+    summary:
+      'Permanently erase a user: personal and gameplay data removed, de-identified record kept (SYSTEM_ADMIN only)',
+  })
   @ApiResponse({ status: 200, description: 'User permanently deleted.' })
-  async hardDeleteUser(@Param('id') id: string) {
-    await this.usersService.hardDelete(id);
+  async hardDeleteUser(@Param('id') id: string, @Request() req) {
+    if (id === req.user.userId) {
+      throw new BadRequestException(
+        'You cannot delete your own account here. Ask another administrator.',
+      );
+    }
+    await this.accountLifecycle.purge(id, 'ADMIN');
     return { message: 'User permanently deleted' };
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SYSTEM_ADMIN)
   @Put(':id/restore')
-  @ApiOperation({ summary: 'Restore soft-deleted user (SYSTEM_ADMIN only)' })
+  @ApiOperation({
+    summary: 'Cancel a pending account deletion (SYSTEM_ADMIN only)',
+  })
   @ApiResponse({ status: 200, description: 'User restored successfully.' })
+  @ApiResponse({ status: 410, description: 'Account already erased.' })
   async restoreUser(@Param('id') id: string) {
-    await this.usersService.restoreUser(id);
+    await this.accountLifecycle.restore(id);
     return { message: 'User restored successfully' };
   }
 
