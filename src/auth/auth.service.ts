@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +15,7 @@ import { UsersService } from '../users/users.service';
 import { Session } from './entities/session.entity';
 import { assertStrongPassword } from '../shared/utils/password-policy.util';
 import { MailService } from '../mail/mail.service';
+import { AccountLifecycleService } from '../users/account-lifecycle.service';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
+    private accountLifecycle: AccountLifecycleService,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
   ) {}
@@ -46,12 +49,17 @@ export class AuthService {
   }
 
   async login(user: any, ipAddress?: string, userAgent?: string) {
-    const payload = {
-      email: user.email,
-      username: user.username,
-      sub: user.id,
-      role: user.role,
-    };
+    if (user.deletedAt) {
+      // Only reachable with the correct password, so this reveals nothing to
+      // someone guessing accounts. The client uses the code to offer a restore.
+      throw new ForbiddenException({
+        message:
+          'This account is scheduled for deletion. Restore it to sign in again.',
+        code: 'ACCOUNT_PENDING_DELETION',
+        details: { deletionScheduledAt: user.deletionScheduledAt ?? null },
+      });
+    }
+
     const tokens = await this.getTokens(user);
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
@@ -63,7 +71,42 @@ export class AuthService {
       userAgent,
     );
 
+    // Signing in also cancels any pending inactivity deletion.
+    await this.accountLifecycle.markActive(user.id, { login: true });
+
     return tokens;
+  }
+
+  /**
+   * Signs in to an account that is pending deletion and cancels the deletion.
+   * Credentials are required again because the account's sessions were revoked
+   * when deletion was requested.
+   */
+  async restoreAccount(
+    emailOrUsername: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const user = await this.validateUser(emailOrUsername, password);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    if (user.deletedAt) {
+      await this.accountLifecycle.restore(user.id);
+      await this.usersService.logActivity(
+        user.id,
+        'ACCOUNT_RESTORED',
+        {},
+        ipAddress,
+        userAgent,
+      );
+    }
+
+    return this.login(
+      { ...user, deletedAt: null, deletionScheduledAt: null },
+      ipAddress,
+      userAgent,
+    );
   }
 
   async logout(userId: string, refreshToken?: string) {
@@ -180,7 +223,9 @@ export class AuthService {
     });
 
     // Build the reset link — falls back to a generic message if FRONTEND_URL is not set
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://horizontruth.org';
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      'https://horizontruth.org';
     const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
 
     try {
@@ -212,10 +257,7 @@ export class AuthService {
     }
 
     // Verify the raw token against the stored hash
-    const tokenMatches = await bcrypt.compare(
-      token,
-      user.resetPasswordToken!,
-    );
+    const tokenMatches = await bcrypt.compare(token, user.resetPasswordToken!);
     if (!tokenMatches) {
       throw new UnauthorizedException('Invalid or expired token');
     }

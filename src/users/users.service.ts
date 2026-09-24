@@ -6,15 +6,20 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, ILike, FindOptionsWhere, MoreThan } from 'typeorm';
+import {
+  Repository,
+  IsNull,
+  Not,
+  ILike,
+  FindOptionsWhere,
+  MoreThan,
+} from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserActivity } from './entities/user-activity.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserPreferencesDto } from './dto/user-preferences.dto';
 import { IpPrivacyUtil } from '../shared/utils/ip-privacy.util';
-import { PlayerProfile } from '../players/entities/player-profile.entity';
-import { UserStatus } from '../shared/enums/user-status.enum';
 import { assertStrongPassword } from '../shared/utils/password-policy.util';
 
 @Injectable()
@@ -24,8 +29,6 @@ export class UsersService {
     private usersRepository: Repository<User>,
     @InjectRepository(UserActivity)
     private activityRepository: Repository<UserActivity>,
-    @InjectRepository(PlayerProfile)
-    private playerProfileRepository: Repository<PlayerProfile>,
   ) {}
 
   async findOneByEmail(email: string): Promise<User | null> {
@@ -40,6 +43,9 @@ export class UsersService {
         'role',
         'apiKey',
         'username',
+        'deletedAt',
+        'deletionScheduledAt',
+        'purgedAt',
       ],
     });
   }
@@ -56,12 +62,17 @@ export class UsersService {
         'fullName',
         'role',
         'apiKey',
+        'deletedAt',
+        'deletionScheduledAt',
+        'purgedAt',
       ],
     });
   }
 
   async findOneByApiKey(apiKey: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { apiKey } });
+    return this.usersRepository.findOne({
+      where: { apiKey, deletedAt: IsNull() },
+    });
   }
 
   async create(userData: Partial<User> & { password?: string }): Promise<User> {
@@ -181,7 +192,10 @@ export class UsersService {
       select: ['id', 'email', 'resetPasswordToken', 'resetPasswordExpires'],
     });
     for (const u of all) {
-      if (u.resetPasswordToken && (await bcrypt.compare(token, u.resetPasswordToken))) {
+      if (
+        u.resetPasswordToken &&
+        (await bcrypt.compare(token, u.resetPasswordToken))
+      ) {
         return u;
       }
     }
@@ -197,7 +211,11 @@ export class UsersService {
     const role = query.role && query.role !== 'all' ? query.role : undefined;
 
     // Base filters applied to every result (and to each OR branch when searching).
-    const baseWhere: FindOptionsWhere<User> = { deletedAt: IsNull() };
+    // `deletion=pending` lists accounts in their recovery window instead.
+    const baseWhere: FindOptionsWhere<User> =
+      query.deletion === 'pending'
+        ? { deletedAt: Not(IsNull()), purgedAt: IsNull() }
+        : { deletedAt: IsNull() };
     if (role) baseWhere.role = role;
 
     // When searching, match across name/email/username — each needs its own
@@ -328,18 +346,6 @@ export class UsersService {
     });
   }
 
-  async softDelete(userId: string): Promise<void> {
-    await this.usersRepository.update(userId, { deletedAt: new Date() });
-  }
-
-  async hardDelete(userId: string): Promise<void> {
-    await this.usersRepository.delete(userId);
-  }
-
-  async restoreUser(userId: string): Promise<void> {
-    await this.usersRepository.update(userId, { deletedAt: undefined });
-  }
-
   async logActivity(
     userId: string,
     action: string,
@@ -386,38 +392,5 @@ export class UsersService {
         totalPages: Math.ceil(total / limit),
       },
     };
-  }
-
-  async anonymizeAccount(userId: string): Promise<void> {
-    const user = await this.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // 1. Anonymize User record
-    await this.usersRepository.update(userId, {
-      email: null,
-      phone: null,
-      username: null,
-      passwordHash: null,
-      fullName: 'Anonymized User',
-      apiKey: null,
-      hashedRefreshToken: null,
-      resetPasswordToken: null,
-      resetPasswordExpires: null,
-      isVerified: false,
-      status: UserStatus.ANONYMIZED,
-      preferences: null,
-    });
-
-    // 2. Anonymize PlayerProfile if exists
-    if (user.playerProfile) {
-      await this.playerProfileRepository.update(user.playerProfile.id, {
-        nickname: 'Former Player',
-      });
-    }
-
-    // 3. Clear activity metadata (Optional but safer)
-    await this.activityRepository.update({ userId }, { metadata: null });
   }
 }

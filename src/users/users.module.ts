@@ -7,6 +7,8 @@ import { PlayerProfile } from '../players/entities/player-profile.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserInvitationsService } from './user-invitations.service';
+import { AccountLifecycleService } from './account-lifecycle.service';
+import { AccountLifecycleScheduler } from './account-lifecycle.scheduler';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
@@ -18,7 +20,12 @@ import { MailModule } from '../mail/mail.module';
     ConfigModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService, UserInvitationsService],
-  exports: [UsersService, UserInvitationsService],
+  providers: [
+    UsersService,
+    UserInvitationsService,
+    AccountLifecycleService,
+    AccountLifecycleScheduler,
+  ],
+  exports: [UsersService, UserInvitationsService, AccountLifecycleService],
 })
 export class UsersModule {}
