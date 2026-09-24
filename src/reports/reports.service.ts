@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { ReportTag } from './entities/report-tag.entity';
 import { ReportVerification } from './entities/report-verification.entity';
@@ -11,6 +11,37 @@ import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AiVerificationService } from './ai-verification.service';
 import { ReportStatus } from '../shared/enums/report-status.enum';
+import { User } from '../users/entities/user.entity';
+
+/**
+ * Statuses a moderator has taken out of circulation. Everyone else sees every
+ * other report, including unreviewed ones, so the community can verify them.
+ */
+export const PUBLICLY_HIDDEN_REPORT_STATUSES: ReportStatus[] = [
+  ReportStatus.REJECTED,
+  ReportStatus.ARCHIVED,
+  ReportStatus.DUPLICATE,
+];
+
+/** The only user fields a report response may carry — never email, phone or API key. */
+const PUBLIC_USER_FIELDS = ['id', 'fullName', 'username', 'role'] as const;
+
+type PublicUser = Pick<User, (typeof PUBLIC_USER_FIELDS)[number]>;
+
+function toPublicUser(user: User | null | undefined): PublicUser | null {
+  if (!user) return null;
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    username: user.username,
+    role: user.role,
+  };
+}
+
+export interface ReportVisibility {
+  /** Staff see reports in every status; the public does not. */
+  includeHidden?: boolean;
+}
 
 @Injectable()
 export class ReportsService {
@@ -75,16 +106,34 @@ export class ReportsService {
     return savedReport;
   }
 
-  async findAll(query: any): Promise<any> {
-    const { status, tagId, page = 1, limit = 10, search } = query;
+  async findAll(
+    query: any,
+    { includeHidden = false }: ReportVisibility = {},
+  ): Promise<any> {
+    const { status, tagId, search } = query;
+    const page = Math.max(Number(query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(query.limit) || 10, 1), 50);
     const skip = (page - 1) * limit;
+
+    // Joined users are narrowed to their public fields in SQL, so private
+    // columns are never loaded, let alone serialized.
+    const userColumns = (alias: string) =>
+      PUBLIC_USER_FIELDS.map((field) => `${alias}.${field}`);
 
     const queryBuilder = this.reportRepository
       .createQueryBuilder('report')
-      .leftJoinAndSelect('report.reporter', 'reporter')
+      .leftJoin('report.reporter', 'reporter')
+      .addSelect(userColumns('reporter'))
       .leftJoinAndSelect('report.tags', 'tags')
       .leftJoinAndSelect('report.verifications', 'verifications')
-      .leftJoinAndSelect('verifications.user', 'verificationUser');
+      .leftJoin('verifications.user', 'verificationUser')
+      .addSelect(userColumns('verificationUser'));
+
+    if (!includeHidden) {
+      queryBuilder.andWhere('report.status NOT IN (:...hiddenStatuses)', {
+        hiddenStatuses: PUBLICLY_HIDDEN_REPORT_STATUSES,
+      });
+    }
 
     if (status) {
       queryBuilder.andWhere('report.status = :status', { status });
@@ -95,8 +144,14 @@ export class ReportsService {
     }
 
     if (search) {
+      // Bracketed so the ORs cannot escape the status/visibility filters.
       queryBuilder.andWhere(
-        'report.title ILIKE :search OR report.description ILIKE :search OR report.sourceUrl ILIKE :search',
+        new Brackets((qb) =>
+          qb
+            .where('report.title ILIKE :search')
+            .orWhere('report.description ILIKE :search')
+            .orWhere('report.sourceUrl ILIKE :search'),
+        ),
         { search: `%${search}%` },
       );
     }
@@ -125,6 +180,7 @@ export class ReportsService {
 
   async findById(
     id: string,
+    { includeHidden = true }: ReportVisibility = {},
   ): Promise<Report & { aiVerification: ReportAiVerification | null }> {
     const report = await this.reportRepository.findOne({
       where: { id },
@@ -137,6 +193,18 @@ export class ReportsService {
       ],
     });
     if (!report) throw new NotFoundException('Report not found');
+    if (
+      !includeHidden &&
+      PUBLICLY_HIDDEN_REPORT_STATUSES.includes(report.status)
+    ) {
+      throw new NotFoundException('Report not found');
+    }
+
+    // The relations load whole User rows; only public fields leave the service.
+    report.reporter = toPublicUser(report.reporter) as User;
+    report.verifications?.forEach((verification) => {
+      verification.user = toPublicUser(verification.user) as User;
+    });
 
     // Only the newest attempt travels with the report; the full history is
     // served separately so ordinary detail requests stay small.
