@@ -165,6 +165,112 @@ describe('ReportsService', () => {
     expect(result.id).toBe('legacy-report');
   });
 
+  describe('public visibility and user fields', () => {
+    const fullUser = {
+      id: 'user-1',
+      fullName: 'Reporter Person',
+      username: 'reporter',
+      role: 'PLAYER',
+      email: 'reporter@example.com',
+      phone: '+251900000000',
+      apiKey: 'secret-api-key',
+    };
+
+    it('never returns private reporter or verifier fields from a detail lookup', async () => {
+      reportRepository.findOne.mockResolvedValue({
+        id: 'report-1',
+        status: ReportStatus.NEW,
+        reporter: { ...fullUser },
+        verifications: [{ id: 'v1', user: { ...fullUser } }],
+      });
+
+      const result: any = await service.findById('report-1', {
+        includeHidden: false,
+      });
+
+      for (const user of [result.reporter, result.verifications[0].user]) {
+        expect(user).toEqual({
+          id: 'user-1',
+          fullName: 'Reporter Person',
+          username: 'reporter',
+          role: 'PLAYER',
+        });
+      }
+      expect(JSON.stringify(result)).not.toMatch(
+        /secret-api-key|@example\.com/,
+      );
+    });
+
+    it.each([
+      ReportStatus.REJECTED,
+      ReportStatus.ARCHIVED,
+      ReportStatus.DUPLICATE,
+    ])(
+      'hides a %s report from the public but not from staff',
+      async (status) => {
+        reportRepository.findOne.mockResolvedValue({ id: 'report-1', status });
+
+        await expect(
+          service.findById('report-1', { includeHidden: false }),
+        ).rejects.toThrow('Report not found');
+        await expect(
+          service.findById('report-1', { includeHidden: true }),
+        ).resolves.toEqual(expect.objectContaining({ id: 'report-1' }));
+      },
+    );
+
+    const listQueryBuilder = () => {
+      const qb: any = {};
+      for (const method of [
+        'leftJoin',
+        'leftJoinAndSelect',
+        'addSelect',
+        'andWhere',
+        'skip',
+        'take',
+        'orderBy',
+      ]) {
+        qb[method] = jest.fn().mockReturnValue(qb);
+      }
+      qb.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
+      reportRepository.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    };
+
+    it('filters hidden statuses out of the public list and selects only public user columns', async () => {
+      const qb = listQueryBuilder();
+
+      await service.findAll({ limit: '500' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'report.status NOT IN (:...hiddenStatuses)',
+        expect.anything(),
+      );
+      expect(qb.addSelect).toHaveBeenCalledWith([
+        'reporter.id',
+        'reporter.fullName',
+        'reporter.username',
+        'reporter.role',
+      ]);
+      expect(qb.leftJoinAndSelect).not.toHaveBeenCalledWith(
+        'report.reporter',
+        expect.anything(),
+      );
+      expect(qb.take).toHaveBeenCalledWith(50);
+    });
+
+    it('lists every status for staff', async () => {
+      const qb = listQueryBuilder();
+
+      await service.findAll({}, { includeHidden: true });
+
+      expect(qb.andWhere).not.toHaveBeenCalledWith(
+        'report.status NOT IN (:...hiddenStatuses)',
+        expect.anything(),
+      );
+    });
+  });
+
   it('records an audit entry when a moderator updates report status', async () => {
     const existingReport = {
       id: 'report-1',
