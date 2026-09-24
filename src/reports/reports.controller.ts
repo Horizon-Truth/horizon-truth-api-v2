@@ -20,7 +20,12 @@ import { RequestAiVerificationDto } from './dto/request-ai-verification.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../shared/enums/user-role.enum';
+import { MODERATION_ROLES, UserRole } from '../shared/enums/user-role.enum';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+
+/** Staff see reports in every status; everyone else sees the public set. */
+const canSeeHiddenReports = (user?: { role?: UserRole } | null) =>
+  !!user?.role && MODERATION_ROLES.includes(user.role);
 
 @ApiTags('Reports')
 @Controller('reports')
@@ -40,18 +45,25 @@ export class ReportsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.MODERATOR, UserRole.ORG_ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all reports (Admin)' })
-  findAll(@Query() query: any) {
-    return this.reportsService.findAll(query);
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'List reports',
+    description:
+      'Public. Rejected, archived and duplicate reports are only listed for moderators and admins.',
+  })
+  findAll(@Query() query: any, @Request() req: any) {
+    return this.reportsService.findAll(query, {
+      includeHidden: canSeeHiddenReports(req.user),
+    });
   }
 
   @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get a report by ID' })
-  findOne(@Param('id') id: string) {
-    return this.reportsService.findById(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.reportsService.findById(id, {
+      includeHidden: canSeeHiddenReports(req.user),
+    });
   }
 
   @Post(':id/evidence')
