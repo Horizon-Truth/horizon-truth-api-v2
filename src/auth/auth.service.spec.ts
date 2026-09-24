@@ -7,7 +7,8 @@ import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Session } from './entities/session.entity';
 import * as bcrypt from 'bcrypt';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { AccountLifecycleService } from '../users/account-lifecycle.service';
 
 jest.mock('bcrypt');
 
@@ -21,6 +22,12 @@ describe('AuthService', () => {
     findOneByEmail: jest.fn(),
     findOneByUsername: jest.fn(),
     update: jest.fn(),
+    logActivity: jest.fn(),
+  };
+
+  const mockAccountLifecycle = {
+    markActive: jest.fn(),
+    restore: jest.fn(),
   };
 
   const mockJwtService = {
@@ -45,10 +52,14 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: UsersService, useValue: mockUsersService },
+        { provide: AccountLifecycleService, useValue: mockAccountLifecycle },
         { provide: MailService, useValue: { send: () => Promise.resolve() } },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: ConfigService, useValue: { get: () => 'secret', getOrThrow: (k) => 'secret' } },
+        {
+          provide: ConfigService,
+          useValue: { get: () => 'secret', getOrThrow: (k) => 'secret' },
+        },
         {
           provide: getRepositoryToken(Session),
           useValue: mockSessionRepository,
@@ -155,6 +166,66 @@ describe('AuthService', () => {
       sessionRepository.find.mockResolvedValue([]);
       const result = await service.validateSession('1', 'refreshToken');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('account pending deletion', () => {
+    const pendingUser = {
+      id: '1',
+      email: 'test@example.com',
+      passwordHash: 'hashed',
+      deletedAt: new Date('2026-09-01'),
+      deletionScheduledAt: new Date('2026-10-01'),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockJwtService.signAsync.mockResolvedValue('token');
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hash');
+      mockSessionRepository.create.mockImplementation((x) => x);
+    });
+
+    it('refuses login with a code the client can act on', async () => {
+      const { passwordHash, ...user } = pendingUser;
+
+      const attempt = service.login(user);
+
+      await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(attempt).rejects.toMatchObject({
+        response: {
+          code: 'ACCOUNT_PENDING_DELETION',
+          details: { deletionScheduledAt: pendingUser.deletionScheduledAt },
+        },
+      });
+      expect(mockSessionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('records the login and activity on a normal sign-in', async () => {
+      await service.login({ id: '2', email: 'a@b.c' });
+
+      expect(mockAccountLifecycle.markActive).toHaveBeenCalledWith('2', {
+        login: true,
+      });
+    });
+
+    it('restores the account and signs in with valid credentials', async () => {
+      mockUsersService.findOneByEmail.mockResolvedValue(pendingUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.restoreAccount('test@example.com', 'pw');
+
+      expect(mockAccountLifecycle.restore).toHaveBeenCalledWith('1');
+      expect(result).toHaveProperty('access_token');
+    });
+
+    it('does not restore with the wrong password', async () => {
+      mockUsersService.findOneByEmail.mockResolvedValue(pendingUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.restoreAccount('test@example.com', 'wrong'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(mockAccountLifecycle.restore).not.toHaveBeenCalled();
     });
   });
 });

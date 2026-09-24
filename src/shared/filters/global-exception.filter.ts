@@ -27,12 +27,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
+    // Exceptions may carry a machine-readable `code` (and `details`) for the
+    // client to branch on, e.g. ACCOUNT_PENDING_DELETION.
+    const body =
+      typeof message === 'object' && message !== null
+        ? (message as Record<string, unknown>)
+        : {};
+
     const errorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
       message: (message as any).message || message,
+      ...(body.code ? { code: body.code } : {}),
+      ...(body.details ? { details: body.details } : {}),
     };
 
     // Log the error with detail
