@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, dev, stage ]
 
+permissions:
+  contents: read
+  code-quality: write
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
@@ -53,6 +57,14 @@ jobs:
               "Full HTML report: see the `coverage-report` artifact on this run.",
             ].join("\n"));
           ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage to GitHub
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage/cobertura-coverage.xml
+          language: JavaScript
+          label: code-coverage/jest
 
       - name: Upload coverage report
         if: always()
