@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Horizon-Truth/horizon-truth-api-v2/security/advisories/new
+    about: Please report security issues privately here. Do not open a public issue.
+  - name: Questions and ideas
+    url: https://github.com/orgs/Horizon-Truth/discussions
+    about: Ask questions and discuss ideas before opening an issue.
+  - name: Contributing guide
+    url: https://github.com/Horizon-Truth/horizon-truth-api-v2/blob/main/CONTRIBUTING.md
+    about: Read how to set up the project and submit changes.
