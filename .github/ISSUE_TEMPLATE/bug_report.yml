@@ -1,0 +1,97 @@
+name: Bug report
+description: Report something that is broken in the Horizon API (NestJS)
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Horizon. Please search [existing issues](https://github.com/Horizon-Truth/horizon-truth-api-v2/issues) first, and read our [Code of Conduct](https://github.com/Horizon-Truth/horizon-truth-api-v2/blob/main/CODE_OF_CONDUCT.md).
+        **Security issues must not be reported here.** Use the private security advisory link on the issue chooser.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I am using the latest `main` or `dev` code
+          required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Authentication / authorization
+        - Gamification (XP, ranks, learning content)
+        - Scenarios / Blogs / Resources
+        - Multilingual content (en / am / om)
+        - Organizations / Players
+        - Database / migrations
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear, concise description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the endpoint, HTTP method, request payload and the response (status and body). Redact tokens and personal data.
+      placeholder: |
+        1. Go to ...
+        2. Click / call ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Node.js version
+      placeholder: "e.g. 20.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: db
+    attributes:
+      label: Database
+      placeholder: "e.g. PostgreSQL 16"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "e.g. Ubuntu 24.04, macOS 15"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs / stack trace
+      description: Paste relevant output. It is formatted as code automatically.
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, related issues, possible cause, anything else.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on a fix for this
